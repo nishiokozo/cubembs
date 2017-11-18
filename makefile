@@ -1,7 +1,6 @@
-OBJS=main.o key.o
+OBJS=main.o key.o vk.o
 SHDR=\
-	cube-frag.spv\
-	cube-vert.spv
+	cube-frag.spv cube-vert.spv
 
 LIBS= -LC:/VulkanSDK/1.0.54.0/Lib -lvulkan-1
 FLAGS=-g -m64 -c -g -IC:/VulkanSDK/1.0.54.0/Include -Wno-narrowing -fpermissive -Werror
