@@ -23,8 +23,10 @@
 
 #include <math.h>
 
-	const static int WIN_NAME_LEN = 80;
+#include "key.h"
 
+
+const static int WIN_NAME_LEN = 80;
 struct WindowInf
 {
 
@@ -2829,15 +2831,15 @@ void vk_setVert( VulkanInf& vk, void* pDataVert, int sizeVert )
 				}
 			}
 			assert(pass);
-		}
 
-		//-----------------------------------------------------
-		// メモリの確保
-		//-----------------------------------------------------
-		{
-			VkResult  err;
-			err = vkAllocateMemory(vk.device, &mai, NULL,&vk.swapchain_image_resources[i].uniform_memory);
-			assert(!err);
+			//-----------------------------------------------------
+			// メモリの確保
+			//-----------------------------------------------------
+			{
+				VkResult  err;
+				err = vkAllocateMemory(vk.device, &mai, NULL,&vk.swapchain_image_resources[i].uniform_memory);
+				assert(!err);
+			}
 		}
 
 		//-----------------------------------------------------
@@ -3872,83 +3874,124 @@ void	vk_end( VulkanInf& vk )
 		vkDestroyInstance(vk.inst, NULL);
 	}
 }
+	WindowInf win;
+
+	bool vk_flgActive = false;
+
+class VkInf
+{
+	VulkanInf vk;
+public:
+
+	//-----------------------------------------------------------------------------
+	void v_init( HINSTANCE hInstance, HWND hWin, int _width, int _height )
+	//-----------------------------------------------------------------------------
+	{
+		if ( vk_flgActive == false )
+		{
+
+			vk_init( vk );
+
+
+			vk_setup( vk, hInstance, hWin, _width, _height );
+
+			//---------------------------------------------------------
+			// 透視変換行列の作成
+			//---------------------------------------------------------
+			{
+				apr_spin_angle = 4.0f;
+				apr_spin_increment = 0.2f;
+				apr_pause = false;
+
+				vec3 eye = {0.0f, 3.0f, 5.0f};
+				vec3 origin = {0, 0, 0};
+				vec3 up = {0.0f, 1.0f, 0.0};
+
+				mat4x4_perspective(apr_projection_matrix, (float)degreesToRadians(45.0f),1.0f, 0.1f, 100.0f);
+				mat4x4_look_at(apr_view_matrix, eye, origin, up);
+				mat4x4_identity(apr_model_matrix);
+
+				apr_projection_matrix[1][1]*=-1;  //Flip projection matrix from GL to Vulkan orientation.
+			}
+
+			//-----------------------------------------------------
+			// モデルデータの作成
+			//-----------------------------------------------------
+			struct vktexcube_vs_uniform dataVert;
+			{
+				mat4x4 VP;
+				mat4x4_mul(VP, apr_projection_matrix, apr_view_matrix);
+
+				mat4x4 MVP;
+				mat4x4_mul(MVP, VP, apr_model_matrix);
+
+				memcpy(dataVert.mvp, MVP, sizeof(MVP));
+				//	dumpMatrix("MVP", MVP);
+
+				for (unsigned int i = 0; i < 12 * 3; i++) 
+				{
+					dataVert.position[i][0] = g_vertex_buffer_data[i * 3];
+					dataVert.position[i][1] = g_vertex_buffer_data[i * 3 + 1];
+					dataVert.position[i][2] = g_vertex_buffer_data[i * 3 + 2];
+					dataVert.position[i][3] = 1.0f;
+					dataVert.attr[i][0] = g_uv_buffer_data[2 * i];
+					dataVert.attr[i][1] = g_uv_buffer_data[2 * i + 1];
+					dataVert.attr[i][2] = 0;
+					dataVert.attr[i][3] = 0;
+				}
+
+				vk_setVert( vk, (void*)&dataVert, sizeof(dataVert) );
+			}
+
+			//-----------------------------------------------------
+			// パイプライン作成
+			//-----------------------------------------------------
+			{
+				uint32_t _vertexCount	= 12*3;
+				uint32_t _instanceCount	= 1;
+				uint32_t _firstVertex	= 0;
+				uint32_t _firstInstance = 0;
+
+				vk_setPipeline( vk, _width, _height, _vertexCount, _instanceCount, _firstVertex, _firstInstance );
+			}
+
+			//-----------------------------------------------------
+			// 終了待ち
+			//-----------------------------------------------------
+			vk_endSetup( vk );
+
+			vk_flgActive = true;
+			printf("initialized\n");
+		}
+	}
+	
+	//-----------------------------------------------------------------------------
+	void v_release()
+	//-----------------------------------------------------------------------------
+	{
+		if ( vk_flgActive == true )
+		{
+			vk_end( vk );
+			vk_flgActive = false;
+			printf("released\n");
+		}
+	}
+
+	//-----------------------------------------------------------------------------
+	void v_draw()
+	//-----------------------------------------------------------------------------
+	{
+		if ( vk_flgActive == true ) vk_draw( vk );
+	}
+
+};
+
+VkInf vkInf;
 //-----------------------------------------------------------------------------
 int main(int argc, char *argv[])
 //-----------------------------------------------------------------------------
 {
-	WindowInf win;
-	VulkanInf vk;
-
-	vk_init( vk );
-
-	win_init( win , "cube", 512, 512 );
-
-	vk_setup( vk, win.hInstance, win.hWin, win.win_width, win.win_height );
-
-	//---------------------------------------------------------
-	// 透視変換行列の作成
-	//---------------------------------------------------------
-	{
-		apr_spin_angle = 4.0f;
-		apr_spin_increment = 0.2f;
-		apr_pause = false;
-
-		vec3 eye = {0.0f, 3.0f, 5.0f};
-		vec3 origin = {0, 0, 0};
-		vec3 up = {0.0f, 1.0f, 0.0};
-
-		mat4x4_perspective(apr_projection_matrix, (float)degreesToRadians(45.0f),1.0f, 0.1f, 100.0f);
-		mat4x4_look_at(apr_view_matrix, eye, origin, up);
-		mat4x4_identity(apr_model_matrix);
-
-		apr_projection_matrix[1][1]*=-1;  //Flip projection matrix from GL to Vulkan orientation.
-	}
-
-	//-----------------------------------------------------
-	// モデルデータの作成
-	//-----------------------------------------------------
-	struct vktexcube_vs_uniform dataVert;
-	{
-		mat4x4 VP;
-		mat4x4_mul(VP, apr_projection_matrix, apr_view_matrix);
-
-		mat4x4 MVP;
-		mat4x4_mul(MVP, VP, apr_model_matrix);
-
-		memcpy(dataVert.mvp, MVP, sizeof(MVP));
-		//	dumpMatrix("MVP", MVP);
-
-		for (unsigned int i = 0; i < 12 * 3; i++) 
-		{
-			dataVert.position[i][0] = g_vertex_buffer_data[i * 3];
-			dataVert.position[i][1] = g_vertex_buffer_data[i * 3 + 1];
-			dataVert.position[i][2] = g_vertex_buffer_data[i * 3 + 2];
-			dataVert.position[i][3] = 1.0f;
-			dataVert.attr[i][0] = g_uv_buffer_data[2 * i];
-			dataVert.attr[i][1] = g_uv_buffer_data[2 * i + 1];
-			dataVert.attr[i][2] = 0;
-			dataVert.attr[i][3] = 0;
-		}
-
-		vk_setVert( vk, (void*)&dataVert, sizeof(dataVert) );
-	}
-
-	//-----------------------------------------------------
-	// パイプライン作成
-	//-----------------------------------------------------
-	{
-		uint32_t _vertexCount	= 12*3;
-		uint32_t _instanceCount	= 1;
-		uint32_t _firstVertex	= 0;
-		uint32_t _firstInstance = 0;
-
-		vk_setPipeline( vk, win.win_width, win.win_height, _vertexCount, _instanceCount, _firstVertex, _firstInstance );
-	}
-
-	//-----------------------------------------------------
-	// 終了待ち
-	//-----------------------------------------------------
-	vk_endSetup( vk );
+	win_init( win , "msb", 256, 256 );
 
 	//-----------------------------------------------------
 	// メインループ
@@ -3957,6 +4000,9 @@ int main(int argc, char *argv[])
 	msg.wParam = 0;
 	bool done; // flag saying when app is complete
 	done = false; // initialize loop condition variable
+
+	key_init(argc,argv);
+
 	while (!done) 
 	{
 		PeekMessage(&msg, NULL, 0, 0, PM_REMOVE);
@@ -3971,10 +4017,22 @@ int main(int argc, char *argv[])
 			DispatchMessage(&msg);
 		}
 		
+		if ( key.hi._1 )
+		{
+			vkInf.v_init( win.hInstance, win.hWin, win.win_width, win.win_height );
+		}
+		
+		if ( key.hi._2 )
+		{
+			vkInf.v_release();
+		}
+		
 		//-----------------------------------------------------
 		// 描画
 		//-----------------------------------------------------
-		vk_draw( vk );
+		vkInf.v_draw();
+
+		key_update();
 
 		RedrawWindow(win.hWin, NULL, NULL, RDW_INTERNALPAINT);
 	}
@@ -3982,7 +4040,6 @@ int main(int argc, char *argv[])
 	//-----------------------------------------------------
 	// 終了
 	//-----------------------------------------------------
-	vk_end( vk );
 
 	return (int)msg.wParam;
 }
