@@ -44,24 +44,26 @@ int main(int argc, char *argv[])
 	//-----------------------------------------------------
 	MSG msg;   // message
 	msg.wParam = 0;
-	bool done; // flag saying when app is complete
-	done = false; // initialize loop condition variable
 
 	key_init(argc,argv);
 
-	while (!done) 
+	int lim = 0;
+
+	while (true) 
 	{
 		PeekMessage(&msg, NULL, 0, 0, PM_REMOVE);
 		if (msg.message == WM_QUIT) // check for a flgQuit message
 		{
-			done = true; // if found, flgQuit app
+			printf("quit1 %d\n",msg.message);
+			break;
 		} else 
 		{
 			/* Translate and dispatch to event queue*/
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
-		
+		if (msg.message != WM_PAINT) continue;
+
 		if ( key.hi._1 )
 		{
 			pVk = new VkInf( pWin->hInstance, pWin->hWin, pWin->win_width, pWin->win_height );
@@ -71,6 +73,19 @@ int main(int argc, char *argv[])
 		{
 			delete pVk;
 			pVk = 0;
+		}
+
+		if ( key.hi._3 )
+		{
+			lim = 10;
+		}
+
+		if ( lim )
+		{
+			delete pVk;
+			pVk = new VkInf( pWin->hInstance, pWin->hWin, pWin->win_width, pWin->win_height );
+			printf("init-v_release %d\n",lim );
+			lim--;
 		}
 		
 		//-----------------------------------------------------
