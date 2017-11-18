@@ -1,4 +1,4 @@
-OBJS=main.o key.o vk.o
+OBJS=main.o key.o vk.o win.o
 SHDR=\
 	cube-frag.spv cube-vert.spv
 
