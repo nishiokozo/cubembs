@@ -3674,7 +3674,6 @@ void	vk_end( VulkanInf& vk )
 	}
 }
 
-//	bool vk_flgActive = false;
 
 //=================
 
@@ -3758,7 +3757,6 @@ void VkInf::v_init( HINSTANCE hInstance, HWND hWin, int _width, int _height )
 void VkInf::v_draw()
 //-----------------------------------------------------------------------------
 {
-//	if ( vk_flgActive == true ) 
 	vk_draw( vk );
 }
 
@@ -3779,6 +3777,5 @@ VkInf::~VkInf()
 	vk_end( vk );
 	printf("released\n");
 }
-
 
 

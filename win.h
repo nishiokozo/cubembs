@@ -10,7 +10,7 @@ public:
 	int	win_width;
 	int	win_height;
 
-	void create( const char* name, int width, int height );
+	WinInf( const char* name, int width, int height );
 
 };
 
