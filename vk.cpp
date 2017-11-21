@@ -1,4 +1,4 @@
-//#define _GNU_SOURCE // M_PI ‚ª’è‹`‚³‚ê‚é
+//#define _GNU_SOURCE // M_PI ãŒå®šç¾©ã•ã‚Œã‚‹
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -8,7 +8,7 @@
 #include <signal.h>
 
 //#ifdef _WIN32
-//#pragma comment(linker, "/subsystem:windows")	//	ƒRƒ“ƒ\[ƒ‹•\¦‚³‚ê‚È‚­‚·‚é
+//#pragma comment(linker, "/subsystem:windows")	//	ã‚³ãƒ³ã‚½ãƒ¼ãƒ«è¡¨ç¤ºã•ã‚Œãªãã™ã‚‹
 //#endif  // _WIN32
 
 #define M_PI	3.14159265358979323846
@@ -18,505 +18,24 @@
 #include <vulkan/vk_sdk_platform.h>
 
 
-#ifndef LINMATH_H
-#define LINMATH_H
+//#ifndef LINMATH_H
+//#define LINMATH_H
 
 #include <math.h>
 
 #include "key.h"
 #include "vk.h"
 
+#define ASSERTW(flg,err_msg)											 \
+	if ( !(flg) ) {																		 \
+		wchar_t wcs[256];														\
+		mbstowcs( wcs, __func__, 256 );												\
+		wchar_t wcs2[256];														\
+		MultiByteToWideChar( CP_UTF8, 0, err_msg,-1,wcs2,256 );\
+		MessageBoxW(NULL, wcs2, wcs, MB_OK); \
+		exit(1);																 \
+	} 
 
-
-
-// Converts degrees to radians.
-#define degreesToRadians(angleDegrees) (angleDegrees * M_PI / 180.0)
-
-// Converts radians to degrees.
-#define radiansToDegrees(angleRadians) (angleRadians * 180.0 / M_PI)
-
-typedef float vec3[3];
-static inline void vec3_add(vec3 r, vec3 const a, vec3 const b) {
-    int i;
-    for (i = 0; i < 3; ++i) r[i] = a[i] + b[i];
-}
-static inline void vec3_sub(vec3 r, vec3 const a, vec3 const b) {
-    int i;
-    for (i = 0; i < 3; ++i) r[i] = a[i] - b[i];
-}
-static inline void vec3_scale(vec3 r, vec3 const v, float const s) {
-    int i;
-    for (i = 0; i < 3; ++i) r[i] = v[i] * s;
-}
-static inline float vec3_mul_inner(vec3 const a, vec3 const b) {
-    float p = 0.f;
-    int i;
-    for (i = 0; i < 3; ++i) p += b[i] * a[i];
-    return p;
-}
-static inline void vec3_mul_cross(vec3 r, vec3 const a, vec3 const b) {
-    r[0] = a[1] * b[2] - a[2] * b[1];
-    r[1] = a[2] * b[0] - a[0] * b[2];
-    r[2] = a[0] * b[1] - a[1] * b[0];
-}
-static inline float vec3_len(vec3 const v) { return sqrtf(vec3_mul_inner(v, v)); }
-static inline void vec3_norm(vec3 r, vec3 const v) {
-    float k = 1.f / vec3_len(v);
-    vec3_scale(r, v, k);
-}
-static inline void vec3_reflect(vec3 r, vec3 const v, vec3 const n) {
-    float p = 2.f * vec3_mul_inner(v, n);
-    int i;
-    for (i = 0; i < 3; ++i) r[i] = v[i] - p * n[i];
-}
-
-typedef float vec4[4];
-static inline void vec4_add(vec4 r, vec4 const a, vec4 const b) {
-    int i;
-    for (i = 0; i < 4; ++i) r[i] = a[i] + b[i];
-}
-static inline void vec4_sub(vec4 r, vec4 const a, vec4 const b) {
-    int i;
-    for (i = 0; i < 4; ++i) r[i] = a[i] - b[i];
-}
-static inline void vec4_scale(vec4 r, vec4 v, float s) {
-    int i;
-    for (i = 0; i < 4; ++i) r[i] = v[i] * s;
-}
-static inline float vec4_mul_inner(vec4 a, vec4 b) {
-    float p = 0.f;
-    int i;
-    for (i = 0; i < 4; ++i) p += b[i] * a[i];
-    return p;
-}
-static inline void vec4_mul_cross(vec4 r, vec4 a, vec4 b) {
-    r[0] = a[1] * b[2] - a[2] * b[1];
-    r[1] = a[2] * b[0] - a[0] * b[2];
-    r[2] = a[0] * b[1] - a[1] * b[0];
-    r[3] = 1.f;
-}
-static inline float vec4_len(vec4 v) { return sqrtf(vec4_mul_inner(v, v)); }
-static inline void vec4_norm(vec4 r, vec4 v) {
-    float k = 1.f / vec4_len(v);
-    vec4_scale(r, v, k);
-}
-static inline void vec4_reflect(vec4 r, vec4 v, vec4 n) {
-    float p = 2.f * vec4_mul_inner(v, n);
-    int i;
-    for (i = 0; i < 4; ++i) r[i] = v[i] - p * n[i];
-}
-
-typedef vec4 mat4x4[4];
-static inline void mat4x4_identity(mat4x4 M) {
-    int i, j;
-    for (i = 0; i < 4; ++i)
-        for (j = 0; j < 4; ++j) M[i][j] = i == j ? 1.f : 0.f;
-}
-static inline void mat4x4_dup(mat4x4 M, mat4x4 N) {
-    int i, j;
-    for (i = 0; i < 4; ++i)
-        for (j = 0; j < 4; ++j) M[i][j] = N[i][j];
-}
-static inline void mat4x4_row(vec4 r, mat4x4 M, int i) {
-    int k;
-    for (k = 0; k < 4; ++k) r[k] = M[k][i];
-}
-static inline void mat4x4_col(vec4 r, mat4x4 M, int i) {
-    int k;
-    for (k = 0; k < 4; ++k) r[k] = M[i][k];
-}
-static inline void mat4x4_transpose(mat4x4 M, mat4x4 N) {
-    int i, j;
-    for (j = 0; j < 4; ++j)
-        for (i = 0; i < 4; ++i) M[i][j] = N[j][i];
-}
-static inline void mat4x4_add(mat4x4 M, mat4x4 a, mat4x4 b) {
-    int i;
-    for (i = 0; i < 4; ++i) vec4_add(M[i], a[i], b[i]);
-}
-static inline void mat4x4_sub(mat4x4 M, mat4x4 a, mat4x4 b) {
-    int i;
-    for (i = 0; i < 4; ++i) vec4_sub(M[i], a[i], b[i]);
-}
-static inline void mat4x4_scale(mat4x4 M, mat4x4 a, float k) {
-    int i;
-    for (i = 0; i < 4; ++i) vec4_scale(M[i], a[i], k);
-}
-static inline void mat4x4_scale_aniso(mat4x4 M, mat4x4 a, float x, float y, float z) {
-    int i;
-    vec4_scale(M[0], a[0], x);
-    vec4_scale(M[1], a[1], y);
-    vec4_scale(M[2], a[2], z);
-    for (i = 0; i < 4; ++i) {
-        M[3][i] = a[3][i];
-    }
-}
-static inline void mat4x4_mul(mat4x4 M, mat4x4 a, mat4x4 b) {
-    int k, r, c;
-    for (c = 0; c < 4; ++c)
-        for (r = 0; r < 4; ++r) {
-            M[c][r] = 0.f;
-            for (k = 0; k < 4; ++k) M[c][r] += a[k][r] * b[c][k];
-        }
-}
-static inline void mat4x4_mul_vec4(vec4 r, mat4x4 M, vec4 v) {
-    int i, j;
-    for (j = 0; j < 4; ++j) {
-        r[j] = 0.f;
-        for (i = 0; i < 4; ++i) r[j] += M[i][j] * v[i];
-    }
-}
-static inline void mat4x4_translate(mat4x4 T, float x, float y, float z) {
-    mat4x4_identity(T);
-    T[3][0] = x;
-    T[3][1] = y;
-    T[3][2] = z;
-}
-static inline void mat4x4_translate_in_place(mat4x4 M, float x, float y, float z) {
-    vec4 t = {x, y, z, 0};
-    vec4 r;
-    int i;
-    for (i = 0; i < 4; ++i) {
-        mat4x4_row(r, M, i);
-        M[3][i] += vec4_mul_inner(r, t);
-    }
-}
-static inline void mat4x4_from_vec3_mul_outer(mat4x4 M, vec3 a, vec3 b) {
-    int i, j;
-    for (i = 0; i < 4; ++i)
-        for (j = 0; j < 4; ++j) M[i][j] = i < 3 && j < 3 ? a[i] * b[j] : 0.f;
-}
-static inline void mat4x4_rotate(mat4x4 R, mat4x4 M, float x, float y, float z, float angle) {
-    float s = sinf(angle);
-    float c = cosf(angle);
-    vec3 u = {x, y, z};
-
-    if (vec3_len(u) > 1e-4) {
-        vec3_norm(u, u);
-        mat4x4 T;
-        mat4x4_from_vec3_mul_outer(T, u, u);
-
-        mat4x4 S = {{0, u[2], -u[1], 0}, {-u[2], 0, u[0], 0}, {u[1], -u[0], 0, 0}, {0, 0, 0, 0}};
-        mat4x4_scale(S, S, s);
-
-        mat4x4 C;
-        mat4x4_identity(C);
-        mat4x4_sub(C, C, T);
-
-        mat4x4_scale(C, C, c);
-
-        mat4x4_add(T, T, C);
-        mat4x4_add(T, T, S);
-
-        T[3][3] = 1.;
-        mat4x4_mul(R, M, T);
-    } else {
-        mat4x4_dup(R, M);
-    }
-}
-static inline void mat4x4_rotate_X(mat4x4 Q, mat4x4 M, float angle) {
-    float s = sinf(angle);
-    float c = cosf(angle);
-    mat4x4 R = {{1.f, 0.f, 0.f, 0.f}, {0.f, c, s, 0.f}, {0.f, -s, c, 0.f}, {0.f, 0.f, 0.f, 1.f}};
-    mat4x4_mul(Q, M, R);
-}
-static inline void mat4x4_rotate_Y(mat4x4 Q, mat4x4 M, float angle) {
-    float s = sinf(angle);
-    float c = cosf(angle);
-    mat4x4 R = {{c, 0.f, s, 0.f}, {0.f, 1.f, 0.f, 0.f}, {-s, 0.f, c, 0.f}, {0.f, 0.f, 0.f, 1.f}};
-    mat4x4_mul(Q, M, R);
-}
-static inline void mat4x4_rotate_Z(mat4x4 Q, mat4x4 M, float angle) {
-    float s = sinf(angle);
-    float c = cosf(angle);
-    mat4x4 R = {{c, s, 0.f, 0.f}, {-s, c, 0.f, 0.f}, {0.f, 0.f, 1.f, 0.f}, {0.f, 0.f, 0.f, 1.f}};
-    mat4x4_mul(Q, M, R);
-}
-static inline void mat4x4_invert(mat4x4 T, mat4x4 M) {
-    float s[6];
-    float c[6];
-    s[0] = M[0][0] * M[1][1] - M[1][0] * M[0][1];
-    s[1] = M[0][0] * M[1][2] - M[1][0] * M[0][2];
-    s[2] = M[0][0] * M[1][3] - M[1][0] * M[0][3];
-    s[3] = M[0][1] * M[1][2] - M[1][1] * M[0][2];
-    s[4] = M[0][1] * M[1][3] - M[1][1] * M[0][3];
-    s[5] = M[0][2] * M[1][3] - M[1][2] * M[0][3];
-
-    c[0] = M[2][0] * M[3][1] - M[3][0] * M[2][1];
-    c[1] = M[2][0] * M[3][2] - M[3][0] * M[2][2];
-    c[2] = M[2][0] * M[3][3] - M[3][0] * M[2][3];
-    c[3] = M[2][1] * M[3][2] - M[3][1] * M[2][2];
-    c[4] = M[2][1] * M[3][3] - M[3][1] * M[2][3];
-    c[5] = M[2][2] * M[3][3] - M[3][2] * M[2][3];
-
-    /* Assumes it is invertible */
-    float idet = 1.0f / (s[0] * c[5] - s[1] * c[4] + s[2] * c[3] + s[3] * c[2] - s[4] * c[1] + s[5] * c[0]);
-
-    T[0][0] = (M[1][1] * c[5] - M[1][2] * c[4] + M[1][3] * c[3]) * idet;
-    T[0][1] = (-M[0][1] * c[5] + M[0][2] * c[4] - M[0][3] * c[3]) * idet;
-    T[0][2] = (M[3][1] * s[5] - M[3][2] * s[4] + M[3][3] * s[3]) * idet;
-    T[0][3] = (-M[2][1] * s[5] + M[2][2] * s[4] - M[2][3] * s[3]) * idet;
-
-    T[1][0] = (-M[1][0] * c[5] + M[1][2] * c[2] - M[1][3] * c[1]) * idet;
-    T[1][1] = (M[0][0] * c[5] - M[0][2] * c[2] + M[0][3] * c[1]) * idet;
-    T[1][2] = (-M[3][0] * s[5] + M[3][2] * s[2] - M[3][3] * s[1]) * idet;
-    T[1][3] = (M[2][0] * s[5] - M[2][2] * s[2] + M[2][3] * s[1]) * idet;
-
-    T[2][0] = (M[1][0] * c[4] - M[1][1] * c[2] + M[1][3] * c[0]) * idet;
-    T[2][1] = (-M[0][0] * c[4] + M[0][1] * c[2] - M[0][3] * c[0]) * idet;
-    T[2][2] = (M[3][0] * s[4] - M[3][1] * s[2] + M[3][3] * s[0]) * idet;
-    T[2][3] = (-M[2][0] * s[4] + M[2][1] * s[2] - M[2][3] * s[0]) * idet;
-
-    T[3][0] = (-M[1][0] * c[3] + M[1][1] * c[1] - M[1][2] * c[0]) * idet;
-    T[3][1] = (M[0][0] * c[3] - M[0][1] * c[1] + M[0][2] * c[0]) * idet;
-    T[3][2] = (-M[3][0] * s[3] + M[3][1] * s[1] - M[3][2] * s[0]) * idet;
-    T[3][3] = (M[2][0] * s[3] - M[2][1] * s[1] + M[2][2] * s[0]) * idet;
-}
-static inline void mat4x4_orthonormalize(mat4x4 R, mat4x4 M) {
-    mat4x4_dup(R, M);
-    float s = 1.;
-    vec3 h;
-
-    vec3_norm(R[2], R[2]);
-
-    s = vec3_mul_inner(R[1], R[2]);
-    vec3_scale(h, R[2], s);
-    vec3_sub(R[1], R[1], h);
-    vec3_norm(R[2], R[2]);
-
-    s = vec3_mul_inner(R[1], R[2]);
-    vec3_scale(h, R[2], s);
-    vec3_sub(R[1], R[1], h);
-    vec3_norm(R[1], R[1]);
-
-    s = vec3_mul_inner(R[0], R[1]);
-    vec3_scale(h, R[1], s);
-    vec3_sub(R[0], R[0], h);
-    vec3_norm(R[0], R[0]);
-}
-
-static inline void mat4x4_frustum(mat4x4 M, float l, float r, float b, float t, float n, float f) {
-    M[0][0] = 2.f * n / (r - l);
-    M[0][1] = M[0][2] = M[0][3] = 0.f;
-
-    M[1][1] = 2.f * n / (t - b);
-    M[1][0] = M[1][2] = M[1][3] = 0.f;
-
-    M[2][0] = (r + l) / (r - l);
-    M[2][1] = (t + b) / (t - b);
-    M[2][2] = -(f + n) / (f - n);
-    M[2][3] = -1.f;
-
-    M[3][2] = -2.f * (f * n) / (f - n);
-    M[3][0] = M[3][1] = M[3][3] = 0.f;
-}
-static inline void mat4x4_ortho(mat4x4 M, float l, float r, float b, float t, float n, float f) {
-    M[0][0] = 2.f / (r - l);
-    M[0][1] = M[0][2] = M[0][3] = 0.f;
-
-    M[1][1] = 2.f / (t - b);
-    M[1][0] = M[1][2] = M[1][3] = 0.f;
-
-    M[2][2] = -2.f / (f - n);
-    M[2][0] = M[2][1] = M[2][3] = 0.f;
-
-    M[3][0] = -(r + l) / (r - l);
-    M[3][1] = -(t + b) / (t - b);
-    M[3][2] = -(f + n) / (f - n);
-    M[3][3] = 1.f;
-}
-static inline void mat4x4_perspective(mat4x4 m, float y_fov, float aspect, float n, float f) {
-    /* NOTE: Degrees are an unhandy unit to work with.
-     * linmath.h uses radians for everything! */
-    float const a = (float)(1.f / tan(y_fov / 2.f));
-
-    m[0][0] = a / aspect;
-    m[0][1] = 0.f;
-    m[0][2] = 0.f;
-    m[0][3] = 0.f;
-
-    m[1][0] = 0.f;
-    m[1][1] = a;
-    m[1][2] = 0.f;
-    m[1][3] = 0.f;
-
-    m[2][0] = 0.f;
-    m[2][1] = 0.f;
-    m[2][2] = -((f + n) / (f - n));
-    m[2][3] = -1.f;
-
-    m[3][0] = 0.f;
-    m[3][1] = 0.f;
-    m[3][2] = -((2.f * f * n) / (f - n));
-    m[3][3] = 0.f;
-}
-static inline void mat4x4_look_at(mat4x4 m, vec3 eye, vec3 center, vec3 up) {
-    /* Adapted from Android's OpenGL Matrix.java.                        */
-    /* See the OpenGL GLUT documentation for gluLookAt for a description */
-    /* of the algorithm. We implement it in a straightforward way:       */
-
-    /* TODO: The negation of of can be spared by swapping the order of
-     *       operands in the following cross products in the right way. */
-    vec3 f;
-    vec3_sub(f, center, eye);
-    vec3_norm(f, f);
-
-    vec3 s;
-    vec3_mul_cross(s, f, up);
-    vec3_norm(s, s);
-
-    vec3 t;
-    vec3_mul_cross(t, s, f);
-
-    m[0][0] = s[0];
-    m[0][1] = t[0];
-    m[0][2] = -f[0];
-    m[0][3] = 0.f;
-
-    m[1][0] = s[1];
-    m[1][1] = t[1];
-    m[1][2] = -f[1];
-    m[1][3] = 0.f;
-
-    m[2][0] = s[2];
-    m[2][1] = t[2];
-    m[2][2] = -f[2];
-    m[2][3] = 0.f;
-
-    m[3][0] = 0.f;
-    m[3][1] = 0.f;
-    m[3][2] = 0.f;
-    m[3][3] = 1.f;
-
-    mat4x4_translate_in_place(m, -eye[0], -eye[1], -eye[2]);
-}
-
-typedef float quat[4];
-static inline void quat_identity(quat q) {
-    q[0] = q[1] = q[2] = 0.f;
-    q[3] = 1.f;
-}
-static inline void quat_add(quat r, quat a, quat b) {
-    int i;
-    for (i = 0; i < 4; ++i) r[i] = a[i] + b[i];
-}
-static inline void quat_sub(quat r, quat a, quat b) {
-    int i;
-    for (i = 0; i < 4; ++i) r[i] = a[i] - b[i];
-}
-static inline void quat_mul(quat r, quat p, quat q) {
-    vec3 w;
-    vec3_mul_cross(r, p, q);
-    vec3_scale(w, p, q[3]);
-    vec3_add(r, r, w);
-    vec3_scale(w, q, p[3]);
-    vec3_add(r, r, w);
-    r[3] = p[3] * q[3] - vec3_mul_inner(p, q);
-}
-static inline void quat_scale(quat r, quat v, float s) {
-    int i;
-    for (i = 0; i < 4; ++i) r[i] = v[i] * s;
-}
-static inline float quat_inner_product(quat a, quat b) {
-    float p = 0.f;
-    int i;
-    for (i = 0; i < 4; ++i) p += b[i] * a[i];
-    return p;
-}
-static inline void quat_conj(quat r, quat q) {
-    int i;
-    for (i = 0; i < 3; ++i) r[i] = -q[i];
-    r[3] = q[3];
-}
-#define quat_norm vec4_norm
-static inline void quat_mul_vec3(vec3 r, quat q, vec3 v) {
-    quat v_ = {v[0], v[1], v[2], 0.f};
-
-    quat_conj(r, q);
-    quat_norm(r, r);
-    quat_mul(r, v_, r);
-    quat_mul(r, q, r);
-}
-static inline void mat4x4_from_quat(mat4x4 M, quat q) {
-    float a = q[3];
-    float b = q[0];
-    float c = q[1];
-    float d = q[2];
-    float a2 = a * a;
-    float b2 = b * b;
-    float c2 = c * c;
-    float d2 = d * d;
-
-    M[0][0] = a2 + b2 - c2 - d2;
-    M[0][1] = 2.f * (b * c + a * d);
-    M[0][2] = 2.f * (b * d - a * c);
-    M[0][3] = 0.f;
-
-    M[1][0] = 2 * (b * c - a * d);
-    M[1][1] = a2 - b2 + c2 - d2;
-    M[1][2] = 2.f * (c * d + a * b);
-    M[1][3] = 0.f;
-
-    M[2][0] = 2.f * (b * d + a * c);
-    M[2][1] = 2.f * (c * d - a * b);
-    M[2][2] = a2 - b2 - c2 + d2;
-    M[2][3] = 0.f;
-
-    M[3][0] = M[3][1] = M[3][2] = 0.f;
-    M[3][3] = 1.f;
-}
-
-static inline void mat4x4o_mul_quat(mat4x4 R, mat4x4 M, quat q) {
-    /*  XXX: The way this is written only works for othogonal matrices. */
-    /* TODO: Take care of non-orthogonal case. */
-    quat_mul_vec3(R[0], q, M[0]);
-    quat_mul_vec3(R[1], q, M[1]);
-    quat_mul_vec3(R[2], q, M[2]);
-
-    R[3][0] = R[3][1] = R[3][2] = 0.f;
-    R[3][3] = 1.f;
-}
-static inline void quat_from_mat4x4(quat q, mat4x4 M) {
-    float r = 0.f;
-    int i;
-
-    int perm[] = {0, 1, 2, 0, 1};
-    int *p = perm;
-
-    for (i = 0; i < 3; i++) {
-        float m = M[i][i];
-        if (m < r) continue;
-        m = r;
-        p = &perm[i];
-    }
-
-    r = sqrtf(1.f + M[p[0]][p[0]] - M[p[1]][p[1]] - M[p[2]][p[2]]);
-
-    if (r < 1e-6) {
-        q[0] = 1.f;
-        q[1] = q[2] = q[3] = 0.f;
-        return;
-    }
-
-    q[0] = r / 2.f;
-    q[1] = (M[p[0]][p[1]] - M[p[1]][p[0]]) / (2.f * r);
-    q[2] = (M[p[2]][p[0]] - M[p[0]][p[2]]) / (2.f * r);
-    q[3] = (M[p[2]][p[1]] - M[p[1]][p[2]]) / (2.f * r);
-}
-
-#endif
-
-
-mat4x4 apr_projection_matrix;
-mat4x4 apr_view_matrix;
-mat4x4 apr_model_matrix;
-
-float 	apr_spin_angle;
-float 	apr_spin_increment;
-bool	apr_pause;
-
-
-//bool in_callback = false;
 #define ERR_EXIT(err_msg, err_class)											 \
 	do {																		 \
 		MessageBox(NULL, err_msg, err_class, MB_OK); \
@@ -525,133 +44,8 @@ bool	apr_pause;
 
 
 static PFN_vkGetDeviceProcAddr g_gdpa = NULL;
-
 static const char *tex_files[] = {"lunarg.ppm"};
 
-
-struct vktexcube_vs_uniform 
-{
-	// Must start with MVP
-	float mvp[4][4];
-	float position[12 * 3][4];
-	float attr[12 * 3][4];
-};
-
-//--------------------------------------------------------------------------------------
-// Mesh and VertexFormat Data
-//--------------------------------------------------------------------------------------
-// clang-format off
-static const float g_vertex_buffer_data[] = 
-{
-	-1.0f,-1.0f,-1.0f,  // -X side
-	-1.0f,-1.0f, 1.0f,
-	-1.0f, 1.0f, 1.0f,
-	-1.0f, 1.0f, 1.0f,
-	-1.0f, 1.0f,-1.0f,
-	-1.0f,-1.0f,-1.0f,
-
-	-1.0f,-1.0f,-1.0f,  // -Z side
-	 1.0f, 1.0f,-1.0f,
-	 1.0f,-1.0f,-1.0f,
-	-1.0f,-1.0f,-1.0f,
-	-1.0f, 1.0f,-1.0f,
-	 1.0f, 1.0f,-1.0f,
-
-	-1.0f,-1.0f,-1.0f,  // -Y side
-	 1.0f,-1.0f,-1.0f,
-	 1.0f,-1.0f, 1.0f,
-	-1.0f,-1.0f,-1.0f,
-	 1.0f,-1.0f, 1.0f,
-	-1.0f,-1.0f, 1.0f,
-
-	-1.0f, 1.0f,-1.0f,  // +Y side
-	-1.0f, 1.0f, 1.0f,
-	 1.0f, 1.0f, 1.0f,
-	-1.0f, 1.0f,-1.0f,
-	 1.0f, 1.0f, 1.0f,
-	 1.0f, 1.0f,-1.0f,
-
-	 1.0f, 1.0f,-1.0f,  // +X side
-	 1.0f, 1.0f, 1.0f,
-	 1.0f,-1.0f, 1.0f,
-	 1.0f,-1.0f, 1.0f,
-	 1.0f,-1.0f,-1.0f,
-	 1.0f, 1.0f,-1.0f,
-
-	-1.0f, 1.0f, 1.0f,  // +Z side
-	-1.0f,-1.0f, 1.0f,
-	 1.0f, 1.0f, 1.0f,
-	-1.0f,-1.0f, 1.0f,
-	 1.0f,-1.0f, 1.0f,
-	 1.0f, 1.0f, 1.0f,
-};
-
-static const float g_uv_buffer_data[] = 
-{
-	0.0f, 1.0f,  // -X side
-	1.0f, 1.0f,
-	1.0f, 0.0f,
-	1.0f, 0.0f,
-	0.0f, 0.0f,
-	0.0f, 1.0f,
-
-	1.0f, 1.0f,  // -Z side
-	0.0f, 0.0f,
-	0.0f, 1.0f,
-	1.0f, 1.0f,
-	1.0f, 0.0f,
-	0.0f, 0.0f,
-
-	1.0f, 0.0f,  // -Y side
-	1.0f, 1.0f,
-	0.0f, 1.0f,
-	1.0f, 0.0f,
-	0.0f, 1.0f,
-	0.0f, 0.0f,
-
-	1.0f, 0.0f,  // +Y side
-	0.0f, 0.0f,
-	0.0f, 1.0f,
-	1.0f, 0.0f,
-	0.0f, 1.0f,
-	1.0f, 1.0f,
-
-	1.0f, 0.0f,  // +X side
-	0.0f, 0.0f,
-	0.0f, 1.0f,
-	0.0f, 1.0f,
-	1.0f, 1.0f,
-	1.0f, 0.0f,
-
-	0.0f, 0.0f,  // +Z side
-	0.0f, 1.0f,
-	1.0f, 0.0f,
-	0.0f, 1.0f,
-	1.0f, 1.0f,
-	1.0f, 0.0f,
-};
-// clang-format on
-
-void dumpMatrix(const char *note, mat4x4 MVP) 
-{
-	int i;
-
-	printf("%s: \n", note);
-	for (i = 0; i < 4; i++) 
-	{
-		printf("%f, %f, %f, %f\n", MVP[i][0], MVP[i][1], MVP[i][2], MVP[i][3]);
-	}
-	printf("\n");
-	fflush(stdout);
-}
-
-void dumpVec4(const char *note, vec4 vector) 
-{
-	printf("%s: \n", note);
-	printf("%f, %f, %f, %f\n", vector[0], vector[1], vector[2], vector[3]);
-	printf("\n");
-	fflush(stdout);
-}
 
 VKAPI_ATTR VkBool32 VKAPI_CALL BreakCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType, uint64_t srcObject,
 											 size_t location, int32_t msgCode, const char *pLayerPrefix, const char *pMsg,
@@ -792,7 +186,7 @@ static void demo_prepare_texture_image(
 	}
 
 	//-----------------------------------------------------
-	// ƒCƒ[ƒW‚Ìì¬
+	// ã‚¤ãƒ¡ãƒ¼ã‚¸ã®ä½œæˆ
 	//-----------------------------------------------------
 	{
 		const VkFormat tex_format = VK_FORMAT_R8G8B8A8_UNORM;
@@ -821,7 +215,7 @@ static void demo_prepare_texture_image(
 
 		};
 		VkResult  err;
-		err = vkCreateImage(device, &ici, NULL, &tex_obj->image);
+		err = vkCreateImage(device, &ici, NULL, &tex_obj->image);		//create13	setup
 		assert(!err);
 	}
 
@@ -832,7 +226,7 @@ static void demo_prepare_texture_image(
 		VkMemoryRequirements mr;
 		{
 			//---------------------------------------------------------
-			// ƒCƒ[ƒWƒƒ‚ƒŠ—v‹‚Ìæ“¾
+			// ã‚¤ãƒ¡ãƒ¼ã‚¸ãƒ¡ãƒ¢ãƒªè¦æ±‚ã®å–å¾—
 			//---------------------------------------------------------
 			vkGetImageMemoryRequirements(device, tex_obj->image, &mr);
 
@@ -842,7 +236,7 @@ static void demo_prepare_texture_image(
 			tex_obj->mem_alloc.memoryTypeIndex = 0;
 
 			//-----------------------------------------------------
-			// ƒvƒƒpƒeƒB[‚Ìæ“¾
+			// ãƒ—ãƒ­ãƒ‘ãƒ†ã‚£ãƒ¼ã®å–å¾—
 			//-----------------------------------------------------
 			bool  pass = false;
 			{
@@ -872,17 +266,17 @@ static void demo_prepare_texture_image(
 
 	/* allocate memory */
 	//---------------------------------------------------------
-	// ƒƒ‚ƒŠ‚ÌŠm•Û
+	// ãƒ¡ãƒ¢ãƒªã®ç¢ºä¿
 	//---------------------------------------------------------
 	{
 		VkResult  err;
-		err = vkAllocateMemory(device, &tex_obj->mem_alloc, NULL, &(tex_obj->devmem));
+		err = vkAllocateMemory(device, &tex_obj->mem_alloc, NULL, &(tex_obj->devmem));	//create14	setup
 		assert(!err);
 	}
 
 	/* bind memory */
 	//---------------------------------------------------------
-	// ƒCƒ[ƒWƒƒ‚ƒŠ‚ÌƒoƒCƒ“ƒh
+	// ã‚¤ãƒ¡ãƒ¼ã‚¸ãƒ¡ãƒ¢ãƒªã®ãƒã‚¤ãƒ³ãƒ‰
 	//---------------------------------------------------------
 	{
 		VkResult  err;
@@ -896,7 +290,7 @@ static void demo_prepare_texture_image(
 	if (required_props & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) 
 	{
 		//---------------------------------------------------------
-		// ƒCƒ[ƒWƒTƒuƒŠƒ\[ƒXƒŒƒCƒAƒEƒg‚Ìæ“¾
+		// ã‚¤ãƒ¡ãƒ¼ã‚¸ã‚µãƒ–ãƒªã‚½ãƒ¼ã‚¹ãƒ¬ã‚¤ã‚¢ã‚¦ãƒˆã®å–å¾—
 		//---------------------------------------------------------
 		VkSubresourceLayout layout;
 		{
@@ -912,7 +306,7 @@ static void demo_prepare_texture_image(
 		}
 
 		//---------------------------------------------------------
-		// ƒ}ƒbƒvƒƒ‚ƒŠ
+		// ãƒãƒƒãƒ—ãƒ¡ãƒ¢ãƒª
 		//---------------------------------------------------------
 		{
 			void *data;
@@ -921,7 +315,7 @@ static void demo_prepare_texture_image(
 			assert(!err);
 
 			//---------------------------------------------------------
-			// ƒeƒNƒXƒ`ƒƒ“]‘—
+			// ãƒ†ã‚¯ã‚¹ãƒãƒ£è»¢é€
 			//---------------------------------------------------------
 			if ( !loadTexture( filename, (uint8_t*)data, &layout, &tex_width, &tex_height ) )
 			{
@@ -930,7 +324,7 @@ static void demo_prepare_texture_image(
 		}
 
 		//---------------------------------------------------------
-		// ƒ}ƒbƒv‰ğœ
+		// ãƒãƒƒãƒ—è§£é™¤
 		//---------------------------------------------------------
 		{
 			vkUnmapMemory(device, tex_obj->devmem);
@@ -970,7 +364,10 @@ char *demo_read_spv(const char *filename, size_t *psize)
 
 
 //-----------------------------------------------------------------------------
-void	vk_draw( VulkanInf& vk )
+void	vk_draw( VulkanInf& vk
+,const void* pMVP
+,int& matrixSize
+)
 //-----------------------------------------------------------------------------
 {
 	// Ensure no more than FRAME_LAG renderings are outstanding
@@ -1008,19 +405,11 @@ void	vk_draw( VulkanInf& vk )
 
 	//demo_update_data_buffer(&vk);
 	{
-		mat4x4 MVP, Model, VP;
-		int matrixSize = sizeof(MVP);
+
 		uint8_t *pData;
 
-		mat4x4_mul(VP, apr_projection_matrix, apr_view_matrix);
-
-		// Rotate around the Y axis
-		mat4x4_dup(Model, apr_model_matrix);
-		mat4x4_rotate(apr_model_matrix, Model, 0.0f, 1.0f, 0.0f, (float)degreesToRadians(apr_spin_angle));
-		mat4x4_mul(MVP, VP, apr_model_matrix);
-
 		//---------------------------------------------------------
-		// ƒ}ƒbƒvƒƒ‚ƒŠ
+		// ãƒãƒƒãƒ—ãƒ¡ãƒ¢ãƒª
 		//---------------------------------------------------------
 		{
 			VkResult  err;
@@ -1036,12 +425,12 @@ void	vk_draw( VulkanInf& vk )
 		}
 
 		//---------------------------------------------------------
-		// ƒ}ƒgƒŠƒNƒX‚ÌƒRƒs[
+		// ãƒãƒˆãƒªã‚¯ã‚¹ã®ã‚³ãƒ”ãƒ¼
 		//---------------------------------------------------------
-		memcpy(pData, (const void *)&MVP[0][0], matrixSize);
+		memcpy(pData, pMVP, matrixSize);
 
 		//---------------------------------------------------------
-		// ƒ}ƒbƒv‰ğœ
+		// ãƒãƒƒãƒ—è§£é™¤
 		//---------------------------------------------------------
 		vkUnmapMemory(vk.device, vk.swapchain_image_resources[vk.current_buffer].uniform_memory);
 	}
@@ -1053,7 +442,7 @@ void	vk_draw( VulkanInf& vk )
 	// okay to render to the image.
 
 	//---------------------------------------------------------
-	// ƒOƒ‰ƒtƒBƒbƒNƒLƒ…[‚ğ“o˜^
+	// ã‚°ãƒ©ãƒ•ã‚£ãƒƒã‚¯ã‚­ãƒ¥ãƒ¼ã‚’ç™»éŒ²
 	//---------------------------------------------------------
 	{
 		VkPipelineStageFlags psf;
@@ -1079,7 +468,7 @@ void	vk_draw( VulkanInf& vk )
 	}
 
 	//---------------------------------------------------------
-	// •`‰æƒLƒ…[‚ğ“o˜^
+	// æç”»ã‚­ãƒ¥ãƒ¼ã‚’ç™»éŒ²
 	//---------------------------------------------------------
 	if (vk.flg_separate_present_queue) 
 	{
@@ -1129,7 +518,7 @@ void	vk_draw( VulkanInf& vk )
 
 
 		//---------------------------------------------------------
-		// •`‰æƒLƒbƒN
+		// æç”»ã‚­ãƒƒã‚¯
 		//---------------------------------------------------------
 		{
 			VkResult  err;
@@ -1167,7 +556,7 @@ void	vk_init( VulkanInf& vk )
 	vk.enabled_layer_count = 0;
 
 	//---------------------------------------------------------
-	// Šg’£ƒCƒ“ƒXƒ^ƒ“ƒXî•ñ‚Ìæ“¾
+	// æ‹¡å¼µã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹æƒ…å ±ã®å–å¾—
 	//---------------------------------------------------------
 	{
 		VkBool32 surfaceExtFound = 0;
@@ -1241,7 +630,7 @@ void	vk_init( VulkanInf& vk )
 	}
 
 	//---------------------------------------------------------
-	// ƒCƒ“ƒXƒ^ƒ“ƒX‚Ìì¬
+	// ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ã®ä½œæˆ
 	//---------------------------------------------------------
 	{
 		const VkApplicationInfo app = 
@@ -1269,11 +658,11 @@ void	vk_init( VulkanInf& vk )
 
 
 			//---------------------------------------------------------
-			// ƒCƒ“ƒXƒ^ƒ“ƒX‚Ìì¬
+			// ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ã®ä½œæˆ
 			//---------------------------------------------------------
 			{
 				VkResult err;
-				err = vkCreateInstance(&inst_info, NULL, &vk.inst);
+				err = vkCreateInstance(&inst_info, NULL, &vk.inst);			//create31
 				if (err == VK_ERROR_INCOMPATIBLE_DRIVER) 
 				{
 					ERR_EXIT("Cannot find a compatible Vulkan installable client driver "
@@ -1297,7 +686,7 @@ void	vk_init( VulkanInf& vk )
 	}
 
 	//---------------------------------------------------------
-	// GPU”‚ğæ“¾
+	// GPUæ•°ã‚’å–å¾—
 	//---------------------------------------------------------
 	uint32_t gpu_count;
 	{
@@ -1307,7 +696,7 @@ void	vk_init( VulkanInf& vk )
 	}
 
 	//---------------------------------------------------------
-	// GPUƒfƒoƒCƒX‚ğ—ñ‹“
+	// GPUãƒ‡ãƒã‚¤ã‚¹ã‚’åˆ—æŒ™
 	//---------------------------------------------------------
 	if (gpu_count > 0) 
 	{
@@ -1330,7 +719,7 @@ void	vk_init( VulkanInf& vk )
 	}
 
 	//---------------------------------------------------------
-	// —ñ‹“ƒfƒoƒCƒXî•ñ‰Šú‰»
+	// åˆ—æŒ™ãƒ‡ãƒã‚¤ã‚¹æƒ…å ±åˆæœŸåŒ–
 	//---------------------------------------------------------
 	{
 		vk.enabled_extension_count = 0;
@@ -1338,7 +727,7 @@ void	vk_init( VulkanInf& vk )
 	}
 
 	//---------------------------------------------------------
-	// —ñ‹“ƒfƒoƒCƒXî•ñæ“¾
+	// åˆ—æŒ™ãƒ‡ãƒã‚¤ã‚¹æƒ…å ±å–å¾—
 	//---------------------------------------------------------
 	{
 		uint32_t device_extension_count = 0;
@@ -1354,7 +743,7 @@ void	vk_init( VulkanInf& vk )
 			{
 				VkExtensionProperties* device_extensions = (VkExtensionProperties*)malloc(sizeof(VkExtensionProperties) * device_extension_count);
 				//---------------------------------------------------------
-				// —ñ‹“ƒfƒoƒCƒXî•ñæ“¾
+				// åˆ—æŒ™ãƒ‡ãƒã‚¤ã‚¹æƒ…å ±å–å¾—
 				//---------------------------------------------------------
 				{
 					VkResult err;
@@ -1390,12 +779,12 @@ void	vk_init( VulkanInf& vk )
 
 
 	//---------------------------------------------------------
-	// GPUƒfƒoƒCƒXî•ñæ“¾
+	// GPUãƒ‡ãƒã‚¤ã‚¹æƒ…å ±å–å¾—
 	//---------------------------------------------------------
 	vkGetPhysicalDeviceProperties(vk.gpu, &vk.gpu_props);
 
 	//---------------------------------------------------------
-	// ƒfƒoƒCƒXƒLƒ…[ƒtƒ@ƒ~ƒŠ[î•ñæ“¾
+	// ãƒ‡ãƒã‚¤ã‚¹ã‚­ãƒ¥ãƒ¼ãƒ•ã‚¡ãƒŸãƒªãƒ¼æƒ…å ±å–å¾—
 	//---------------------------------------------------------
 	{
 		vkGetPhysicalDeviceQueueFamilyProperties(vk.gpu,&vk.queue_family_count, NULL);
@@ -1403,17 +792,17 @@ void	vk_init( VulkanInf& vk )
 	}
 
 	//---------------------------------------------------------
-	// ƒLƒ…[ƒtƒ@ƒ~ƒŠ[î•ñƒoƒbƒtƒ@Šm•Û
+	// ã‚­ãƒ¥ãƒ¼ãƒ•ã‚¡ãƒŸãƒªãƒ¼æƒ…å ±ãƒãƒƒãƒ•ã‚¡ç¢ºä¿
 	//---------------------------------------------------------
-	vk.queue_props = (VkQueueFamilyProperties *)malloc( vk.queue_family_count * sizeof(VkQueueFamilyProperties));
+	vk.queue_props = (VkQueueFamilyProperties *)malloc( vk.queue_family_count * sizeof(VkQueueFamilyProperties));	//create25
 
 	//---------------------------------------------------------
-	// ƒLƒ…[ƒtƒ@ƒ~ƒŠ[î•ñæ“¾
+	// ã‚­ãƒ¥ãƒ¼ãƒ•ã‚¡ãƒŸãƒªãƒ¼æƒ…å ±å–å¾—
 	//---------------------------------------------------------
 	vkGetPhysicalDeviceQueueFamilyProperties( vk.gpu, &vk.queue_family_count, vk.queue_props);
 
 	//---------------------------------------------------------
-	// ƒfƒoƒCƒX‹@”\î•ñ‚Ìæ“¾
+	// ãƒ‡ãƒã‚¤ã‚¹æ©Ÿèƒ½æƒ…å ±ã®å–å¾—
 	//---------------------------------------------------------
 	{
 		// Query fine-grained feature support for this device.
@@ -1424,7 +813,7 @@ void	vk_init( VulkanInf& vk )
 	}
 
 	//---------------------------------------------------------
-	// Šg’£ŠÖ”æ“¾
+	// æ‹¡å¼µé–¢æ•°å–å¾—
 	//---------------------------------------------------------
 	{
 		vk.fpGetPhysicalDeviceSurfaceSupportKHR = (PFN_vkGetPhysicalDeviceSurfaceSupportKHR)vkGetInstanceProcAddr(vk.inst, "vk" "GetPhysicalDeviceSurfaceSupportKHR");
@@ -1466,7 +855,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 //-----------------------------------------------------------------------------
 {
 	//---------------------------------------------------------
-	// windowsƒnƒ“ƒhƒ‹‚©‚çAvkƒT[ƒtƒFƒX‚ğæ“¾‚·‚é
+	// windowsãƒãƒ³ãƒ‰ãƒ«ã‹ã‚‰ã€vkã‚µãƒ¼ãƒ•ã‚§ã‚¹ã‚’å–å¾—ã™ã‚‹
 	//---------------------------------------------------------
 	{
 		VkWin32SurfaceCreateInfoKHR createInfo;
@@ -1478,12 +867,12 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 		createInfo.hwnd 		= hWin;
 
 		VkResult  err;
-		err = vkCreateWin32SurfaceKHR(vk.inst, &createInfo, NULL, &vk.surface);
+		err = vkCreateWin32SurfaceKHR(vk.inst, &createInfo, NULL, &vk.surface);		//create30s
 		assert(!err);
 	}
 
 	//---------------------------------------------------------
-	// ƒLƒ…[‚ğì¬
+	// ã‚­ãƒ¥ãƒ¼ã‚’ä½œæˆ
 	//---------------------------------------------------------
 	{
 		// Iterate over each queue to learn whether it supports presenting:
@@ -1581,7 +970,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 		}
 
 		VkResult  err;
-		err = vkCreateDevice(vk.gpu, &device, NULL, &vk.device);
+		err = vkCreateDevice(vk.gpu, &device, NULL, &vk.device);			//create29s
 		assert(!err);
 	}
 
@@ -1650,11 +1039,11 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 	}
 
 	//---------------------------------------------------------
-	// ƒtƒH[ƒ}ƒbƒgî•ñ‚ğæ“¾
+	// ãƒ•ã‚©ãƒ¼ãƒãƒƒãƒˆæƒ…å ±ã‚’å–å¾—
 	//---------------------------------------------------------
 	{	
 		//---------------------------------------------------------
-		// ƒtƒH[ƒ€”‚ğæ“¾
+		// ãƒ•ã‚©ãƒ¼ãƒ æ•°ã‚’å–å¾—
 		//---------------------------------------------------------
 		uint32_t formatCount;
 		{
@@ -1664,12 +1053,12 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 		}
 
 		//---------------------------------------------------------
-		// ƒtƒH[ƒ€”•ªƒoƒbƒtƒ@‚ğŠm•Û
+		// ãƒ•ã‚©ãƒ¼ãƒ æ•°åˆ†ãƒãƒƒãƒ•ã‚¡ã‚’ç¢ºä¿
 		//---------------------------------------------------------
 		VkSurfaceFormatKHR *surfFormats = (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
 
 		//---------------------------------------------------------
-		// ƒT[ƒtƒF[ƒXƒtƒH[ƒ}ƒbƒg‚ğæ“¾
+		// ã‚µãƒ¼ãƒ•ã‚§ãƒ¼ã‚¹ãƒ•ã‚©ãƒ¼ãƒãƒƒãƒˆã‚’å–å¾—
 		//---------------------------------------------------------
 		{
 			VkResult  err;
@@ -1715,7 +1104,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 				.flags = VK_FENCE_CREATE_SIGNALED_BIT
 			};
 			VkResult  err;
-			err = vkCreateFence(vk.device, &fci, NULL, &vk.fences[i]);
+			err = vkCreateFence(vk.device, &fci, NULL, &vk.fences[i]);		//create1s
 			assert(!err);
 		}
 
@@ -1729,30 +1118,30 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 				.flags = 0,
 			};
 			//---------------------------------------------------------
-			// ƒZƒ}ƒtƒH‚Ìì¬FƒCƒ[ƒWƒAƒLƒ…ƒƒCƒh
+			// ã‚»ãƒãƒ•ã‚©ã®ä½œæˆï¼šã‚¤ãƒ¡ãƒ¼ã‚¸ã‚¢ã‚­ãƒ¥ãƒ¯ã‚¤ãƒ‰
 			//---------------------------------------------------------
 			{
 				VkResult  err;
-				err = vkCreateSemaphore(vk.device, &sci, NULL, &vk.image_acquired_semaphores[i]);
+				err = vkCreateSemaphore(vk.device, &sci, NULL, &vk.image_acquired_semaphores[i]);	//create2s
 				assert(!err);
 			}
 
 			//---------------------------------------------------------
-			// ƒZƒ}ƒtƒH‚Ìì¬F•`‰æŠ®—¹
+			// ã‚»ãƒãƒ•ã‚©ã®ä½œæˆï¼šæç”»å®Œäº†
 			//---------------------------------------------------------
 			{
 				VkResult  err;
-				err = vkCreateSemaphore(vk.device, &sci, NULL, &vk.draw_complete_semaphores[i]);
+				err = vkCreateSemaphore(vk.device, &sci, NULL, &vk.draw_complete_semaphores[i]);	//create3s
 				assert(!err);
 			}
 
 			//---------------------------------------------------------
-			// ƒZƒ}ƒtƒH‚Ìì¬FƒCƒ[ƒWƒI[ƒi[ƒVƒbƒv
+			// ã‚»ãƒãƒ•ã‚©ã®ä½œæˆï¼šã‚¤ãƒ¡ãƒ¼ã‚¸ã‚ªãƒ¼ãƒŠãƒ¼ã‚·ãƒƒãƒ—
 			//---------------------------------------------------------
 			if (vk.flg_separate_present_queue) 
 			{
 				VkResult  err;
-				err = vkCreateSemaphore(vk.device, &sci, NULL, &vk.image_ownership_semaphores[i]);
+				err = vkCreateSemaphore(vk.device, &sci, NULL, &vk.image_ownership_semaphores[i]);	//create4s
 				assert(!err);
 			}
 		}
@@ -1761,7 +1150,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 
 
 	//---------------------------------------------------------
-	// ƒRƒ}ƒ“ƒhƒv[ƒ‹‚Ìì¬
+	// ã‚³ãƒãƒ³ãƒ‰ãƒ—ãƒ¼ãƒ«ã®ä½œæˆ
 	//---------------------------------------------------------
 	{
 
@@ -1774,14 +1163,14 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 		};
 
 		VkResult  err;
-		err = vkCreateCommandPool(vk.device, &cmd_pool_info, NULL, &vk.cmd_pool);
+		err = vkCreateCommandPool(vk.device, &cmd_pool_info, NULL, &vk.cmd_pool);	//create26s
 		assert(!err);
 	}
 
 
 
 	//---------------------------------------------------------
-	// ƒRƒ}ƒ“ƒhƒoƒbƒtƒ@‚ÌŠm•Û
+	// ã‚³ãƒãƒ³ãƒ‰ãƒãƒƒãƒ•ã‚¡ã®ç¢ºä¿
 	//---------------------------------------------------------
 	{
 		const VkCommandBufferAllocateInfo cmai = 
@@ -1798,7 +1187,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 	}
 
 	//---------------------------------------------------------
-	// ƒRƒ}ƒ“ƒhƒoƒbƒtƒ@‚ÌŠJn
+	// ã‚³ãƒãƒ³ãƒ‰ãƒãƒƒãƒ•ã‚¡ã®é–‹å§‹
 	//---------------------------------------------------------
 	{
 		VkCommandBufferBeginInfo cb = 
@@ -1815,7 +1204,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 
 
 	//---------------------------------------------------------
-	// •`‰æƒ‚[ƒh’l
+	// æç”»ãƒ¢ãƒ¼ãƒ‰å€¤
 	//---------------------------------------------------------
 	VkPresentModeKHR swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR;
 	{
@@ -1849,7 +1238,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 		// the application wants the late image to be immediately displayed, even
 		// though that may mean some tearing.
 		//---------------------------------------------------------
-		// •`‰æƒ‚[ƒh‚Ì”‚Ìæ“¾
+		// æç”»ãƒ¢ãƒ¼ãƒ‰ã®æ•°ã®å–å¾—
 		//---------------------------------------------------------
 		uint32_t presentModeCount;
 		{
@@ -1859,7 +1248,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 		}
 
 		//---------------------------------------------------------
-		// •`‰æƒ‚[ƒhƒoƒbƒtƒ@‚ÌŠm•Û
+		// æç”»ãƒ¢ãƒ¼ãƒ‰ãƒãƒƒãƒ•ã‚¡ã®ç¢ºä¿
 		//---------------------------------------------------------
 		VkPresentModeKHR *presentModes;
 		{
@@ -1872,7 +1261,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 		}
 
 		//---------------------------------------------------------
-		// •`‰æƒ‚[ƒh‚ğŒŸõ
+		// æç”»ãƒ¢ãƒ¼ãƒ‰ã‚’æ¤œç´¢
 		//---------------------------------------------------------
 		if (vk.presentMode !=  swapchainPresentMode) 
 		{
@@ -1892,7 +1281,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 		}
 
 		//---------------------------------------------------------
-		// •`‰æƒ‚[ƒhƒoƒbƒtƒ@‚Ì‰ğ•ú
+		// æç”»ãƒ¢ãƒ¼ãƒ‰ãƒãƒƒãƒ•ã‚¡ã®è§£æ”¾
 		//---------------------------------------------------------
 		if (NULL != presentModes) 
 		{
@@ -1902,7 +1291,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 
 
 	//---------------------------------------------------------
-	// ƒT[ƒtƒFƒXî•ñ‚Ìæ“¾
+	// ã‚µãƒ¼ãƒ•ã‚§ã‚¹æƒ…å ±ã®å–å¾—
 	//---------------------------------------------------------
 	VkSurfaceCapabilitiesKHR surfCapabilities;
 	{
@@ -1912,7 +1301,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 	}
 
 	//---------------------------------------------------------
-	// Å¬ƒCƒ[ƒW”’l
+	// æœ€å°ã‚¤ãƒ¡ãƒ¼ã‚¸æ•°å€¤
 	//---------------------------------------------------------
 	uint32_t mic = 3;
 	{
@@ -1933,7 +1322,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 	}
 
 	//---------------------------------------------------------
-	// ƒT[ƒtƒFƒXƒgƒ‰ƒ“ƒXƒtƒH[ƒ€’l
+	// ã‚µãƒ¼ãƒ•ã‚§ã‚¹ãƒˆãƒ©ãƒ³ã‚¹ãƒ•ã‚©ãƒ¼ãƒ å€¤
 	//---------------------------------------------------------
 //	VkSurfaceTransformFlagsKHR preTransform;
 	VkSurfaceTransformFlagBitsKHR preTransform;
@@ -1948,7 +1337,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 	}
 
 	//---------------------------------------------------------
-	// ƒRƒ“ƒ|ƒWƒbƒgƒAƒ‹ƒtƒ@ƒtƒ‰ƒO’l
+	// ã‚³ãƒ³ãƒã‚¸ãƒƒãƒˆã‚¢ãƒ«ãƒ•ã‚¡ãƒ•ãƒ©ã‚°å€¤
 	//---------------------------------------------------------
 	VkCompositeAlphaFlagBitsKHR caf = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 	{
@@ -1971,11 +1360,11 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 	}
 
 	//---------------------------------------------------------
-	// ƒXƒƒbƒvƒ`ƒFƒCƒ“‚ÌØ‚è‘Ö‚¦
+	// ã‚¹ãƒ¯ãƒƒãƒ—ãƒã‚§ã‚¤ãƒ³ã®åˆ‡ã‚Šæ›¿ãˆ
 	//---------------------------------------------------------
 	{
 		//---------------------------------------------------------
-		// ƒXƒNƒŠ[ƒ“ƒTƒCƒY’l
+		// ã‚¹ã‚¯ãƒªãƒ¼ãƒ³ã‚µã‚¤ã‚ºå€¤
 		//---------------------------------------------------------
 		VkExtent2D ext;
 		{
@@ -2017,12 +1406,12 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 		}
 
 		//---------------------------------------------------------
-		// ƒXƒƒbƒvƒ`ƒFƒCƒ“‚Ì•Û‘¶
+		// ã‚¹ãƒ¯ãƒƒãƒ—ãƒã‚§ã‚¤ãƒ³ã®ä¿å­˜
 		//---------------------------------------------------------
 		VkSwapchainKHR oldSwapchain = vk.swapchain;
 
 		//---------------------------------------------------------
-		// ƒXƒƒbƒvƒ`ƒFƒCƒ“‚Ìì¬
+		// ã‚¹ãƒ¯ãƒƒãƒ—ãƒã‚§ã‚¤ãƒ³ã®ä½œæˆ
 		//---------------------------------------------------------
 		{
 			VkSwapchainCreateInfoKHR sci = 
@@ -2050,11 +1439,11 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 				.clipped 				= true,
 			};
 			VkResult  err;
-			err = vk.fpCreateSwapchainKHR(vk.device, &sci, NULL, &vk.swapchain);
+			err = vk.fpCreateSwapchainKHR(vk.device, &sci, NULL, &vk.swapchain);	//create16s
 			assert(!err);
 		}
 		//---------------------------------------------------------
-		// ‹ŒƒXƒƒbƒvƒ`ƒFƒCƒ“‚Ì”pŠü
+		// æ—§ã‚¹ãƒ¯ãƒƒãƒ—ãƒã‚§ã‚¤ãƒ³ã®å»ƒæ£„
 		//---------------------------------------------------------
 		{
 			// If we just re-created an existing swapchain, we should destroy the old
@@ -2069,7 +1458,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 	}
 
 	//---------------------------------------------------------
-	// ƒXƒƒbƒvƒ`ƒFƒCƒ“EƒCƒ[ƒW”‚Ìæ“¾
+	// ã‚¹ãƒ¯ãƒƒãƒ—ãƒã‚§ã‚¤ãƒ³ãƒ»ã‚¤ãƒ¡ãƒ¼ã‚¸æ•°ã®å–å¾—
 	//---------------------------------------------------------
 	{
 		VkResult  err;
@@ -2079,7 +1468,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 
 	{
 		//---------------------------------------------------------
-		// ƒXƒƒbƒvƒ`ƒFƒCƒ“EƒCƒ[ƒWƒoƒbƒtƒ@‚ÌŠm•Û
+		// ã‚¹ãƒ¯ãƒƒãƒ—ãƒã‚§ã‚¤ãƒ³ãƒ»ã‚¤ãƒ¡ãƒ¼ã‚¸ãƒãƒƒãƒ•ã‚¡ã®ç¢ºä¿
 		//---------------------------------------------------------
 		VkImage *sci = (VkImage *)malloc(vk.swapchainImageCount * sizeof(VkImage));
 		assert(sci);
@@ -2090,10 +1479,10 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 		}
 
 		//---------------------------------------------------------
-		// ƒCƒ[ƒWƒrƒ…[‚Ìì¬
+		// ã‚¤ãƒ¡ãƒ¼ã‚¸ãƒ“ãƒ¥ãƒ¼ã®ä½œæˆ
 		//---------------------------------------------------------
 		{
-			vk.swapchain_image_resources = (SwapchainImageResources *)malloc(sizeof(SwapchainImageResources) * vk.swapchainImageCount);
+			vk.swapchain_image_resources = (SwapchainImageResources *)malloc(sizeof(SwapchainImageResources) * vk.swapchainImageCount);	//create24s
 			assert(vk.swapchain_image_resources);
 
 			for (uint32_t i = 0; i < vk.swapchainImageCount; i++) 
@@ -2127,7 +1516,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 
 				{
 					VkResult  err;
-					err = vkCreateImageView(vk.device, &ivci, NULL, &vk.swapchain_image_resources[i].imgview);
+					err = vkCreateImageView(vk.device, &ivci, NULL, &vk.swapchain_image_resources[i].imgview);	//create20s
 					assert(!err);
 				}
 			}
@@ -2136,7 +1525,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 	}
 	
 	//---------------------------------------------------------
-	// •¨—ƒfƒoƒCƒXƒƒ‚ƒŠƒvƒƒpƒeƒB‚ğæ“¾
+	// ç‰©ç†ãƒ‡ãƒã‚¤ã‚¹ãƒ¡ãƒ¢ãƒªãƒ—ãƒ­ãƒ‘ãƒ†ã‚£ã‚’å–å¾—
 	//---------------------------------------------------------
 	{
 		vk.frame_index = 0;
@@ -2145,7 +1534,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 	}
 	
 	//-----------------------------------------------------
-	// ƒtƒŒ[ƒ€ƒoƒbƒtƒ@‚Ìì¬
+	// ãƒ•ãƒ¬ãƒ¼ãƒ ãƒãƒƒãƒ•ã‚¡ã®ä½œæˆ
 	//-----------------------------------------------------
 	{//demo_prepare_depth(&vk);
 		const VkFormat depth_format = VK_FORMAT_D16_UNORM;
@@ -2167,24 +1556,24 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 
 
 		//-----------------------------------------------------
-		// ƒfƒvƒXì¬
+		// ãƒ‡ãƒ—ã‚¹ä½œæˆ
 		//-----------------------------------------------------
 		{
 			VkMemoryRequirements mr;
 			vk.depth_inf.format = depth_format;
 
 			//-----------------------------------------------------
-			// ƒCƒ[ƒW‚Ìì¬
+			// ã‚¤ãƒ¡ãƒ¼ã‚¸ã®ä½œæˆ
 			//-----------------------------------------------------
 			{
 				/* create image */
 				VkResult  err;
-				err = vkCreateImage(vk.device, &image, NULL, &vk.depth_inf.image);
+				err = vkCreateImage(vk.device, &image, NULL, &vk.depth_inf.image);	//create18s
 				assert(!err);
 			}
 
 			//-----------------------------------------------------
-			// ƒCƒ[ƒWƒƒ‚ƒŠî•ñ‚Ìæ“¾
+			// ã‚¤ãƒ¡ãƒ¼ã‚¸ãƒ¡ãƒ¢ãƒªæƒ…å ±ã®å–å¾—
 			//-----------------------------------------------------
 			{
 				vkGetImageMemoryRequirements(vk.device, vk.depth_inf.image, &mr);
@@ -2226,17 +1615,17 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 			}
 
 			//-----------------------------------------------------
-			// ƒƒ‚ƒŠŠm•ÛFƒfƒvƒX 
+			// ãƒ¡ãƒ¢ãƒªç¢ºä¿ï¼šãƒ‡ãƒ—ã‚¹ 
 			//-----------------------------------------------------
 			{ 
 				/* allocate memory */
 				VkResult  err;
-				err = vkAllocateMemory(vk.device, &vk.depth_inf.mem_alloc, NULL, &vk.depth_inf.devmem);
+				err = vkAllocateMemory(vk.device, &vk.depth_inf.mem_alloc, NULL, &vk.depth_inf.devmem);	//create19s
 				assert(!err);
 			}
 
 			//-----------------------------------------------------
-			// ƒCƒ[ƒWƒƒ‚ƒŠ‚ÌƒoƒCƒ“ƒh
+			// ã‚¤ãƒ¡ãƒ¼ã‚¸ãƒ¡ãƒ¢ãƒªã®ãƒã‚¤ãƒ³ãƒ‰
 			//-----------------------------------------------------
 			{
 				/* bind memory */
@@ -2247,7 +1636,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 		}
 
 		//-----------------------------------------------------
-		// ƒCƒ[ƒWƒrƒ…[‚Ìì¬
+		// ã‚¤ãƒ¡ãƒ¼ã‚¸ãƒ“ãƒ¥ãƒ¼ã®ä½œæˆ
 		//-----------------------------------------------------
 		{
 			VkImageViewCreateInfo ivci = 
@@ -2268,13 +1657,13 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 			/* create image imgview */
 			ivci.image = vk.depth_inf.image;
 			VkResult  err;
-			err = vkCreateImageView(vk.device, &ivci, NULL, &vk.depth_inf.imgview);
+			err = vkCreateImageView(vk.device, &ivci, NULL, &vk.depth_inf.imgview);	//create17s
 			assert(!err);
 		}
 	}
 
 	//-----------------------------------------------------
-	// ƒeƒNƒXƒ`ƒƒƒCƒ[ƒWƒrƒ…[‚Ìì¬
+	// ãƒ†ã‚¯ã‚¹ãƒãƒ£ã‚¤ãƒ¡ãƒ¼ã‚¸ãƒ“ãƒ¥ãƒ¼ã®ä½œæˆ
 	//-----------------------------------------------------
 	//demo_prepare_textures(&vk);
 	{
@@ -2509,7 +1898,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 
 
 			//-----------------------------------------------------
-			// ƒTƒ“ƒvƒ‰[‚Ìì¬
+			// ã‚µãƒ³ãƒ—ãƒ©ãƒ¼ã®ä½œæˆ
 			//-----------------------------------------------------
 			{
 				/* create sampler */
@@ -2533,12 +1922,12 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 					.unnormalizedCoordinates = VK_FALSE,
 				};
 				VkResult  err;
-				err = vkCreateSampler(vk.device, &sci, NULL, &vk.textures[i].sampler);
+				err = vkCreateSampler(vk.device, &sci, NULL, &vk.textures[i].sampler);	//create15s
 				assert(!err);
 			}
 
 			//-----------------------------------------------------
-			// ƒCƒ[ƒWƒrƒ…[‚Ìì¬
+			// ã‚¤ãƒ¡ãƒ¼ã‚¸ãƒ“ãƒ¥ãƒ¼ã®ä½œæˆ
 			//-----------------------------------------------------
 			{
 				/* create image imgview */
@@ -2559,7 +1948,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 				};
 				ivc.image = vk.textures[i].image;
 				VkResult  err;
-				err = vkCreateImageView(vk.device, &ivc, NULL, &vk.textures[i].imgview);
+				err = vkCreateImageView(vk.device, &ivc, NULL, &vk.textures[i].imgview);	//create12s
 				assert(!err);
 			}
 			
@@ -2569,117 +1958,120 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 }
 
 //-----------------------------------------------------------------------------
-void vk_setVert( VulkanInf& vk, void* pDataVert, int sizeVert )
+static void vk_setVert(
 //-----------------------------------------------------------------------------
+	  const VkDevice							& 	vk_sc_device 
+	, const VkPhysicalDeviceMemoryProperties	&	vk_pdmemory_properties
+	, const void* 									pDataVert
+	, const int 									sizeofDataVert
+
+	, VkBuffer 									&	sc_uniform_buffer
+	, VkDeviceMemory 							&	sc_uniform_memory
+)
 {
-	//-----------------------------------------------------
-	// ƒo[ƒeƒbƒNƒXƒoƒbƒtƒ@‚Ìì¬
-	//-----------------------------------------------------
-	for (unsigned int i = 0; i < vk.swapchainImageCount; i++) 
+
+	//---------------------
+	// ãƒãƒƒãƒ•ã‚¡ä½œæˆ
+	//---------------------
 	{
-		//-----------------------------------------------------
-		// ƒoƒbƒtƒ@ì¬
-		//-----------------------------------------------------
+		VkBufferCreateInfo bci;
 		{
-			VkBufferCreateInfo bci;
-			{
-				memset(&bci, 0, sizeof(bci));
-				bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-				bci.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-				bci.size = sizeVert;//sizeof(dataVert);
-			}
-			VkResult  err;
-			err = vkCreateBuffer(vk.device, &bci, NULL, &vk.swapchain_image_resources[i].uniform_buffer);
-			assert(!err);
+			memset(&bci, 0, sizeof(bci));
+			bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+			bci.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+			bci.size = sizeofDataVert;//sizeof(pDataVert);
 		}
+		VkResult  err;
+		err = vkCreateBuffer(vk_sc_device, &bci, NULL, &sc_uniform_buffer);	//create22 setVert
+		ASSERTW(!err,"ä¸­æ–­ã—ã¾ã™");
+	}
 
-		//-----------------------------------------------------
-		// ƒoƒbƒtƒ@‚Ìƒƒ‚ƒŠ—v‹æ“¾
-		//-----------------------------------------------------
-		{
-			VkMemoryRequirements mr;
-			vkGetBufferMemoryRequirements(vk.device, vk.swapchain_image_resources[i].uniform_buffer, &mr);
+	//---------------------
+	// ãƒãƒƒãƒ•ã‚¡ã®ãƒ¡ãƒ¢ãƒªè¦æ±‚å–å¾—
+	//---------------------
+	{
+		VkMemoryRequirements mr;
+		vkGetBufferMemoryRequirements(vk_sc_device, sc_uniform_buffer, &mr);
 
-			VkMemoryAllocateInfo mai;
-			mai.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-			mai.pNext = NULL;
-			mai.allocationSize = mr.size;
-			mai.memoryTypeIndex = 0;
+		VkMemoryAllocateInfo mai;
+		mai.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		mai.pNext = NULL;
+		mai.allocationSize = mr.size;
+		mai.memoryTypeIndex = 0;
 
-			bool  pass = false;
+		bool  flgFound = false;
+		{// åˆ—æŒ™æ¤œç´¢
+			uint32_t 	typeBits			= mr.memoryTypeBits;
+			VkFlags 	requirements_mask	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+			uint32_t*	typeIndex			= &mai.memoryTypeIndex;
+
+			for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++) 
 			{
-				VkPhysicalDeviceMemoryProperties* 	pMemory_properties 	= &vk.memory_properties;
-				uint32_t 							typeBits			= mr.memoryTypeBits;
-				VkFlags 							requirements_mask	= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-				uint32_t*							typeIndex			= &mai.memoryTypeIndex;
-
-				// Search memtypes to find first index with those properties
-				for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++) 
+				if ((typeBits & 1) == 1) 
 				{
-					if ((typeBits & 1) == 1) 
+					if ((vk_pdmemory_properties.memoryTypes[i].propertyFlags & requirements_mask) == requirements_mask) 
 					{
-						// Type is available, does it match user properties?
-						if ((pMemory_properties->memoryTypes[i].propertyFlags & requirements_mask) == requirements_mask) 
-						{
-							*typeIndex = i;
-							pass = true;
-							break;
-						}
+						*typeIndex = i;
+						flgFound = true;
+						break;
 					}
-					typeBits >>= 1;
 				}
-			}
-			assert(pass);
-
-			//-----------------------------------------------------
-			// ƒƒ‚ƒŠ‚ÌŠm•Û
-			//-----------------------------------------------------
-			{
-				VkResult  err;
-				err = vkAllocateMemory(vk.device, &mai, NULL,&vk.swapchain_image_resources[i].uniform_memory);
-				assert(!err);
+				typeBits >>= 1;
 			}
 		}
-
-		//-----------------------------------------------------
-		// ƒƒ‚ƒŠ“]‘—
-		//-----------------------------------------------------
+		if ( flgFound == false )
 		{
-			//-----------------------------------------------------
-			// ƒ}ƒbƒvƒƒ‚ƒŠ
-			//-----------------------------------------------------
-			uint8_t *pData;
-			{
-				VkResult  err;
-				err = vkMapMemory(vk.device, vk.swapchain_image_resources[i].uniform_memory, 0, VK_WHOLE_SIZE, 0, (void **)&pData);
-				assert(!err);
-			}
-
-			//-----------------------------------------------------
-			// “]‘—
-			//-----------------------------------------------------
-			memcpy(pData, pDataVert, sizeVert);
-
-			//-----------------------------------------------------
-			// ƒ}ƒbƒv‰ğ•ú
-			//-----------------------------------------------------
-			vkUnmapMemory(vk.device, vk.swapchain_image_resources[i].uniform_memory);
+			ASSERTW(false, "VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT:æŒ‡å®šã—ãŸç¾åœ¨ã®ãƒ¢ãƒ¼ãƒ‰ã¯ã‚µãƒãƒ¼ãƒˆã•ã‚Œã¦ã„ã¾ã›ã‚“" );
 		}
-
-
-		//-----------------------------------------------------
-		// ƒoƒCƒ“ƒh
-		//-----------------------------------------------------
+		//---------------------
+		// ãƒ¡ãƒ¢ãƒªã®ç¢ºä¿
+		//---------------------
 		{
 			VkResult  err;
-			err = vkBindBufferMemory(
-				  vk.device
-				, vk.swapchain_image_resources[i].uniform_buffer
-				, vk.swapchain_image_resources[i].uniform_memory
-				, 0
-			);
-			assert(!err);
+			err = vkAllocateMemory(vk_sc_device, &mai, NULL,&sc_uniform_memory);	//create23 setVert
+			ASSERTW(!err,"ä¸­æ–­ã—ã¾ã™");
 		}
+	}
+
+
+	//---------------------
+	// ãƒ¡ãƒ¢ãƒªè»¢é€
+	//---------------------
+	{
+		//---------------------
+		// ãƒãƒƒãƒ—ãƒ¡ãƒ¢ãƒª
+		//---------------------
+		uint8_t *pData;
+		{
+			VkResult  err;
+			err = vkMapMemory(vk_sc_device, sc_uniform_memory, 0, VK_WHOLE_SIZE, 0, (void **)&pData);
+			ASSERTW(!err,"ä¸­æ–­ã—ã¾ã™");
+		}
+
+		//---------------------
+		// è»¢é€
+		//---------------------
+		memcpy(pData, pDataVert, sizeofDataVert);
+
+		//---------------------
+		// ãƒãƒƒãƒ—è§£æ”¾
+		//---------------------
+		vkUnmapMemory(vk_sc_device, sc_uniform_memory);
+	}
+
+
+	//---------------------
+	// ãƒã‚¤ãƒ³ãƒ‰
+	//---------------------
+	{
+		VkResult  err;
+		err = vkBindBufferMemory(
+			  vk_sc_device
+			, sc_uniform_buffer
+			, sc_uniform_memory
+			, 0
+		);
+		ASSERTW(!err,"ä¸­æ–­ã—ã¾ã™");
 	}
 }
 //-----------------------------------------------------------------------------
@@ -2692,10 +2084,11 @@ void	vk_setPipeline(
 	, uint32_t _instanceCount
 	, uint32_t _firstVertex
 	, uint32_t _firstInstance
+	,int sizeofStructDataVert
 )
 {
 	//-----------------------------------------------------
-	// ƒpƒCƒvƒ‰ƒCƒ“ƒŒƒCƒAƒEƒg‚Ìæ“¾
+	// ãƒ‘ã‚¤ãƒ—ãƒ©ã‚¤ãƒ³ãƒ¬ã‚¤ã‚¢ã‚¦ãƒˆã®å–å¾—
 	//-----------------------------------------------------
 	{
 		const VkDescriptorSetLayoutBinding dslb[2] = 
@@ -2728,13 +2121,13 @@ void	vk_setPipeline(
 				.pBindings = dslb,
 			};
 			VkResult  err;
-			err = vkCreateDescriptorSetLayout(vk.device, &dslci, NULL, &vk.desc_layout);
+			err = vkCreateDescriptorSetLayout(vk.device, &dslci, NULL, &vk.desc_layout);	//create11	setPipeline
 			assert(!err);
 		}
 	}
 
 	//-----------------------------------------------------
-	// ƒpƒCƒvƒ‰ƒCƒ“ƒŒƒCƒAƒEƒg‚Ìì¬
+	// ãƒ‘ã‚¤ãƒ—ãƒ©ã‚¤ãƒ³ãƒ¬ã‚¤ã‚¢ã‚¦ãƒˆã®ä½œæˆ
 	//-----------------------------------------------------
 	{
 		const VkPipelineLayoutCreateInfo plci = 
@@ -2746,12 +2139,12 @@ void	vk_setPipeline(
 		};
 
 		VkResult  err;
-		err = vkCreatePipelineLayout(vk.device, &plci, NULL, &vk.pipeline_layout);
+		err = vkCreatePipelineLayout(vk.device, &plci, NULL, &vk.pipeline_layout);		//create10	setPipeline
 		assert(!err);
 	}
 
 	//-----------------------------------------------------
-	// ƒŒƒ“ƒ_[ƒpƒX‚Ìì¬
+	// ãƒ¬ãƒ³ãƒ€ãƒ¼ãƒ‘ã‚¹ã®ä½œæˆ
 	//-----------------------------------------------------
 	{//demo_prepare_render_pass(&vk);
 		// The initial layout for the color and depth_inf attachments will be LAYOUT_UNDEFINED
@@ -2818,7 +2211,7 @@ void	vk_setPipeline(
 		};
 
 		//-----------------------------------------------------
-		// ƒŒƒ“ƒ_[ƒpƒX‚Ìæ“¾
+		// ãƒ¬ãƒ³ãƒ€ãƒ¼ãƒ‘ã‚¹ã®å–å¾—
 		//-----------------------------------------------------
 		{
 			const VkRenderPassCreateInfo rp_info = 
@@ -2835,13 +2228,13 @@ void	vk_setPipeline(
 			};
 
 			VkResult  err;
-			err = vkCreateRenderPass(vk.device, &rp_info, NULL, &vk.render_pass);
+			err = vkCreateRenderPass(vk.device, &rp_info, NULL, &vk.render_pass);		//create9	setPipeline
 			assert(!err);
 		}
 	}
 
 	//-----------------------------------------------------
-	// ƒpƒCƒvƒ‰ƒCƒ“ƒLƒƒƒbƒVƒ…‚Ìì¬
+	// ãƒ‘ã‚¤ãƒ—ãƒ©ã‚¤ãƒ³ã‚­ãƒ£ãƒƒã‚·ãƒ¥ã®ä½œæˆ
 	//-----------------------------------------------------
 	{
 		VkPipelineCacheCreateInfo ppc;
@@ -2849,7 +2242,7 @@ void	vk_setPipeline(
 		ppc.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
 
 		VkResult  err;
-		err = vkCreatePipelineCache(vk.device, &ppc, NULL, &vk.pipelineCache);
+		err = vkCreatePipelineCache(vk.device, &ppc, NULL, &vk.pipelineCache);		//create8	setPipeline
 		assert(!err);
 	}
 
@@ -2959,20 +2352,20 @@ void	vk_setPipeline(
 	}
 
 	//-----------------------------------------------------
-	// ƒOƒ‰ƒtƒBƒbƒNƒpƒCƒvƒ‰ƒCƒ“‚Ìì¬
+	// ã‚°ãƒ©ãƒ•ã‚£ãƒƒã‚¯ãƒ‘ã‚¤ãƒ—ãƒ©ã‚¤ãƒ³ã®ä½œæˆ
 	//-----------------------------------------------------
 	{
 		VkShaderModule vert_sm;
 		VkShaderModule flag_sm;
 		//-----------------------------------------------------
-		// ƒVƒF[ƒ_[ƒ‚ƒWƒ…[ƒ‹‚Ìì¬
+		// ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ã®ä½œæˆ
 		//-----------------------------------------------------
-		VkPipelineShaderStageCreateInfo pssci[2];
+		VkPipelineShaderStageCreateInfo pssci[2];			
 		{
 			memset(&pssci, 0, 2 * sizeof(VkPipelineShaderStageCreateInfo));
 
 			//-----------------------------------------------------
-			// ƒo[ƒeƒbƒNƒXƒVƒF[ƒ_[“Ç‚İ‚İƒ‚ƒWƒ…[ƒ‹‚Ìì¬
+			// ãƒãƒ¼ãƒ†ãƒƒã‚¯ã‚¹ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼èª­ã¿è¾¼ã¿ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ã®ä½œæˆ
 			//-----------------------------------------------------
 			{
 				pssci[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -2996,7 +2389,7 @@ void	vk_setPipeline(
 						smci.flags = 0;
 
 						VkResult  err;
-						err = vkCreateShaderModule(vk.device, &smci, NULL, &vert_sm);
+						err = vkCreateShaderModule(vk.device, &smci, NULL, &vert_sm);	//createTmp2
 						assert(!err);
 					}
 
@@ -3008,7 +2401,7 @@ void	vk_setPipeline(
 			}
 
 			//-----------------------------------------------------
-			// ƒtƒ‰ƒOƒƒ“ƒgƒVƒF[ƒ_[ƒ‚ƒWƒ…[ƒ‹‚Ìì¬
+			// ãƒ•ãƒ©ã‚°ãƒ¡ãƒ³ãƒˆã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ã®ä½œæˆ
 			//-----------------------------------------------------
 			{
 				pssci[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -3031,7 +2424,7 @@ void	vk_setPipeline(
 						smci.pCode = (uint32_t*)fcode;
 						smci.flags = 0;
 						VkResult  err;
-						err = vkCreateShaderModule(vk.device, &smci, NULL, &flag_sm);
+						err = vkCreateShaderModule(vk.device, &smci, NULL, &flag_sm);	//createTmp3
 						assert(!err);
 					}
 
@@ -3044,7 +2437,7 @@ void	vk_setPipeline(
 		}
 
 		//-----------------------------------------------------
-		// ƒOƒ‰ƒtƒBƒbƒNƒpƒCƒvƒ‰ƒCƒ“‚Ì¶¬
+		// ã‚°ãƒ©ãƒ•ã‚£ãƒƒã‚¯ãƒ‘ã‚¤ãƒ—ãƒ©ã‚¤ãƒ³ã®ç”Ÿæˆ
 		//-----------------------------------------------------
 		{
 			VkGraphicsPipelineCreateInfo gpci;
@@ -3066,19 +2459,19 @@ void	vk_setPipeline(
 			gpci.renderPass 			= vk.render_pass;
 
 			VkResult  err;
-			err = vkCreateGraphicsPipelines(vk.device, vk.pipelineCache, 1, &gpci, NULL, &vk.pipeline);
+			err = vkCreateGraphicsPipelines(vk.device, vk.pipelineCache, 1, &gpci, NULL, &vk.pipeline);	//create7	setPipeline
 			assert(!err);
 		}
 
 		//-----------------------------------------------------
-		// ƒVƒF[ƒ_[ƒ‚ƒWƒ…[ƒ‹‚Ì”pŠü
+		// ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ã®å»ƒæ£„
 		//-----------------------------------------------------
-		vkDestroyShaderModule(vk.device, flag_sm, NULL);
-		vkDestroyShaderModule(vk.device, vert_sm, NULL);
+		vkDestroyShaderModule(vk.device, flag_sm, NULL);	//createTmp3
+		vkDestroyShaderModule(vk.device, vert_sm, NULL);	//createTmp2
 	}
 
 	//-----------------------------------------------------
-	// ƒRƒ}ƒ“ƒhƒoƒbƒtƒ@‚Ìì¬
+	// ã‚³ãƒãƒ³ãƒ‰ãƒãƒƒãƒ•ã‚¡ã®ä½œæˆ
 	//-----------------------------------------------------
 	for (uint32_t i = 0; i < vk.swapchainImageCount; i++) 
 	{
@@ -3091,18 +2484,18 @@ void	vk_setPipeline(
 			.commandBufferCount = 1,
 		};
 		VkResult  err;
-		err = vkAllocateCommandBuffers(vk.device, &cmai, &vk.swapchain_image_resources[i].cmdbuf);
+		err = vkAllocateCommandBuffers(vk.device, &cmai, &vk.swapchain_image_resources[i].cmdbuf);	//create21	setPipeline
 		assert(!err);
 	}
 
 	//-----------------------------------------------------
-	// ƒZƒpƒŒ[ƒg•`‰æƒLƒ…[ì¬
+	// ã‚»ãƒ‘ãƒ¬ãƒ¼ãƒˆæç”»ã‚­ãƒ¥ãƒ¼ä½œæˆ
 	//-----------------------------------------------------
 	if (vk.flg_separate_present_queue) 
 	{
 
 		//-----------------------------------------------------
-		// ƒRƒ}ƒ“ƒhƒv[ƒ‹‚Ìì¬
+		// ã‚³ãƒãƒ³ãƒ‰ãƒ—ãƒ¼ãƒ«ã®ä½œæˆ
 		//-----------------------------------------------------
 		{
 			const VkCommandPoolCreateInfo cpci = 
@@ -3113,17 +2506,17 @@ void	vk_setPipeline(
 				.flags = 0,
 			};
 			VkResult  err;
-			err = vkCreateCommandPool(vk.device, &cpci, NULL, &vk.present_cmd_pool);
+			err = vkCreateCommandPool(vk.device, &cpci, NULL, &vk.present_cmd_pool);	//create27	setPipeline
 			assert(!err);
 		}
 
 		//-----------------------------------------------------
-		// ƒXƒƒbƒvƒ`ƒFƒCƒ“•ª‚ÌƒRƒ}ƒ“ƒhƒoƒbƒtƒ@‚Ìì¬
+		// ã‚¹ãƒ¯ãƒƒãƒ—ãƒã‚§ã‚¤ãƒ³åˆ†ã®ã‚³ãƒãƒ³ãƒ‰ãƒãƒƒãƒ•ã‚¡ã®ä½œæˆ
 		//-----------------------------------------------------
 		for (uint32_t i = 0; i < vk.swapchainImageCount; i++) 
 		{
 			//-----------------------------------------------------
-			// ƒRƒ}ƒ“ƒhƒoƒbƒtƒ@‚ÌŠm•Û
+			// ã‚³ãƒãƒ³ãƒ‰ãƒãƒƒãƒ•ã‚¡ã®ç¢ºä¿
 			//-----------------------------------------------------
 			{
 				const VkCommandBufferAllocateInfo cbai = 
@@ -3141,7 +2534,7 @@ void	vk_setPipeline(
 			}
 
 			//-----------------------------------------------------
-			// ƒRƒ}ƒ“ƒhƒoƒbƒtƒ@‚ÌŠJn
+			// ã‚³ãƒãƒ³ãƒ‰ãƒãƒƒãƒ•ã‚¡ã®é–‹å§‹
 			//-----------------------------------------------------
 			{
 				const VkCommandBufferBeginInfo cb = 
@@ -3157,7 +2550,7 @@ void	vk_setPipeline(
 			}
 
 			//-----------------------------------------------------
-			// ƒRƒ}ƒ“ƒhƒpƒCƒvƒ‰ƒCƒ“ƒoƒŠƒA
+			// ã‚³ãƒãƒ³ãƒ‰ãƒ‘ã‚¤ãƒ—ãƒ©ã‚¤ãƒ³ãƒãƒªã‚¢
 			//-----------------------------------------------------
 			{
 				VkImageMemoryBarrier imb = 
@@ -3184,7 +2577,7 @@ void	vk_setPipeline(
 			}
 
 			//-----------------------------------------------------
-			// ƒRƒ}ƒ“ƒhƒoƒbƒtƒ@I—¹
+			// ã‚³ãƒãƒ³ãƒ‰ãƒãƒƒãƒ•ã‚¡çµ‚äº†
 			//-----------------------------------------------------
 			{
 				VkResult  err;
@@ -3195,7 +2588,7 @@ void	vk_setPipeline(
 	}
 
 	//-----------------------------------------------------
-	// ƒfƒXƒNƒŠƒvƒ^ƒv[ƒ‹‚Ìì¬
+	// ãƒ‡ã‚¹ã‚¯ãƒªãƒ—ã‚¿ãƒ—ãƒ¼ãƒ«ã®ä½œæˆ
 	//-----------------------------------------------------
 	{//demo_prepare_dpci(&vk);
 		const VkDescriptorPoolSize dps[2] = 
@@ -3220,12 +2613,12 @@ void	vk_setPipeline(
 			.pPoolSizes = dps,
 		};
 		VkResult  err;
-		err = vkCreateDescriptorPool(vk.device, &dpci, NULL, &vk.desc_pool);
+		err = vkCreateDescriptorPool(vk.device, &dpci, NULL, &vk.desc_pool);	//create6	setPipeline
 		assert(!err);
 	}
 	
 	//-----------------------------------------------------
-	// ƒfƒBƒXƒNƒŠƒvƒ^[‚Ìì¬
+	// ãƒ‡ã‚£ã‚¹ã‚¯ãƒªãƒ—ã‚¿ãƒ¼ã®ä½œæˆ
 	//-----------------------------------------------------
 	{
 		//-----------------------------------------------------
@@ -3245,7 +2638,7 @@ void	vk_setPipeline(
 		//-----------------------------------------------------
 		VkDescriptorBufferInfo dbi;
 		dbi.offset = 0;
-		dbi.range = sizeof(struct vktexcube_vs_uniform);
+		dbi.range = sizeofStructDataVert;//sizeof(struct vktexcube_vs_uniform);
 
 		//-----------------------------------------------------
 		// 
@@ -3270,7 +2663,7 @@ void	vk_setPipeline(
 		for (unsigned int i = 0; i < vk.swapchainImageCount; i++) 
 		{
 			//-----------------------------------------------------
-			// ƒfƒBƒXƒNƒŠƒvƒ^[ƒZƒbƒg‚ÌŠm•Û
+			// ãƒ‡ã‚£ã‚¹ã‚¯ãƒªãƒ—ã‚¿ãƒ¼ã‚»ãƒƒãƒˆã®ç¢ºä¿
 			//-----------------------------------------------------
 			{
 				VkDescriptorSetAllocateInfo dsai = 
@@ -3286,7 +2679,7 @@ void	vk_setPipeline(
 				assert(!err);
 			}
 			//-----------------------------------------------------
-			// ƒfƒBƒXƒNƒŠƒvƒ^[ƒZƒbƒg‚ÌXV
+			// ãƒ‡ã‚£ã‚¹ã‚¯ãƒªãƒ—ã‚¿ãƒ¼ã‚»ãƒƒãƒˆã®æ›´æ–°
 			//-----------------------------------------------------
 			{
 				dbi.buffer 			= vk.swapchain_image_resources[i].uniform_buffer;
@@ -3298,7 +2691,7 @@ void	vk_setPipeline(
 	}
 
 	//-----------------------------------------------------
-	// ƒtƒŒ[ƒ€ƒoƒbƒtƒ@‚Ìì¬
+	// ãƒ•ãƒ¬ãƒ¼ãƒ ãƒãƒƒãƒ•ã‚¡ã®ä½œæˆ
 	//-----------------------------------------------------
 	{
 		VkImageView attachments[2];
@@ -3321,13 +2714,13 @@ void	vk_setPipeline(
 		for (i = 0; i < vk.swapchainImageCount; i++) 
 		{
 			attachments[0] = vk.swapchain_image_resources[i].imgview;
-			err = vkCreateFramebuffer(vk.device, &fci, NULL, &vk.swapchain_image_resources[i].framebuffer);
+			err = vkCreateFramebuffer(vk.device, &fci, NULL, &vk.swapchain_image_resources[i].framebuffer);	//create5	setPipeline
 			assert(!err);
 		}
 	}
 
 	//-----------------------------------------------------
-	// •`‰æƒRƒ}ƒ“ƒhƒoƒbƒtƒ@‚Ìì¬
+	// æç”»ã‚³ãƒãƒ³ãƒ‰ãƒãƒƒãƒ•ã‚¡ã®ä½œæˆ
 	//-----------------------------------------------------
 	for (uint32_t i = 0; i < vk.swapchainImageCount; i++) 
 	{
@@ -3337,7 +2730,7 @@ void	vk_setPipeline(
 		{
 
 			//-----------------------------------------------------
-			// ƒRƒ}ƒ“ƒhƒoƒbƒtƒ@‚ÌŠJn
+			// ã‚³ãƒãƒ³ãƒ‰ãƒãƒƒãƒ•ã‚¡ã®é–‹å§‹
 			//-----------------------------------------------------
 			{
 				const VkCommandBufferBeginInfo cbbi = 
@@ -3353,14 +2746,15 @@ void	vk_setPipeline(
 			}
 
 			//-----------------------------------------------------
-			// ƒRƒ}ƒ“ƒhEƒŒƒ“ƒ_[ƒpƒX‚ÌŠJn
+			// ã‚³ãƒãƒ³ãƒ‰ãƒ»ãƒ¬ãƒ³ãƒ€ãƒ¼ãƒ‘ã‚¹ã®é–‹å§‹
 			//-----------------------------------------------------
 			{
 				const VkClearValue cv[2] = 
 				{
 					[0] = 
 					{
-						.color.float32 = {0.2f, 0.2f, 0.2f, 0.2f}
+//						.color.float32 = {0.2f, 0.2f, 0.2f, 0.2f}
+						.color.float32 = {1.0f, 1.0f, 1.0f, 0.2f}
 					}
 					,
 					[1] = 
@@ -3385,12 +2779,12 @@ void	vk_setPipeline(
 			}
 			
 			//-----------------------------------------------------
-			// ƒRƒ}ƒ“ƒhEƒpƒCƒvƒ‰ƒCƒ“‚ÌƒoƒCƒ“ƒh
+			// ã‚³ãƒãƒ³ãƒ‰ãƒ»ãƒ‘ã‚¤ãƒ—ãƒ©ã‚¤ãƒ³ã®ãƒã‚¤ãƒ³ãƒ‰
 			//-----------------------------------------------------
 			vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.pipeline );
 
 			//-----------------------------------------------------
-			// ƒRƒ}ƒ“ƒhEƒfƒBƒXƒNƒŠƒvƒ^[‚ÌƒoƒCƒ“ƒh
+			// ã‚³ãƒãƒ³ãƒ‰ãƒ»ãƒ‡ã‚£ã‚¹ã‚¯ãƒªãƒ—ã‚¿ãƒ¼ã®ãƒã‚¤ãƒ³ãƒ‰
 			//-----------------------------------------------------
 			vkCmdBindDescriptorSets(
 				 cmd_buf
@@ -3404,7 +2798,7 @@ void	vk_setPipeline(
 			);
 			
 			//-----------------------------------------------------
-			// ƒrƒ…[ƒ|[ƒg‚Ìİ’è
+			// ãƒ“ãƒ¥ãƒ¼ãƒãƒ¼ãƒˆã®è¨­å®š
 			//-----------------------------------------------------
 			{
 				VkViewport viewport;
@@ -3417,7 +2811,7 @@ void	vk_setPipeline(
 			}
 
 			//-----------------------------------------------------
-			// ƒVƒUƒŠƒ“ƒOƒGƒŠƒA‚Ìİ’è
+			// ã‚·ã‚¶ãƒªãƒ³ã‚°ã‚¨ãƒªã‚¢ã®è¨­å®š
 			//-----------------------------------------------------
 			{
 				VkRect2D scissor;
@@ -3430,19 +2824,19 @@ void	vk_setPipeline(
 			}
 
 			//-----------------------------------------------------
-			// •`‰æƒRƒ}ƒ“ƒh”­s
+			// æç”»ã‚³ãƒãƒ³ãƒ‰ç™ºè¡Œ
 			//-----------------------------------------------------
 			vkCmdDraw(cmd_buf, _vertexCount, _instanceCount, _firstVertex, _firstInstance);
 
 			//-----------------------------------------------------
-			// ƒŒƒ“ƒ_[ƒpƒXI—¹
+			// ãƒ¬ãƒ³ãƒ€ãƒ¼ãƒ‘ã‚¹çµ‚äº†
 			//-----------------------------------------------------
 			// Note that ending the renderpass changes the image's layout from
 			// COLOR_ATTACHMENT_OPTIMAL to PRESENT_SRC_KHR
 			vkCmdEndRenderPass(cmd_buf);
 
 			//-----------------------------------------------------
-			// ƒpƒCƒvƒ‰ƒCƒ“ƒoƒŠƒA‚Ìİ’è
+			// ãƒ‘ã‚¤ãƒ—ãƒ©ã‚¤ãƒ³ãƒãƒªã‚¢ã®è¨­å®š
 			//-----------------------------------------------------
 			if (vk.flg_separate_present_queue) 
 			{
@@ -3480,7 +2874,7 @@ void	vk_setPipeline(
 			}
 
 			//-----------------------------------------------------
-			// ƒRƒ}ƒ“ƒhƒoƒbƒtƒ@I—¹
+			// ã‚³ãƒãƒ³ãƒ‰ãƒãƒƒãƒ•ã‚¡çµ‚äº†
 			//-----------------------------------------------------
 			{
 				VkResult  err;
@@ -3509,7 +2903,7 @@ void vk_endSetup( VulkanInf& vk )
 	else
 	{
 		//-----------------------------------------------------
-		// ƒRƒ}ƒ“ƒhƒoƒbƒtƒ@I—¹
+		// ã‚³ãƒãƒ³ãƒ‰ãƒãƒƒãƒ•ã‚¡çµ‚äº†
 		//-----------------------------------------------------
 		{
 			VkResult  err;
@@ -3518,11 +2912,11 @@ void vk_endSetup( VulkanInf& vk )
 		}
 
 		//-----------------------------------------------------
-		// ƒtƒFƒ“ƒXˆ—
+		// ãƒ•ã‚§ãƒ³ã‚¹å‡¦ç†
 		//-----------------------------------------------------
 		{	
 			//-----------------------------------------------------
-			// ƒtƒFƒ“ƒX‚Ìì¬
+			// ãƒ•ã‚§ãƒ³ã‚¹ã®ä½œæˆ
 			//-----------------------------------------------------
 			VkFence fence;
 			{
@@ -3533,12 +2927,12 @@ void vk_endSetup( VulkanInf& vk )
 					.flags = 0
 				};
 				VkResult  err;
-				err = vkCreateFence(vk.device, &fci, NULL, &fence);
+				err = vkCreateFence(vk.device, &fci, NULL, &fence);	//createTmp1
 				assert(!err);
 			}
 
 			//-----------------------------------------------------
-			// ƒtƒFƒ“ƒX‘Ò‚¿
+			// ãƒ•ã‚§ãƒ³ã‚¹å¾…ã¡
 			//-----------------------------------------------------
 			{
 				const VkCommandBuffer cmd_bufs[] = {vk.cmdbuf};
@@ -3570,9 +2964,9 @@ void vk_endSetup( VulkanInf& vk )
 			}
 
 			//-----------------------------------------------------
-			// ƒtƒFƒ“ƒX‚Ì”pŠü
+			// ãƒ•ã‚§ãƒ³ã‚¹ã®å»ƒæ£„
 			//-----------------------------------------------------
-			vkDestroyFence(vk.device, fence, NULL);
+			vkDestroyFence(vk.device, fence, NULL);		//createTmp1
 
 		}
 		vk.cmdbuf = VK_NULL_HANDLE;
@@ -3600,11 +2994,11 @@ void vk_endSetup( VulkanInf& vk )
 }
 
 //-----------------------------------------------------------------------------
-void	vk_end( VulkanInf& vk )
+void	vk_vk_end( VulkanInf& vk )
 //-----------------------------------------------------------------------------
 {
 	//---------------------------------------------------------
-	// I—¹
+	// çµ‚äº†
 	//---------------------------------------------------------
 	{
 		uint32_t i;
@@ -3615,127 +3009,178 @@ void	vk_end( VulkanInf& vk )
 		for (i = 0; i < FRAME_LAG; i++) 
 		{
 			vkWaitForFences(vk.device, 1, &vk.fences[i], VK_TRUE, UINT64_MAX);
-			vkDestroyFence(vk.device, vk.fences[i], NULL);
-			vkDestroySemaphore(vk.device, vk.image_acquired_semaphores[i], NULL);
-			vkDestroySemaphore(vk.device, vk.draw_complete_semaphores[i], NULL);
+			vkDestroyFence(vk.device, vk.fences[i], NULL);										//create1	*	setup
+			vkDestroySemaphore(vk.device, vk.image_acquired_semaphores[i], NULL)	;			//create2	*	setup
+			vkDestroySemaphore(vk.device, vk.draw_complete_semaphores[i], NULL);				//create3	*	setup
 			if (vk.flg_separate_present_queue) 
 			{
-				vkDestroySemaphore(vk.device, vk.image_ownership_semaphores[i], NULL);
+				vkDestroySemaphore(vk.device, vk.image_ownership_semaphores[i], NULL);			//create4	*	setup
 			}
 		}
 
 		for (i = 0; i < vk.swapchainImageCount; i++) 
 		{
-			vkDestroyFramebuffer(vk.device, vk.swapchain_image_resources[i].framebuffer, NULL);
+			vkDestroyFramebuffer(vk.device, vk.swapchain_image_resources[i].framebuffer, NULL);	//create5	*	setPipeline
 		}
-		vkDestroyDescriptorPool(vk.device, vk.desc_pool, NULL);
+		vkDestroyDescriptorPool(vk.device, vk.desc_pool, NULL);				//create6	*	setPipeline
 
-		vkDestroyPipeline(vk.device, vk.pipeline, NULL);
-		vkDestroyPipelineCache(vk.device, vk.pipelineCache, NULL);
-		vkDestroyRenderPass(vk.device, vk.render_pass, NULL);
-		vkDestroyPipelineLayout(vk.device, vk.pipeline_layout, NULL);
-		vkDestroyDescriptorSetLayout(vk.device, vk.desc_layout, NULL);
+		vkDestroyPipeline(vk.device, vk.pipeline, NULL);					//create7	*	setPipeline
+		vkDestroyPipelineCache(vk.device, vk.pipelineCache, NULL);			//create8	*	setPipeline
+		vkDestroyRenderPass(vk.device, vk.render_pass, NULL);				//create9	*	setPipeline
+		vkDestroyPipelineLayout(vk.device, vk.pipeline_layout, NULL)	;	//create10	*	setPipeline
+		vkDestroyDescriptorSetLayout(vk.device, vk.desc_layout, NULL);		//create11	*	setPipeline
 
 		for (i = 0; i < DEMO_TEXTURE_COUNT; i++) 
 		{
-			vkDestroyImageView(vk.device, vk.textures[i].imgview, NULL);
-			vkDestroyImage(vk.device, vk.textures[i].image, NULL);
-			vkFreeMemory(vk.device, vk.textures[i].devmem, NULL);
-			vkDestroySampler(vk.device, vk.textures[i].sampler, NULL);
+			vkDestroyImageView(vk.device, vk.textures[i].imgview, NULL);	//create12	*	setup
+			vkDestroyImage(vk.device, vk.textures[i].image, NULL);			//create13	*	setup
+			vkFreeMemory(vk.device, vk.textures[i].devmem, NULL);			//create14	*	setup
+			vkDestroySampler(vk.device, vk.textures[i].sampler, NULL);		//create15	*	setup
 		}
-		vk.fpDestroySwapchainKHR(vk.device, vk.swapchain, NULL);
+		vk.fpDestroySwapchainKHR(vk.device, vk.swapchain, NULL);			//create16	*	setup
 
-		vkDestroyImageView(vk.device, vk.depth_inf.imgview, NULL);
-		vkDestroyImage(vk.device, vk.depth_inf.image, NULL);
-		vkFreeMemory(vk.device, vk.depth_inf.devmem, NULL);
+		vkDestroyImageView(vk.device, vk.depth_inf.imgview, NULL);			//create17	*	setup
+		vkDestroyImage(vk.device, vk.depth_inf.image, NULL);				//create18	*	setup
+		vkFreeMemory(vk.device, vk.depth_inf.devmem, NULL);					//create19	*	setup
 
 		for (i = 0; i < vk.swapchainImageCount; i++) 
 		{
-			vkDestroyImageView(vk.device, vk.swapchain_image_resources[i].imgview, NULL);
-			vkFreeCommandBuffers(vk.device, vk.cmd_pool, 1, &vk.swapchain_image_resources[i].cmdbuf);
-			vkDestroyBuffer(vk.device, vk.swapchain_image_resources[i].uniform_buffer, NULL);
-			vkFreeMemory(vk.device, vk.swapchain_image_resources[i].uniform_memory, NULL);
+			vkDestroyImageView(vk.device, vk.swapchain_image_resources[i].imgview, NULL);				//create20	*	setup
+			vkFreeCommandBuffers(vk.device, vk.cmd_pool, 1, &vk.swapchain_image_resources[i].cmdbuf);	//create21	*	setPipeline
+			vkDestroyBuffer(vk.device, vk.swapchain_image_resources[i].uniform_buffer, NULL);			//create22	*	setVert
+			vkFreeMemory(vk.device, vk.swapchain_image_resources[i].uniform_memory, NULL);				//create23	*	setVert
 		}
-		free(vk.swapchain_image_resources);
-		free(vk.queue_props);
-		vkDestroyCommandPool(vk.device, vk.cmd_pool, NULL);
+		free(vk.swapchain_image_resources);									//create24	*	setup
+		free(vk.queue_props);												//create25	*	init
+		vkDestroyCommandPool(vk.device, vk.cmd_pool, NULL);					//create26	*	setup
 
 		if (vk.flg_separate_present_queue) 
 		{
-			vkDestroyCommandPool(vk.device, vk.present_cmd_pool, NULL);
+			vkDestroyCommandPool(vk.device, vk.present_cmd_pool, NULL);		//create27	*	setPipeline
 		}
 		vkDeviceWaitIdle(vk.device);
-		vkDestroyDevice(vk.device, NULL);
+		vkDestroyDevice(vk.device, NULL);									//create29	*	setup
 
-		vkDestroySurfaceKHR(vk.inst, vk.surface, NULL);
+		vkDestroySurfaceKHR(vk.inst, vk.surface, NULL);						//create30	*	setup
 
-
-		vkDestroyInstance(vk.inst, NULL);
+		vkDestroyInstance(vk.inst, NULL);									//create31	*	init
 	}
 }
+/*
+
+//-----------------------------------------------------------------------------
+void	vk_vk_end( VulkanInf& vk )
+//-----------------------------------------------------------------------------
+{
+	//---------------------------------------------------------
+	// çµ‚äº†
+	//---------------------------------------------------------
+	{
+		uint32_t i;
+
+		vkDeviceWaitIdle(vk.device);
+
+		// Wait for fences from present operations
+		for (i = 0; i < FRAME_LAG; i++) 
+		{
+			vkWaitForFences(vk.device, 1, &vk.fences[i], VK_TRUE, UINT64_MAX);
+			vkDestroyFence(vk.device, vk.fences[i], NULL);										//create1	*	setup
+			vkDestroySemaphore(vk.device, vk.image_acquired_semaphores[i], NULL)	;			//create2	*	setup
+			vkDestroySemaphore(vk.device, vk.draw_complete_semaphores[i], NULL);				//create3	*	setup
+			if (vk.flg_separate_present_queue) 
+			{
+				vkDestroySemaphore(vk.device, vk.image_ownership_semaphores[i], NULL);			//create4	*	setup
+			}
+		}
+
+		for (i = 0; i < vk.swapchainImageCount; i++) 
+		{
+			vkDestroyFramebuffer(vk.device, vk.swapchain_image_resources[i].framebuffer, NULL);	//create5	*	setPipeline
+		}
+		vkDestroyDescriptorPool(vk.device, vk.desc_pool, NULL);				//create6	*	setPipeline
+
+		vkDestroyPipeline(vk.device, vk.pipeline, NULL);					//create7	*	setPipeline
+		vkDestroyPipelineCache(vk.device, vk.pipelineCache, NULL);			//create8	*	setPipeline
+		vkDestroyRenderPass(vk.device, vk.render_pass, NULL);				//create9	*	setPipeline
+		vkDestroyPipelineLayout(vk.device, vk.pipeline_layout, NULL)	;	//create10	*	setPipeline
+		vkDestroyDescriptorSetLayout(vk.device, vk.desc_layout, NULL);		//create11	*	setPipeline
+
+		for (i = 0; i < DEMO_TEXTURE_COUNT; i++) 
+		{
+			vkDestroyImageView(vk.device, vk.textures[i].imgview, NULL);	//create12	*	setup
+			vkDestroyImage(vk.device, vk.textures[i].image, NULL);			//create13	*	setup
+			vkFreeMemory(vk.device, vk.textures[i].devmem, NULL);			//create14	*	setup
+			vkDestroySampler(vk.device, vk.textures[i].sampler, NULL);		//create15	*	setup
+		}
+		vk.fpDestroySwapchainKHR(vk.device, vk.swapchain, NULL);			//create16	*	setup
+
+		vkDestroyImageView(vk.device, vk.depth_inf.imgview, NULL);			//create17	*	setup
+		vkDestroyImage(vk.device, vk.depth_inf.image, NULL);				//create18	*	setup
+		vkFreeMemory(vk.device, vk.depth_inf.devmem, NULL);					//create19	*	setup
+
+		for (i = 0; i < vk.swapchainImageCount; i++) 
+		{
+			vkDestroyImageView(vk.device, vk.swapchain_image_resources[i].imgview, NULL);				//create20	*	setup
+			vkFreeCommandBuffers(vk.device, vk.cmd_pool, 1, &vk.swapchain_image_resources[i].cmdbuf);	//create21	*	setPipeline
+			vkDestroyBuffer(vk.device, vk.swapchain_image_resources[i].uniform_buffer, NULL);			//create22	*	setVert
+			vkFreeMemory(vk.device, vk.swapchain_image_resources[i].uniform_memory, NULL);				//create23	*	setVert
+		}
+		free(vk.swapchain_image_resources);									//create24	*	setup
+		free(vk.queue_props);												//create25	*	init
+		vkDestroyCommandPool(vk.device, vk.cmd_pool, NULL);					//create26	*	setup
+
+		if (vk.flg_separate_present_queue) 
+		{
+			vkDestroyCommandPool(vk.device, vk.present_cmd_pool, NULL);		//create27	*	setPipeline
+		}
+		vkDeviceWaitIdle(vk.device);
+		vkDestroyDevice(vk.device, NULL);									//create29	*	setup
+
+		vkDestroySurfaceKHR(vk.inst, vk.surface, NULL);						//create30	*	setup
+
+		vkDestroyInstance(vk.inst, NULL);									//create31	*	init
+	}
+}
+*/
 
 
 //=================
 
 //-----------------------------------------------------------------------------
-void VkInf::v_init( HINSTANCE hInstance, HWND hWin, int _width, int _height )
+void vk0_setmodel( VulkanInf& vk, int _width, int _height
 //-----------------------------------------------------------------------------
+//,void* pMVP
+,void* pDataVert
+,int sizeofStructDataVert
+ )
 {
 
-	vk_init( vk );
-
-	vk_setup( vk, hInstance, hWin, _width, _height );
-
-	//---------------------------------------------------------
-	// “§‹•ÏŠ·s—ñ‚Ìì¬
-	//---------------------------------------------------------
-	{
-		apr_spin_angle = 4.0f;
-		apr_spin_increment = 0.2f;
-		apr_pause = false;
-
-		vec3 eye = {0.0f, 3.0f, 5.0f};
-		vec3 origin = {0, 0, 0};
-		vec3 up = {0.0f, 1.0f, 0.0};
-
-		mat4x4_perspective(apr_projection_matrix, (float)degreesToRadians(45.0f),1.0f, 0.1f, 100.0f);
-		mat4x4_look_at(apr_view_matrix, eye, origin, up);
-		mat4x4_identity(apr_model_matrix);
-
-		apr_projection_matrix[1][1]*=-1;  //Flip projection matrix from GL to Vulkan orientation.
-	}
-
 	//-----------------------------------------------------
-	// ƒ‚ƒfƒ‹ƒf[ƒ^‚Ìì¬
+	// ãƒ¢ãƒ‡ãƒ«ãƒ‡ãƒ¼ã‚¿ã®ä½œæˆ
 	//-----------------------------------------------------
-	struct vktexcube_vs_uniform dataVert;
 	{
-		mat4x4 VP;
-		mat4x4_mul(VP, apr_projection_matrix, apr_view_matrix);
 
-		mat4x4 MVP;
-		mat4x4_mul(MVP, VP, apr_model_matrix);
-
-		memcpy(dataVert.mvp, MVP, sizeof(MVP));
-		//	dumpMatrix("MVP", MVP);
-
-		for (unsigned int i = 0; i < 12 * 3; i++) 
+		for ( int i = 0; i < vk.swapchainImageCount; i++) 
 		{
-			dataVert.position[i][0] = g_vertex_buffer_data[i * 3];
-			dataVert.position[i][1] = g_vertex_buffer_data[i * 3 + 1];
-			dataVert.position[i][2] = g_vertex_buffer_data[i * 3 + 2];
-			dataVert.position[i][3] = 1.0f;
-			dataVert.attr[i][0] = g_uv_buffer_data[2 * i];
-			dataVert.attr[i][1] = g_uv_buffer_data[2 * i + 1];
-			dataVert.attr[i][2] = 0;
-			dataVert.attr[i][3] = 0;
-		}
+			//---------------------
+			// ãƒ¢ãƒ‡ãƒ«ãƒ‡ãƒ¼ã‚¿ã®ä½œæˆ
+			//---------------------
+			vk_setVert(
+				  vk.device
+				, vk.memory_properties
+//				, (void*)&dataVert
+//				, sizeof(dataVert)
+				, pDataVert
+				, sizeofStructDataVert
+				, vk.swapchain_image_resources[i].uniform_buffer
+				, vk.swapchain_image_resources[i].uniform_memory
 
-		vk_setVert( vk, (void*)&dataVert, sizeof(dataVert) );
+			);
+		}
 	}
 
 	//-----------------------------------------------------
-	// ƒpƒCƒvƒ‰ƒCƒ“ì¬
+	// ãƒ‘ã‚¤ãƒ—ãƒ©ã‚¤ãƒ³ä½œæˆ
 	//-----------------------------------------------------
 	{
 		uint32_t _vertexCount	= 12*3;
@@ -3743,21 +3188,31 @@ void VkInf::v_init( HINSTANCE hInstance, HWND hWin, int _width, int _height )
 		uint32_t _firstVertex	= 0;
 		uint32_t _firstInstance = 0;
 
-		vk_setPipeline( vk, _width, _height, _vertexCount, _instanceCount, _firstVertex, _firstInstance );
+		vk_setPipeline( vk, _width, _height, _vertexCount, _instanceCount, _firstVertex, _firstInstance
+			, sizeofStructDataVert
+		 );
 	}
 
 	//-----------------------------------------------------
-	// I—¹‘Ò‚¿
+	// çµ‚äº†å¾…ã¡
 	//-----------------------------------------------------
 	vk_endSetup( vk );
 
 }
 
+
 //-----------------------------------------------------------------------------
-void VkInf::v_draw()
+void VkInf::v_draw(
+	 void* pMVP
+	,int matrixSize
+)
 //-----------------------------------------------------------------------------
 {
-	vk_draw( vk );
+
+	vk_draw( vk
+		, pMVP
+		, matrixSize
+	);
 }
 
 
@@ -3765,8 +3220,28 @@ void VkInf::v_draw()
 VkInf::VkInf( HINSTANCE hInstance, HWND hWin, int _width, int _height )
 //-----------------------------------------------------------------------------
 {
-	this->v_init( hInstance, hWin, _width, _height );
-	printf("initialized\n");
+	vk_init( vk );
+
+	vk_setup( vk, hInstance, hWin, _width, _height );
+	printf("initialize model \n");
+}
+//-----------------------------------------------------------------------------
+void VkInf::setmodel( int _width, int _height
+,void* pDataVert
+,int sizeofStructDataVert
+//,void* pMVP
+ )
+//-----------------------------------------------------------------------------
+{
+
+	vk0_setmodel(vk
+		, _width
+		, _height
+//		, pMVP
+		, pDataVert
+		, sizeofStructDataVert
+	 );
+	printf("set model \n");
 	
 }
 
@@ -3774,7 +3249,7 @@ VkInf::VkInf( HINSTANCE hInstance, HWND hWin, int _width, int _height )
 VkInf::~VkInf()
 //-----------------------------------------------------------------------------
 {
-	vk_end( vk );
+	vk_vk_end( vk );
 	printf("released\n");
 }
 

@@ -105,8 +105,19 @@ class VkInf
 	VulkanInf vk;
 public:
 
-	void v_init( HINSTANCE hInstance, HWND hWin, int _width, int _height );
-	void v_draw();
+	bool isNull()
+	{
+		return ((long long)this==0);
+	}
+
+	void setmodel( int _width, int _height
+		,void* pDataVert
+		,int sizeofStructDataVert
+	);
+	void v_draw(
+		 void*	pMVP
+		,int matrixSize
+	);
 	VkInf( HINSTANCE hInstance, HWND hWin, int _width, int _height );
 	~VkInf();
 
