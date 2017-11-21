@@ -103,6 +103,7 @@ struct VulkanInf
 class VkInf
 {
 	VulkanInf vk;
+	bool	flgSetModel;
 public:
 
 	bool isNull()
@@ -114,6 +115,8 @@ public:
 		,void* pDataVert
 		,int sizeofStructDataVert
 	);
+	void releaseModel();
+
 	void v_draw(
 		 void*	pMVP
 		,int matrixSize

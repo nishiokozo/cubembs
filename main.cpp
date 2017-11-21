@@ -696,10 +696,7 @@ int main(int argc, char *argv[])
 	//---
 	WinInf* pWin = new WinInf( "msb", 256, 256 );
 	VkInf* pVk = new VkInf( pWin->hInstance, pWin->hWin, pWin->win_width, pWin->win_height );
-	pVk->setmodel( pWin->win_width, pWin->win_height
-		,(void*)&dataVert
-		,sizeof(struct vktexcube_vs_uniform)
-	 );
+			pVk->setmodel( pWin->win_width, pWin->win_height, (void*)&dataVert, sizeof(struct vktexcube_vs_uniform) );
 
 	//-----------------------------------------------------
 	// メインループ
@@ -731,32 +728,39 @@ int main(int argc, char *argv[])
 			if ( pVk == 0 ) 
 			{
 				pVk = new VkInf( pWin->hInstance, pWin->hWin, pWin->win_width, pWin->win_height );
-				pVk->setmodel( pWin->win_width, pWin->win_height
-					,(void*)&dataVert
-					,sizeof(struct vktexcube_vs_uniform)
-				 );
 			}
 		}
 		
 		if ( key.hi._2 )
 		{
-			if ( pVk != 0 ) {delete pVk;pVk=0;}
+			if ( pVk != 0 ) 
+			{
+				if ( pVk != 0 ) pVk->releaseModel();
+				delete pVk;pVk=0;
+			}
 		}
 
 		if ( key.hi._3 )
 		{
-			lim = 10;
+			lim = 100;
 		}
-
+		if ( key.hi._4 )
+		{
+			if ( pVk != 0 ) pVk->setmodel( pWin->win_width, pWin->win_height, (void*)&dataVert, sizeof(struct vktexcube_vs_uniform) );
+		}
+		if ( key.hi._5 )
+		{
+			if ( pVk != 0 ) pVk->releaseModel();
+		}
+		
 		if ( lim )
 		{
+			if ( pVk != 0 ) pVk->releaseModel();
 			delete pVk;
 			pVk = new VkInf( pWin->hInstance, pWin->hWin, pWin->win_width, pWin->win_height );
-			pVk->setmodel( pWin->win_width, pWin->win_height
-				,(void*)&dataVert
-				,sizeof(struct vktexcube_vs_uniform)
-			 );
+//			pVk->setmodel( pWin->win_width, pWin->win_height, (void*)&dataVert, sizeof(struct vktexcube_vs_uniform) );
 			lim--;
+			printf("%d ",lim );
 		}
 		
 		//-----------------------------------------------------
@@ -773,10 +777,7 @@ int main(int argc, char *argv[])
 			mat4x4_dup(Model, apr_model_matrix);
 			mat4x4_rotate(apr_model_matrix, Model, 0.0f, 1.0f, 0.0f, (float)degreesToRadians(apr_spin_angle));
 			mat4x4_mul(MVP, VP, apr_model_matrix);
-			pVk->v_draw(
-				  MVP
-				, matrixSize
-			);
+			pVk->v_draw(MVP, matrixSize);
 		}
 
 		key_update();
@@ -786,7 +787,11 @@ int main(int argc, char *argv[])
 	//-----------------------------------------------------
 	// 終了
 	//-----------------------------------------------------
-	if ( pVk ) delete pVk;
+	if ( pVk != 0 ) pVk->releaseModel();
+	if ( pVk ) 
+	{
+		delete pVk;
+	}
 	if ( pWin ) delete pWin;
 
 	return (int)msg.wParam;

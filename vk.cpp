@@ -2994,80 +2994,96 @@ void vk_endSetup( VulkanInf& vk )
 }
 
 //-----------------------------------------------------------------------------
-void	vk_vk_end( VulkanInf& vk )
+void	vk_vk_model_end( VulkanInf& vk )
 //-----------------------------------------------------------------------------
 {
 	//---------------------------------------------------------
 	// 終了
 	//---------------------------------------------------------
+	uint32_t i;
+
+	vkDeviceWaitIdle(vk.device);
+
+
+//setPipeline
+	for (i = 0; i < vk.swapchainImageCount; i++) 
 	{
-		uint32_t i;
+		vkDestroyFramebuffer(vk.device, vk.swapchain_image_resources[i].framebuffer, NULL);	//create5	*	setPipeline
+	}
+	vkDestroyDescriptorPool(vk.device, vk.desc_pool, NULL);				//create6	*	setPipeline
 
-		vkDeviceWaitIdle(vk.device);
+	vkDestroyPipeline(vk.device, vk.pipeline, NULL);					//create7	*	setPipeline
+	vkDestroyPipelineCache(vk.device, vk.pipelineCache, NULL);			//create8	*	setPipeline
+	vkDestroyRenderPass(vk.device, vk.render_pass, NULL);				//create9	*	setPipeline
+	vkDestroyPipelineLayout(vk.device, vk.pipeline_layout, NULL)	;	//create10	*	setPipeline
+	vkDestroyDescriptorSetLayout(vk.device, vk.desc_layout, NULL);		//create11	*	setPipeline
+	if (vk.flg_separate_present_queue) 
+	{
+		vkDestroyCommandPool(vk.device, vk.present_cmd_pool, NULL);		//create27	*	setPipeline
+	}
 
-		// Wait for fences from present operations
-		for (i = 0; i < FRAME_LAG; i++) 
-		{
-			vkWaitForFences(vk.device, 1, &vk.fences[i], VK_TRUE, UINT64_MAX);
-			vkDestroyFence(vk.device, vk.fences[i], NULL);										//create1	*	setup
-			vkDestroySemaphore(vk.device, vk.image_acquired_semaphores[i], NULL)	;			//create2	*	setup
-			vkDestroySemaphore(vk.device, vk.draw_complete_semaphores[i], NULL);				//create3	*	setup
-			if (vk.flg_separate_present_queue) 
-			{
-				vkDestroySemaphore(vk.device, vk.image_ownership_semaphores[i], NULL);			//create4	*	setup
-			}
-		}
+//setVert
 
-		for (i = 0; i < vk.swapchainImageCount; i++) 
-		{
-			vkDestroyFramebuffer(vk.device, vk.swapchain_image_resources[i].framebuffer, NULL);	//create5	*	setPipeline
-		}
-		vkDestroyDescriptorPool(vk.device, vk.desc_pool, NULL);				//create6	*	setPipeline
+	for (i = 0; i < vk.swapchainImageCount; i++) 
+	{
+		vkFreeCommandBuffers(vk.device, vk.cmd_pool, 1, &vk.swapchain_image_resources[i].cmdbuf);	//create21	*	setPipeline
+	}
+	for (i = 0; i < vk.swapchainImageCount; i++) 
+	{
+		vkDestroyBuffer(vk.device, vk.swapchain_image_resources[i].uniform_buffer, NULL);			//create22	*	setVert
+		vkFreeMemory(vk.device, vk.swapchain_image_resources[i].uniform_memory, NULL);				//create23	*	setVert
+	}
 
-		vkDestroyPipeline(vk.device, vk.pipeline, NULL);					//create7	*	setPipeline
-		vkDestroyPipelineCache(vk.device, vk.pipelineCache, NULL);			//create8	*	setPipeline
-		vkDestroyRenderPass(vk.device, vk.render_pass, NULL);				//create9	*	setPipeline
-		vkDestroyPipelineLayout(vk.device, vk.pipeline_layout, NULL)	;	//create10	*	setPipeline
-		vkDestroyDescriptorSetLayout(vk.device, vk.desc_layout, NULL);		//create11	*	setPipeline
 
-		for (i = 0; i < DEMO_TEXTURE_COUNT; i++) 
-		{
-			vkDestroyImageView(vk.device, vk.textures[i].imgview, NULL);	//create12	*	setup
-			vkDestroyImage(vk.device, vk.textures[i].image, NULL);			//create13	*	setup
-			vkFreeMemory(vk.device, vk.textures[i].devmem, NULL);			//create14	*	setup
-			vkDestroySampler(vk.device, vk.textures[i].sampler, NULL);		//create15	*	setup
-		}
-		vk.fpDestroySwapchainKHR(vk.device, vk.swapchain, NULL);			//create16	*	setup
-
-		vkDestroyImageView(vk.device, vk.depth_inf.imgview, NULL);			//create17	*	setup
-		vkDestroyImage(vk.device, vk.depth_inf.image, NULL);				//create18	*	setup
-		vkFreeMemory(vk.device, vk.depth_inf.devmem, NULL);					//create19	*	setup
-
-		for (i = 0; i < vk.swapchainImageCount; i++) 
-		{
-			vkDestroyImageView(vk.device, vk.swapchain_image_resources[i].imgview, NULL);				//create20	*	setup
-			vkFreeCommandBuffers(vk.device, vk.cmd_pool, 1, &vk.swapchain_image_resources[i].cmdbuf);	//create21	*	setPipeline
-			vkDestroyBuffer(vk.device, vk.swapchain_image_resources[i].uniform_buffer, NULL);			//create22	*	setVert
-			vkFreeMemory(vk.device, vk.swapchain_image_resources[i].uniform_memory, NULL);				//create23	*	setVert
-		}
-		free(vk.swapchain_image_resources);									//create24	*	setup
-		free(vk.queue_props);												//create25	*	init
-		vkDestroyCommandPool(vk.device, vk.cmd_pool, NULL);					//create26	*	setup
-
+}
+//-----------------------------------------------------------------------------
+void	vk_vk_end( VulkanInf& vk )
+//-----------------------------------------------------------------------------
+{
+// setup
+	// Wait for fences from present operations
+	for (int i = 0; i < FRAME_LAG; i++) 
+	{
+		vkWaitForFences(vk.device, 1, &vk.fences[i], VK_TRUE, UINT64_MAX);
+		vkDestroyFence(vk.device, vk.fences[i], NULL);										//create1	*	setup
+		vkDestroySemaphore(vk.device, vk.image_acquired_semaphores[i], NULL)	;			//create2	*	setup
+		vkDestroySemaphore(vk.device, vk.draw_complete_semaphores[i], NULL);				//create3	*	setup
 		if (vk.flg_separate_present_queue) 
 		{
-			vkDestroyCommandPool(vk.device, vk.present_cmd_pool, NULL);		//create27	*	setPipeline
+			vkDestroySemaphore(vk.device, vk.image_ownership_semaphores[i], NULL);			//create4	*	setup
 		}
-		vkDeviceWaitIdle(vk.device);
-		vkDestroyDevice(vk.device, NULL);									//create29	*	setup
-
-		vkDestroySurfaceKHR(vk.inst, vk.surface, NULL);						//create30	*	setup
-
-		vkDestroyInstance(vk.inst, NULL);									//create31	*	init
 	}
+	for (int i = 0; i < DEMO_TEXTURE_COUNT; i++) 
+	{
+		vkDestroyImageView(vk.device, vk.textures[i].imgview, NULL);	//create12	*	setup
+		vkDestroyImage(vk.device, vk.textures[i].image, NULL);			//create13	*	setup
+		vkFreeMemory(vk.device, vk.textures[i].devmem, NULL);			//create14	*	setup
+		vkDestroySampler(vk.device, vk.textures[i].sampler, NULL);		//create15	*	setup
+	}
+	vk.fpDestroySwapchainKHR(vk.device, vk.swapchain, NULL);			//create16	*	setup
+
+	vkDestroyImageView(vk.device, vk.depth_inf.imgview, NULL);			//create17	*	setup
+	vkDestroyImage(vk.device, vk.depth_inf.image, NULL);				//create18	*	setup
+	vkFreeMemory(vk.device, vk.depth_inf.devmem, NULL);					//create19	*	setup
+
+	for (int i = 0; i < vk.swapchainImageCount; i++) 
+	{
+		vkDestroyImageView(vk.device, vk.swapchain_image_resources[i].imgview, NULL);				//create20	*	setup
+	}
+
+	free(vk.swapchain_image_resources);									//create24	*	setup
+	vkDestroyCommandPool(vk.device, vk.cmd_pool, NULL);					//create26	*	setup
+
+	vkDeviceWaitIdle(vk.device);
+	vkDestroyDevice(vk.device, NULL);									//create29	*	setup
+
+	vkDestroySurfaceKHR(vk.inst, vk.surface, NULL);						//create30	*	setup
+
+// init
+	free(vk.queue_props);												//create25	*	init
+	vkDestroyInstance(vk.inst, NULL);									//create31	*	init
 }
 /*
-
 //-----------------------------------------------------------------------------
 void	vk_vk_end( VulkanInf& vk )
 //-----------------------------------------------------------------------------
@@ -3208,11 +3224,13 @@ void VkInf::v_draw(
 )
 //-----------------------------------------------------------------------------
 {
-
-	vk_draw( vk
-		, pMVP
-		, matrixSize
-	);
+	if ( this->flgSetModel== true )
+	{
+		vk_draw( vk
+			, pMVP
+			, matrixSize
+		);
+	}
 }
 
 
@@ -3223,7 +3241,10 @@ VkInf::VkInf( HINSTANCE hInstance, HWND hWin, int _width, int _height )
 	vk_init( vk );
 
 	vk_setup( vk, hInstance, hWin, _width, _height );
-	printf("initialize model \n");
+
+	this->flgSetModel = false;
+
+	printf("initialize \n");
 }
 //-----------------------------------------------------------------------------
 void VkInf::setmodel( int _width, int _height
@@ -3233,18 +3254,31 @@ void VkInf::setmodel( int _width, int _height
  )
 //-----------------------------------------------------------------------------
 {
-
-	vk0_setmodel(vk
-		, _width
-		, _height
-//		, pMVP
-		, pDataVert
-		, sizeofStructDataVert
-	 );
-	printf("set model \n");
-	
+	if ( flgSetModel == false )
+	{
+		vk0_setmodel(vk
+			, _width
+			, _height
+	//		, pMVP
+			, pDataVert
+			, sizeofStructDataVert
+		 );
+		this->flgSetModel = true;
+		printf(">set model \n");
+	}
 }
 
+//-----------------------------------------------------------------------------
+void VkInf::releaseModel()
+//-----------------------------------------------------------------------------
+{
+	if ( flgSetModel == true )
+	{
+		vk_vk_model_end( vk );
+		this->flgSetModel = false;
+		printf(">rel  model\n");
+	}
+}
 //-----------------------------------------------------------------------------
 VkInf::~VkInf()
 //-----------------------------------------------------------------------------
