@@ -696,7 +696,7 @@ int main(int argc, char *argv[])
 	//---
 	WinInf* pWin = new WinInf( "msb", 256, 256 );
 	VkInf* pVk = new VkInf( pWin->hInstance, pWin->hWin, pWin->win_width, pWin->win_height );
-			pVk->setmodel( pWin->win_width, pWin->win_height, (void*)&dataVert, sizeof(struct vktexcube_vs_uniform) );
+	pVk->setmodel( pWin->win_width, pWin->win_height, (void*)&dataVert, sizeof(struct vktexcube_vs_uniform) );
 
 	//-----------------------------------------------------
 	// ƒƒCƒ“ƒ‹[ƒv
@@ -706,7 +706,8 @@ int main(int argc, char *argv[])
 
 	key_init(argc,argv);
 
-	int lim = 0;
+	int lim1 = 0;
+	int lim2 = 0;
 
 	while (true) 
 	{
@@ -727,7 +728,7 @@ int main(int argc, char *argv[])
 		{
 			if ( pVk == 0 ) 
 			{
-				pVk = new VkInf( pWin->hInstance, pWin->hWin, pWin->win_width, pWin->win_height );
+//				pVk = new VkInf( pWin->hInstance, pWin->hWin, pWin->win_width, pWin->win_height );
 			}
 		}
 		
@@ -742,7 +743,7 @@ int main(int argc, char *argv[])
 
 		if ( key.hi._3 )
 		{
-			lim = 100;
+			lim1 = 100;
 		}
 		if ( key.hi._4 )
 		{
@@ -752,15 +753,31 @@ int main(int argc, char *argv[])
 		{
 			if ( pVk != 0 ) pVk->releaseModel();
 		}
+		if ( key.hi._6 )
+		{
+			lim2 = 100;
+		}
 		
-		if ( lim )
+		if ( lim1 )
 		{
 			if ( pVk != 0 ) pVk->releaseModel();
 			delete pVk;
 			pVk = new VkInf( pWin->hInstance, pWin->hWin, pWin->win_width, pWin->win_height );
 //			pVk->setmodel( pWin->win_width, pWin->win_height, (void*)&dataVert, sizeof(struct vktexcube_vs_uniform) );
-			lim--;
-			printf("%d ",lim );
+			lim1--;
+			printf("%d ",lim1 );
+		}
+		if ( lim2 )
+		{
+			if ( pVk != 0 ) 
+			{
+				pVk->releaseModel();
+	//			delete pVk;
+	//			pVk = new VkInf( pWin->hInstance, pWin->hWin, pWin->win_width, pWin->win_height );
+				pVk->setmodel( pWin->win_width, pWin->win_height, (void*)&dataVert, sizeof(struct vktexcube_vs_uniform) );
+				lim2--;
+				printf("%d ",lim2 );
+			}
 		}
 		
 		//-----------------------------------------------------
