@@ -1719,7 +1719,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 
 
 //-----------------------------------------------------------------------------
-void	vk_vk_end( VulkanInf& vk )
+void	vk_release( VulkanInf& vk )
 //-----------------------------------------------------------------------------
 {
 // setup
@@ -1764,32 +1764,41 @@ void	vk_vk_end( VulkanInf& vk )
 // init
 	free(vk.queue_props);												//create25	*	init
 	vkDestroyInstance(vk.inst, NULL);									//create31	*	init
+
+	printf("vk released\n");
 }
 
 
 //=================
 
 
-
 //-----------------------------------------------------------------------------
-VkInf::VkInf( HINSTANCE hInstance, HWND hWin, int _width, int _height )
+void vk_create( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _height )
 //-----------------------------------------------------------------------------
 {
 	vk_init( vk );
 
 	vk_setup( vk, hInstance, hWin, _width, _height );
 
+	printf("vk create \n");
+
+}
+
+//-----------------------------------------------------------------------------
+VkInf::VkInf( HINSTANCE hInstance, HWND hWin, int _width, int _height )
+//-----------------------------------------------------------------------------
+{
+	vk_create( vk, hInstance, hWin, _width, _height );
+
 	this->flgSetModel = false;
 
-	printf("initialize \n");
 }
 
 //-----------------------------------------------------------------------------
 VkInf::~VkInf()
 //-----------------------------------------------------------------------------
 {
-	vk_vk_end( vk );
-	printf("released\n");
+	vk_release( vk );
 }
 
 

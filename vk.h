@@ -110,6 +110,13 @@ public:
 	{
 		return ((long long)this==0);
 	}
+	
+	void release()
+	{
+	
+	printf("---relese\n");
+		delete this;
+	}
 
 /*
 	void setmodel( int _width, int _height
@@ -127,3 +134,4 @@ public:
 	~VkInf();
 
 };
+

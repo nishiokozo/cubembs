@@ -697,11 +697,14 @@ int main(int argc, char *argv[])
 	//---
 	WinInf* pWin = new WinInf( "msb", 256, 256 );
 	VkInf* pVk = new VkInf( pWin->hInstance, pWin->hWin, pWin->win_width, pWin->win_height );
-	if ( pVk == 0 ) 
+
+//pVk->release();pVk=0;
+//delete pVk;pVk=0;
+	if ( pVk ) 
 	{
 			if ( pVk->flgSetModel== false )
 			{
-				vk0_setmodel( pVk->vk, pWin->win_width, pWin->win_height, (void*)&dataVert, sizeof(struct vktexcube_vs_uniform) );
+				vk2_create( pVk->vk, pWin->win_width, pWin->win_height, (void*)&dataVert, sizeof(struct vktexcube_vs_uniform) );
 				pVk->flgSetModel = true;
 			}
 	}
@@ -745,7 +748,7 @@ int main(int argc, char *argv[])
 			{
 				if ( pVk->flgSetModel== true )
 				{
-					vk_vk_model_end( pVk->vk );
+					vk2_release( pVk->vk );
 					pVk->flgSetModel = false;
 				}
 				delete pVk;pVk=0;
@@ -762,7 +765,7 @@ int main(int argc, char *argv[])
 			{
 				if ( pVk->flgSetModel== false )
 				{
-					vk0_setmodel( pVk->vk, pWin->win_width, pWin->win_height, (void*)&dataVert, sizeof(struct vktexcube_vs_uniform) );
+					vk2_create( pVk->vk, pWin->win_width, pWin->win_height, (void*)&dataVert, sizeof(struct vktexcube_vs_uniform) );
 					pVk->flgSetModel = true;
 				}
 			}
@@ -773,7 +776,7 @@ int main(int argc, char *argv[])
 			{
 				if ( pVk->flgSetModel== true )
 				{
-					vk_vk_model_end( pVk->vk );
+					vk2_release( pVk->vk );
 					pVk->flgSetModel = false;
 				}
 			}
@@ -789,14 +792,14 @@ int main(int argc, char *argv[])
 			{
 				if ( pVk->flgSetModel== true )
 				{
-					vk_vk_model_end( pVk->vk );
+					vk2_release( pVk->vk );
 					pVk->flgSetModel = false;
 				}
 				delete pVk;pVk=0;
 				pVk = new VkInf( pWin->hInstance, pWin->hWin, pWin->win_width, pWin->win_height );
 				if ( pVk->flgSetModel== false )
 				{
-					vk0_setmodel( pVk->vk, pWin->win_width, pWin->win_height, (void*)&dataVert, sizeof(struct vktexcube_vs_uniform) );
+					vk2_create( pVk->vk, pWin->win_width, pWin->win_height, (void*)&dataVert, sizeof(struct vktexcube_vs_uniform) );
 					pVk->flgSetModel = true;
 				}
 				lim1--;
@@ -809,12 +812,12 @@ int main(int argc, char *argv[])
 			{
 				if ( pVk->flgSetModel== true )
 				{
-					vk_vk_model_end( pVk->vk );
+					vk2_release( pVk->vk );
 					pVk->flgSetModel = false;
 				}
 				if ( pVk->flgSetModel== false )
 				{
-					vk0_setmodel( pVk->vk, pWin->win_width, pWin->win_height, (void*)&dataVert, sizeof(struct vktexcube_vs_uniform) );
+					vk2_create( pVk->vk, pWin->win_width, pWin->win_height, (void*)&dataVert, sizeof(struct vktexcube_vs_uniform) );
 					pVk->flgSetModel = true;
 				}
 				lim2--;
@@ -839,7 +842,7 @@ int main(int argc, char *argv[])
 
 			if ( pVk->flgSetModel )
 			{
-				vk_draw( pVk->vk, MVP, matrixSize);
+				vk2_draw( pVk->vk, MVP, matrixSize);
 			}
 		}
 
@@ -854,7 +857,7 @@ int main(int argc, char *argv[])
 	{
 		if ( pVk->flgSetModel== true )
 		{
-			vk_vk_model_end( pVk->vk );
+			vk2_release( pVk->vk );
 			pVk->flgSetModel = false;
 		}
 		delete pVk;pVk=0;
