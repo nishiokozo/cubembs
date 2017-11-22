@@ -99,5 +99,5 @@ void	win_init( WinInf& win, const char* name, int width, int height  )
 WinInf::WinInf(  const char* name, int width, int height )
 //-----------------------------------------------------------------------------
 {
-	win_init( *this , "msb", 256, 256 );
+	win_init( *this , name, width, height );
 }

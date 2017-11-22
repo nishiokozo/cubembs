@@ -32,7 +32,7 @@ struct VulkanInf
 {
 	VkSurfaceKHR 	surface;
 //	bool 			flgPrepared;
-	bool 			flg_separate_present_queue;
+//	bool 			flg_separate_present_queue;
 
 
 	VkInstance 			inst;

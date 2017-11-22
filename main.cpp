@@ -695,7 +695,7 @@ int main(int argc, char *argv[])
 		}
 	}
 	//---
-	WinInf* pWin = new WinInf( "msb", 256, 256 );
+	WinInf* pWin = new WinInf( "msb", 128, 128 );
 	VkInf* pVk = new VkInf( pWin->hInstance, pWin->hWin, pWin->win_width, pWin->win_height );
 
 //pVk->release();pVk=0;

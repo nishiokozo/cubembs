@@ -687,7 +687,8 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 
 		vk.q_graphics_queue_family_index = graphicsQueueFamilyIndex;
 		vk.q_present_queue_family_index = presentQueueFamilyIndex;
-		vk.flg_separate_present_queue = (vk.q_graphics_queue_family_index != vk.q_present_queue_family_index);
+//		vk.flg_separate_present_queue = (vk.q_graphics_queue_family_index != vk.q_present_queue_family_index);
+
 		free(supportsPresent);
 	}
 
@@ -718,6 +719,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 			.pEnabledFeatures =
 				NULL, // If specific features are required, pass them in here
 		};
+/*
 		if (vk.flg_separate_present_queue) 
 		{
 			queues[1].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -728,7 +730,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 			queues[1].flags = 0;
 			device.queueCreateInfoCount = 2;
 		}
-
+*/
 		VkResult  err;
 		err = vkCreateDevice(vk.gpu, &device, NULL, &vk.device);			//create29s
 		assert(!err);
@@ -790,10 +792,12 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 	//---------------------------------------------------------
 	// 
 	//---------------------------------------------------------
+/*
 	if (!vk.flg_separate_present_queue) 
 	{
 		vk.present_queue = vk.graphics_queue;
 	} else 
+*/
 	{
 		vkGetDeviceQueue(vk.device, vk.q_present_queue_family_index, 0, &vk.present_queue);
 	}
@@ -898,12 +902,14 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 			//---------------------------------------------------------
 			// セマフォの作成：イメージオーナーシップ
 			//---------------------------------------------------------
+/*
 			if (vk.flg_separate_present_queue) 
 			{
 				VkResult  err;
 				err = vkCreateSemaphore(vk.device, &sci, NULL, &vk.image_ownership_semaphores[i]);	//create4s
 				assert(!err);
 			}
+*/
 		}
 	}
 
@@ -1738,10 +1744,12 @@ void	vk_release( VulkanInf& vk )
 		vkDestroyFence(vk.device, vk.fences[i], NULL);										//create1	*	setup
 		vkDestroySemaphore(vk.device, vk.image_acquired_semaphores[i], NULL)	;			//create2	*	setup
 		vkDestroySemaphore(vk.device, vk.draw_complete_semaphores[i], NULL);				//create3	*	setup
+/*
 		if (vk.flg_separate_present_queue) 
 		{
 			vkDestroySemaphore(vk.device, vk.image_ownership_semaphores[i], NULL);			//create4	*	setup
 		}
+*/
 	}
 	for (int i = 0; i < DEMO_TEXTURE_COUNT; i++) 
 	{

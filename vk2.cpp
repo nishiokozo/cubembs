@@ -46,6 +46,7 @@
 PFN_vkGetDeviceProcAddr g_gdpa = NULL;
 const char *tex_files[] = {"lunarg.ppm"};
 
+
 //-----------------------------------------------------------------------------
 bool memory_type_from_properties(
 //-----------------------------------------------------------------------------
@@ -220,6 +221,807 @@ void vk_setVert(
 		ASSERTW(!err,"中断します");
 	}
 }
+
+//-----------------------------------------------------------------------------
+static void	vk_createDescripterPool( 
+	  const  VkDevice			&	vk_sc_device
+	, const  int 					tex_count
+	, const uint32_t 				sc_cntImage
+
+	, VkDescriptorPool 			&	vk_desc_pool
+)
+//-----------------------------------------------------------------------------
+{
+	//=========================================================================
+	// デスクリプタ・作成
+	//=========================================================================
+	{
+		VkDescriptorPoolSize dps[2] = 
+		{
+			[0] =
+				{
+				 .type 				= VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				 .descriptorCount 	= sc_cntImage
+				},
+			[1] =
+				{
+				 .type 				= VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				 .descriptorCount 	= sc_cntImage * tex_count
+				},
+		};
+		VkDescriptorPoolCreateInfo dpci = 
+		{
+			.sType 					= VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+			.pNext 					= NULL,
+			.flags 					= 0,
+			.maxSets 				= sc_cntImage,
+			.poolSizeCount 			= 2,
+			.pPoolSizes 			= dps
+		};
+		VkResult  err;
+		err = vkCreateDescriptorPool(vk_sc_device, &dpci, NULL, &vk_desc_pool);
+		ASSERTW(!err,"中断します");
+	}
+}
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+static void	vk_createDescriptionLayout( 
+	  const VkDevice& vk_sc_device
+	, const int tex_count
+
+	, VkDescriptorSetLayout 				&vk_desc_layout
+)
+{
+	//=========================================================================
+	// ディスクリプションレイアウト・作成
+	//=========================================================================
+	{
+		//---------------------
+		//ディスクリプションレイアウト・情報取得
+		//---------------------
+		VkDescriptorSetLayoutBinding dslb[2] = 
+		{
+			[0] =
+				
+				{
+				 .binding 				= 0,
+				 .descriptorType 		= VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				 .descriptorCount 		= 1,
+				 .stageFlags 			= VK_SHADER_STAGE_VERTEX_BIT,
+				 .pImmutableSamplers 	= NULL
+				},
+			[1] =
+				
+				{
+				 .binding = 1,
+				 .descriptorType 		= VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				 .descriptorCount 		= tex_count,
+				 .stageFlags 			= VK_SHADER_STAGE_FRAGMENT_BIT,
+				 .pImmutableSamplers 	= NULL
+				},
+		};
+		{
+			VkDescriptorSetLayoutCreateInfo dslci = 
+			{
+				.sType 					= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+				.pNext 					= NULL,
+				.flags					= 0,
+				.bindingCount			= 2,
+				.pBindings				= dslb
+			};
+			VkResult  err;
+			err = vkCreateDescriptorSetLayout(vk_sc_device, &dslci, NULL, &vk_desc_layout);
+			ASSERTW(!err,"中断します");
+		}
+	}
+}
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+static void	vk_createPipelineLayout( 
+	  const VkDevice				&	vk_sc_device
+	, const VkDescriptorSetLayout 	&	vk_desc_layout
+
+	,  VkPipelineLayout				&	vk_pipeline_layout
+)
+{
+	//=========================================================================
+	// パイプラインレイアウト・作成
+	//=========================================================================
+	{
+		VkPipelineLayoutCreateInfo plci = 
+		{
+			.sType 						= VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+			.pNext 						= NULL,
+			.flags						= 0,
+			.setLayoutCount 			= 1,
+			.pSetLayouts 				= &vk_desc_layout
+		};
+
+		VkResult  err;
+		err = vkCreatePipelineLayout(vk_sc_device, &plci, NULL, &vk_pipeline_layout);
+		ASSERTW(!err,"中断します");
+	}
+
+}
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+static void	vk_createRenderPass( 
+	  const VkDevice	& 	vk_sc_device
+	, const VkFormat 	&	vk_surface_format
+	, const VkFormat 		vk_depth_format
+
+	, VkRenderPass 		&	vk_render_pass
+)
+{
+	//=========================================================================
+	// レンダーパスの作成
+	//=========================================================================
+	{
+
+		// レンダリングの開始時には、その内容は気にしないので、colorおよびdepth_inf添付ファイルの初期レイアウトはLAYOUT_UNDEFINEDになります。
+		// サブパスの開始時に、カラーアタッチメントのレイアウトはLAYOUT_COLOR_ATTACHMENT_OPTIMALに移行され、
+		// depth_infステンシルアタッチメントのレイアウトはLAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMALに移行されます。
+		// レンダーパスの最後に、カラーアタッチメントのレイアウトがLAYOUT_PRESENT_SRC_KHRに移行され、表示されます。
+		// これはすべてレンダーパスの一部として行われ、バリアは必要ありません。
+
+		VkAttachmentDescription ad[2] = 
+		{
+			[0] =
+				{
+				 .flags 			= 0,
+				 .format			= vk_surface_format,
+				 .samples 			= VK_SAMPLE_COUNT_1_BIT,
+				 .loadOp 			= VK_ATTACHMENT_LOAD_OP_CLEAR,
+				 .storeOp 			= VK_ATTACHMENT_STORE_OP_STORE,
+				 .stencilLoadOp 	= VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+				 .stencilStoreOp	= VK_ATTACHMENT_STORE_OP_DONT_CARE,
+				 .initialLayout 	= VK_IMAGE_LAYOUT_UNDEFINED,
+				 .finalLayout 		= VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+				},
+			[1] =
+				
+				{
+				 .flags 			= 0,
+				 .format 			= vk_depth_format,
+				 .samples 			= VK_SAMPLE_COUNT_1_BIT,
+				 .loadOp 			= VK_ATTACHMENT_LOAD_OP_CLEAR,
+				 .storeOp 			= VK_ATTACHMENT_STORE_OP_DONT_CARE,
+				 .stencilLoadOp 	= VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+				 .stencilStoreOp 	= VK_ATTACHMENT_STORE_OP_DONT_CARE,
+				 .initialLayout 	= VK_IMAGE_LAYOUT_UNDEFINED,
+				 .finalLayout		= VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+				},
+		};
+
+		//---
+		
+		const VkAttachmentReference color_reference = 
+		{
+			.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+		};
+		const VkAttachmentReference depth_reference = 
+		{
+			.attachment = 1,
+			.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+		};
+		const VkSubpassDescription subpass = 
+		{
+			.flags 						= 0,
+			.pipelineBindPoint 			= VK_PIPELINE_BIND_POINT_GRAPHICS,
+			.inputAttachmentCount 		= 0,
+			.pInputAttachments 			= NULL,
+			.colorAttachmentCount 		= 1,
+			.pColorAttachments 			= &color_reference,
+			.pResolveAttachments 		= NULL,
+			.pDepthStencilAttachment 	= &depth_reference,
+			.preserveAttachmentCount 	= 0,
+			.pPreserveAttachments 		= NULL
+		};
+
+		//---------------------
+		// レンダーパスの取得
+		//---------------------
+		{
+			VkRenderPassCreateInfo rp_info = 
+			{
+				.sType 				= VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+				.pNext 				= NULL,
+				.flags 				= 0,
+				.attachmentCount 	= 2,
+				.pAttachments 		= ad,
+				.subpassCount 		= 1,
+				.pSubpasses 		= &subpass,
+				.dependencyCount 	= 0,
+				.pDependencies 		= NULL
+			};
+
+			VkResult  err;
+			err = vkCreateRenderPass(vk_sc_device, &rp_info, NULL, &vk_render_pass);
+			ASSERTW(!err,"中断します");
+		}
+	}
+
+}
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+static void	vk_CreatePipelineCache( 
+	  const VkDevice			&	vk_sc_device
+	, const VkRenderPass 		&	vk_render_pass
+
+	,  VkPipelineCache 			&	vk_pipelineCache
+
+)
+{
+
+	//---------------------
+	// パイプライン・キャッシュの作成
+	//---------------------
+	{
+		VkPipelineCacheCreateInfo ppc;
+		memset(&ppc, 0, sizeof(ppc));
+		ppc.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+
+		VkResult  err;
+		err = vkCreatePipelineCache(vk_sc_device, &ppc, NULL, &vk_pipelineCache);
+		ASSERTW(!err,"中断します");
+	}
+}//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+static void	vk_CreateGraphicsPipelines( 
+	  const VkDevice			&	vk_sc_device
+	, const VkPipelineLayout	&	vk_pipeline_layout
+	, const VkRenderPass 		&	vk_render_pass
+	, const void*					vcode
+	, const size_t					vsize
+	, const void*					fcode
+	, const size_t					fsize
+	, const VkPipelineCache 	&	vk_pipelineCache
+
+	,  VkPipeline 				&	vk_pipeline_graphics
+
+)
+{
+
+	//=========================================================================
+	// グラフィックパイプラインの作成
+	//=========================================================================
+	{
+		//---------------------
+		// パイプライン・バーテックス入力状態作成情報
+		//---------------------
+		VkPipelineVertexInputStateCreateInfo vi;
+		{
+			memset(&vi, 0, sizeof(vi));
+			vi.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+		}
+
+		//---------------------
+		// パイプライン・入力アセンブリ状態作成情報
+		//---------------------
+		VkPipelineInputAssemblyStateCreateInfo ia;
+		{
+			memset(&ia, 0, sizeof(ia));
+			ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+			ia.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		}
+
+		//---------------------
+		// パイプライン・ラスタライゼーション状態作成情報
+		//---------------------
+		VkPipelineRasterizationStateCreateInfo rs;
+		{
+			memset(&rs, 0, sizeof(rs));
+			rs.sType 					= VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+			rs.polygonMode 				= VK_POLYGON_MODE_FILL;
+			rs.cullMode 				= VK_CULL_MODE_BACK_BIT;
+			rs.frontFace 				= VK_FRONT_FACE_COUNTER_CLOCKWISE;
+			rs.depthClampEnable 		= VK_FALSE;
+			rs.rasterizerDiscardEnable 	= VK_FALSE;
+			rs.depthBiasEnable 			= VK_FALSE;
+			rs.lineWidth 				= 1.0f;
+		}
+
+		//---------------------
+		// パイプライン・カラーブレンド状態作成情報
+		//---------------------
+		VkPipelineColorBlendStateCreateInfo pcbsc;
+		{
+			memset(&pcbsc, 0, sizeof(pcbsc));
+			pcbsc.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+			VkPipelineColorBlendAttachmentState att_state[1];
+			memset(att_state, 0, sizeof(att_state));
+			att_state[0].colorWriteMask = 0xf;
+			att_state[0].blendEnable = VK_FALSE;
+			pcbsc.attachmentCount = 1;
+			pcbsc.pAttachments = att_state;
+		}
+
+		//---------------------
+		// パイプライン・デプスステンシル状態作成情報
+		//---------------------
+		VkPipelineDepthStencilStateCreateInfo dsci;
+		{
+			memset(&dsci, 0, sizeof(dsci));
+			dsci.sType 					= VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+			dsci.depthTestEnable 		= VK_TRUE;
+			dsci.depthWriteEnable 		= VK_TRUE;
+			dsci.depthCompareOp 		= VK_COMPARE_OP_LESS_OR_EQUAL;
+			dsci.depthBoundsTestEnable 	= VK_FALSE;
+			dsci.back.failOp 			= VK_STENCIL_OP_KEEP;
+			dsci.back.passOp 			= VK_STENCIL_OP_KEEP;
+			dsci.back.compareOp			= VK_COMPARE_OP_ALWAYS;
+			dsci.stencilTestEnable 		= VK_FALSE;
+			dsci.front 					= dsci.back;
+		}
+		
+		//---------------------
+		// パイプライン・ビューポート状態作成情報
+		//---------------------
+		VkPipelineViewportStateCreateInfo vp;
+		{
+			memset(&vp, 0, sizeof(vp));
+			vp.sType 			= VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+			vp.viewportCount 	= 1;
+			vp.scissorCount 	= 1;
+		}
+
+		//---------------------
+		// パイプライン・マルチサンプル状態作成情報
+		//---------------------
+		VkPipelineMultisampleStateCreateInfo ms;
+		{
+			memset(&ms, 0, sizeof(ms));
+			ms.sType 				= VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+			ms.pSampleMask 			= NULL;
+			ms.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+		}
+
+		//---------------------
+		// パイプライン・ダイナミック状態作成情報
+		//---------------------
+		VkDynamicState ds[VK_DYNAMIC_STATE_RANGE_SIZE];
+		VkPipelineDynamicStateCreateInfo pdsci;
+		{
+			memset(&pdsci, 0, sizeof pdsci);
+			pdsci.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+
+			memset(ds, 0, sizeof ds);
+			pdsci.pDynamicStates = ds;
+			ds[pdsci.dynamicStateCount++] = VK_DYNAMIC_STATE_VIEWPORT;
+			ds[pdsci.dynamicStateCount++] = VK_DYNAMIC_STATE_SCISSOR;
+		}
+
+		//---------------------
+		// グラフィックパイプラインの作成
+		//---------------------
+		{
+			VkShaderModule vert_sm;
+			VkShaderModule flag_sm;
+			//---------------------
+			// シェーダーモジュールの作成
+			//---------------------
+			VkPipelineShaderStageCreateInfo pssci[2];
+			{
+				memset(&pssci, 0, 2 * sizeof(VkPipelineShaderStageCreateInfo));
+
+				//---------------------
+				// バーテックスシェーダー読み込みモジュールの作成
+				//---------------------
+				{
+					pssci[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+					pssci[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
+					{
+						VkShaderModuleCreateInfo smci;
+						smci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+						smci.pNext = NULL;
+						smci.codeSize = vsize;
+						smci.pCode = (uint32_t*)vcode;
+						smci.flags = 0;
+						{
+							VkResult  err;
+							err = vkCreateShaderModule(vk_sc_device, &smci, NULL, &vert_sm);
+							ASSERTW(!err,"中断します");
+						}
+						pssci[0].module = vert_sm;
+					}
+					pssci[0].pName = "main";
+				}
+
+				//---------------------
+				// フラグメントシェーダーモジュールの作成
+				//---------------------
+				{
+					pssci[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+					pssci[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+					{
+						VkShaderModuleCreateInfo smci;
+						smci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+						smci.pNext = NULL;
+						smci.codeSize = fsize;
+						smci.pCode = (uint32_t*)fcode;
+						smci.flags = 0;
+						{
+							VkResult  err;
+							err = vkCreateShaderModule(vk_sc_device, &smci, NULL, &flag_sm);
+							ASSERTW(!err,"中断します");
+						}
+						pssci[1].module = flag_sm;
+					}
+					pssci[1].pName = "main";
+				}
+			}
+
+			//---------------------
+			// グラフィックパイプラインの生成
+			//---------------------
+			{
+				VkGraphicsPipelineCreateInfo gpci;
+				memset(&gpci, 0, sizeof(gpci));
+				gpci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+				gpci.layout = vk_pipeline_layout;
+				gpci.stageCount = 2; // Two stages: vs and fs
+
+				gpci.pVertexInputState 		= &vi;
+				gpci.pInputAssemblyState 	= &ia;
+				gpci.pRasterizationState 	= &rs;
+				gpci.pColorBlendState 		= &pcbsc;
+				gpci.pMultisampleState 		= &ms;
+				gpci.pViewportState 		= &vp;
+				gpci.pDepthStencilState 	= &dsci;
+				gpci.pStages 				= pssci;
+				gpci.renderPass 			= vk_render_pass;
+				gpci.pDynamicState 			= &pdsci;
+				gpci.renderPass 			= vk_render_pass;
+
+				VkResult  err;
+				err = vkCreateGraphicsPipelines(vk_sc_device, vk_pipelineCache, 1, &gpci, NULL, &vk_pipeline_graphics);
+				ASSERTW(!err,"中断します");
+			}
+
+			//---------------------
+			// フラグメントシェーダーモジュールの廃棄
+			//---------------------
+			vkDestroyShaderModule(vk_sc_device, flag_sm, NULL);
+
+			//---------------------
+			// バーテックスシェーダーモジュールの廃棄
+			//---------------------
+			vkDestroyShaderModule(vk_sc_device, vert_sm, NULL);
+		}
+
+	}
+}
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+static void vk_AllocateCommandBuffers( 
+	  const VkDevice			&	vk_device 
+	, const VkCommandPool 		&	vk_cmd_pool
+
+	, VkCommandBuffer 			&	sir_cmdbuf
+)
+{
+//	for (uint32_t i = 0; i < vk.swapchainImageCount; i++) 
+	{
+		const VkCommandBufferAllocateInfo cmai = 
+		{
+			.sType 				= VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+			.pNext 				= NULL,
+			.commandPool 		= vk_cmd_pool,
+			.level 				= VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+			.commandBufferCount = 1,
+		};
+		VkResult  err;
+		err = vkAllocateCommandBuffers(vk_device, &cmai, &sir_cmdbuf);	//create21	setPipeline
+		assert(!err);
+	}
+}
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+static void	vk_AllocateDescriptorSets(
+	  const VkDevice				&	vk_sc_device
+//	, const int 						tex_count
+//	, const texture_object* 		pTex
+	, const VkDescriptorSetLayout 	&	vk_desc_layout
+	, const VkDescriptorPool 		&	vk_desc_pool
+//	, const int							sizeofStructDataVert
+//	, const VkBuffer 				&	uniform_buffer
+
+	, VkDescriptorSet 				&	descriptor_set
+)
+{
+	//---------------------
+	// ディスクリプターセット・確保
+	//---------------------
+	{
+		VkDescriptorSetAllocateInfo dsai = 
+		{
+			.sType				= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+			.pNext 				= NULL,
+			.descriptorPool 	= vk_desc_pool,
+			.descriptorSetCount = 1,
+			.pSetLayouts 		= &vk_desc_layout
+		};
+		VkResult  err;
+		err = vkAllocateDescriptorSets(vk_sc_device, &dsai, &descriptor_set);
+		{
+			char	chr[256];
+			sprintf( chr, "中断します。 err=(%x)\n",err);
+			ASSERTW(!err, chr);
+		}
+	}
+
+}
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+static void	vk_UpdateDescriptorSets(
+	  const VkDevice				&	vk_sc_device
+	, const int 						tex_count
+	, const texture_object* 			pTex
+//	, const VkDescriptorSetLayout 	&	vk_desc_layout
+//	, const VkDescriptorPool 		&	vk_desc_pool
+	, const int							sizeofStructDataVert
+	, const VkBuffer 				&	uniform_buffer
+
+	, VkDescriptorSet 				&	descriptor_set
+)
+{
+	//---------------------
+	// ディスクリプターセット・更新
+	//---------------------
+	{
+		//---------------------
+		// ディスクリプターセット・バッファ設定
+		//---------------------
+		VkDescriptorBufferInfo dbi;
+		dbi.offset 				= 0;
+		dbi.range 				= sizeofStructDataVert;
+		dbi.buffer 				= uniform_buffer;
+
+		//---------------------
+		// ディスクリプターセット・イメージ設定
+		//---------------------
+		VkDescriptorImageInfo dif[tex_count];
+		memset(&dif, 0, sizeof(dif));
+		for (unsigned int i = 0; i < tex_count; i++) 
+		{
+			dif[i].sampler		= pTex[i].sampler;
+			dif[i].imageView 	= pTex[i].imgview;
+			dif[i].imageLayout 	= VK_IMAGE_LAYOUT_GENERAL;
+		}
+
+		VkWriteDescriptorSet wds[2];
+		memset(&wds, 0, sizeof(wds));
+
+		wds[0].sType 			= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		wds[0].pNext 			= 0;
+		wds[0].dstSet 			= descriptor_set;
+		wds[0].dstBinding 		= 0;
+		wds[0].dstArrayElement	= 0;
+		wds[0].descriptorCount 	= 1;
+		wds[0].descriptorType 	= VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		wds[0].pImageInfo 		= NULL;
+		wds[0].pBufferInfo 		= &dbi;
+		wds[0].pTexelBufferView	= 0;
+
+		wds[1].sType 			= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		wds[1].pNext 			= 0;
+		wds[1].dstSet 			= descriptor_set;
+		wds[1].dstBinding 		= 1;
+		wds[1].dstArrayElement	= 0;
+		wds[1].descriptorCount 	= tex_count;
+		wds[1].descriptorType 	= VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		wds[1].pImageInfo 		= dif;
+		wds[1].pBufferInfo 		= NULL;
+		wds[1].pTexelBufferView	= 0;
+
+		vkUpdateDescriptorSets(vk_sc_device, 2, wds, 0, NULL);
+	}
+}
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+static void	vk_createFramebuffer( 
+	  const VkDevice				& 	vk_sc_device
+	, const VkImageView 			&	sc_imgview
+	, const VkRenderPass 			&	vk_render_pass
+	, const VkImageView				& 	vk_depth_imgview
+	, const int 						_width
+	, const int 						_height
+
+	, VkFramebuffer 				&	sc_framebuffer
+
+)
+{
+
+	//---------------------
+	// フレームバッファの作成
+	//---------------------
+	{
+		VkImageView attachments[2];
+		attachments[1] = vk_depth_imgview;
+		attachments[0] = sc_imgview;
+
+		VkFramebufferCreateInfo fci = 
+		{
+			.sType 				= VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+			.pNext 				= NULL,
+			.flags 				= 0,
+			.renderPass 		= vk_render_pass,
+			.attachmentCount 	= 2,
+			.pAttachments 		= attachments,
+			.width 				= _width,
+			.height 			= _height,
+			.layers 			= 1
+		};
+		VkResult  err;
+		err = vkCreateFramebuffer(vk_sc_device, &fci, NULL, &sc_framebuffer);
+		ASSERTW(!err,"中断します");
+	}
+}
+
+//-----------------------------------------------------------------------------
+static void	vk_CmdBindPipeline( 
+//-----------------------------------------------------------------------------
+	  const VkPipeline 					&	vk_pipeline_graphics
+	, const	VkCommandBuffer				& 	sc_cmdbuf
+
+)
+{
+	//---------------------
+	// 描画コマンド・パイプラインのバインド
+	//---------------------
+	vkCmdBindPipeline(sc_cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_pipeline_graphics );
+}
+//-----------------------------------------------------------------------------
+static void	vk_CmdBindDescriptorSets( 
+//-----------------------------------------------------------------------------
+	  const VkPipelineLayout			&	vk_pipeline_layout
+	, const	VkDescriptorSet				& 	sc_descriptor_set
+	, const	VkCommandBuffer				& 	sc_cmdbuf
+)
+{
+	//---------------------
+	// 描画コマンド・ディスクリプターのバインド
+	//---------------------
+	vkCmdBindDescriptorSets(
+		 sc_cmdbuf
+		,VK_PIPELINE_BIND_POINT_GRAPHICS
+		,vk_pipeline_layout
+		,0
+		,1
+		,&sc_descriptor_set//sc_descriptor_set[i]
+		,0
+		,NULL
+	);
+}
+//-----------------------------------------------------------------------------
+static void	vk_EndCommandBuffer( 
+//-----------------------------------------------------------------------------
+	  const	VkCommandBuffer				& 	sc_cmdbuf
+)
+{
+	//---------------------
+	// 描画コマンドバッファ終了
+	//---------------------
+	{
+		VkResult  err;
+		err = vkEndCommandBuffer(sc_cmdbuf);
+		ASSERTW(!err,"中断します");
+	}
+}
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+static void	vk_CmdBeginRenderPass( 
+	  const VkRenderPass 				&	vk_render_pass
+	, const	VkFramebuffer				& 	sc_framebuffer
+	, const	VkCommandBuffer				& 	sc_cmdbuf
+	, const int 							_width
+	, const int 							_height
+)
+{
+	//---------------------
+	// 描画コマンド・レンダーパスの開始
+	//---------------------
+	{
+		VkClearValue cv[2] = 
+		{
+			[0] = 
+			{
+				.color =
+				{
+//					.float32 = {0.2f, 0.2f, 0.2f, 0.2f}
+					.float32 = {1.0f, 1.0f, 1.0f, 1.0f}
+				},
+			}
+			,
+			[1] = 
+			{
+				.depthStencil = {1.0f, 0}
+			}
+		};
+
+		VkRenderPassBeginInfo rpbi = 
+		{
+			.sType 						= VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+			.pNext 						= NULL,
+			.renderPass 				= vk_render_pass,
+			.framebuffer 				= sc_framebuffer, //sc_framebuffer[i],
+			.renderArea =
+			{
+				.offset 		= {0,0},
+				.extent		 	= {_width,_height},
+			},
+			.clearValueCount 			= 2,
+			.pClearValues 				= cv
+		};
+//printf("cmbuf %d before vkCmdBeginRenderPass-st \n",__LINE__);
+		vkCmdBeginRenderPass(sc_cmdbuf, &rpbi, VK_SUBPASS_CONTENTS_INLINE);
+//printf("cmbuf %d before vkCmdBeginRenderPass-en \n",__LINE__);
+
+	}
+}
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+static void	vk_BeginCommandBuffer( 
+	  const	VkCommandBuffer				& 	sir_cmdbuf
+)
+{
+	const VkCommandBufferBeginInfo cbbi = 
+	{
+		.sType 				= VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		.pNext 				= NULL,
+		.flags 				= VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
+		.pInheritanceInfo 	= NULL,
+	};
+	VkResult  err;
+	err = vkBeginCommandBuffer(sir_cmdbuf, &cbbi);
+	assert(!err);
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+static void	vk_CmdSetViewport( 
+	  const	VkCommandBuffer				& 	sc_cmdbuf
+	, const int 							_width
+	, const int 							_height
+
+)
+{
+	//---------------------
+	// 描画コマンド・ビューポートの設定
+	//---------------------
+	{
+		VkViewport viewport;
+		memset(&viewport, 0, sizeof(viewport));
+		viewport.height = (float)_height;
+		viewport.width = (float)_width;
+		viewport.minDepth = (float)0.0f;
+		viewport.maxDepth = (float)1.0f;
+		vkCmdSetViewport(sc_cmdbuf, 0, 1, &viewport);
+	}
+}
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+static void	vk_CmdSetScissor( 
+	  const	VkCommandBuffer				& 	sc_cmdbuf
+	, const int 							_width
+	, const int 							_height
+
+)
+{
+
+	//---------------------
+	// 描画コマンド・シザリングエリアの設定
+	//---------------------
+	{
+		VkRect2D scissor;
+		memset(&scissor, 0, sizeof(scissor));
+		scissor.extent.width = _width;
+		scissor.extent.height = _height;
+		scissor.offset.x = 0;
+		scissor.offset.y = 0;
+		vkCmdSetScissor(sc_cmdbuf, 0, 1, &scissor);
+	}
+}
 //-----------------------------------------------------------------------------
 void	vk_setPipeline( 
 //-----------------------------------------------------------------------------
@@ -233,9 +1035,16 @@ void	vk_setPipeline(
 	,int sizeofStructDataVert
 )
 {
-	//-----------------------------------------------------
-	// パイプラインレイアウトの取得
-	//-----------------------------------------------------
+	//---------------------
+	// ディスクリプターレイアウト作成
+	//---------------------
+		vk_createDescriptionLayout(
+			  vk.device
+			, DEMO_TEXTURE_COUNT
+
+			, vk.desc_layout
+		);
+/*
 	{
 		const VkDescriptorSetLayoutBinding dslb[2] = 
 		{
@@ -271,10 +1080,18 @@ void	vk_setPipeline(
 			assert(!err);
 		}
 	}
+*/
 
 	//-----------------------------------------------------
 	// パイプラインレイアウトの作成
 	//-----------------------------------------------------
+		vk_createPipelineLayout(
+			  vk.device 
+			, vk.desc_layout
+
+			, vk.pipeline_layout
+		);
+/*
 	{
 		const VkPipelineLayoutCreateInfo plci = 
 		{
@@ -288,10 +1105,19 @@ void	vk_setPipeline(
 		err = vkCreatePipelineLayout(vk.device, &plci, NULL, &vk.pipeline_layout);		//create10	setPipeline
 		assert(!err);
 	}
+*/
 
 	//-----------------------------------------------------
 	// レンダーパスの作成
 	//-----------------------------------------------------
+		vk_createRenderPass(
+			  vk.device 
+			, vk.format
+			, vk.depth_inf.format
+
+			, vk.render_pass
+		);
+/*
 	{//demo_prepare_render_pass(&vk);
 		// The initial layout for the color and depth_inf attachments will be LAYOUT_UNDEFINED
 		// because at the start of the renderpass, we don't care about their contents.
@@ -378,10 +1204,20 @@ void	vk_setPipeline(
 			assert(!err);
 		}
 	}
+*/
 
 	//-----------------------------------------------------
 	// パイプラインキャッシュの作成
 	//-----------------------------------------------------
+	{
+		vk_CreatePipelineCache(
+			  vk.device 
+			, vk.render_pass
+
+			, vk.pipelineCache
+		);
+	}
+/*
 	{
 		VkPipelineCacheCreateInfo ppc;
 		memset(&ppc, 0, sizeof(ppc));
@@ -391,7 +1227,35 @@ void	vk_setPipeline(
 		err = vkCreatePipelineCache(vk.device, &ppc, NULL, &vk.pipelineCache);		//create8	setPipeline
 		assert(!err);
 	}
+*/
+	//---------------------
+	// グラフィックパイプライン作成
+	//---------------------
+	const char* fn_vert = "cube-vert.spv";
+	const char* fn_flag = "cube-frag.spv";
+	{
+		void *vcode;
+		size_t vsize;
+		void *fcode;
+		size_t fsize;
+		vcode = demo_read_spv( fn_vert, &vsize);
+		fcode = demo_read_spv( fn_flag, &fsize);
+		vk_CreateGraphicsPipelines(
+			  vk.device 
+			, vk.pipeline_layout
+			, vk.render_pass
+			, vcode
+			, vsize 
+			, fcode
+			, fsize 
 
+			, vk.pipelineCache
+			, vk.pipeline
+		);
+		free(vcode);
+		free(fcode);
+	}
+/*
 	//-----------------------------------------------------
 	//
 	//-----------------------------------------------------
@@ -615,12 +1479,19 @@ void	vk_setPipeline(
 		vkDestroyShaderModule(vk.device, flag_sm, NULL);	//createTmp3
 		vkDestroyShaderModule(vk.device, vert_sm, NULL);	//createTmp2
 	}
+*/
 
 	//-----------------------------------------------------
 	// コマンドバッファの作成
 	//-----------------------------------------------------
 	for (uint32_t i = 0; i < vk.swapchainImageCount; i++) 
 	{
+		vk_AllocateCommandBuffers(
+			  vk.device
+			, vk.cmd_pool
+			, vk.sir_cmdbuf[i]
+		);
+/*
 		const VkCommandBufferAllocateInfo cmai = 
 		{
 			.sType 				= VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -632,11 +1503,13 @@ void	vk_setPipeline(
 		VkResult  err;
 		err = vkAllocateCommandBuffers(vk.device, &cmai, &vk.sir_cmdbuf[i]);	//create21	setPipeline
 		assert(!err);
+*/
 	}
 
 	//-----------------------------------------------------
 	// セパレート描画キュー作成
 	//-----------------------------------------------------
+/*
 	if (vk.flg_separate_present_queue) 
 	{
 
@@ -732,10 +1605,21 @@ void	vk_setPipeline(
 			}
 		}
 	}
+*/
 
 	//-----------------------------------------------------
 	// デスクリプタプールの作成
 	//-----------------------------------------------------
+	{
+		vk_createDescripterPool(									
+			  vk.device
+			, DEMO_TEXTURE_COUNT
+			, vk.swapchainImageCount //* unit_cnt
+
+			, vk.desc_pool
+		);
+	}
+/*
 	{//demo_prepare_dpci(&vk);
 		const VkDescriptorPoolSize dps[2] = 
 		{
@@ -762,10 +1646,37 @@ void	vk_setPipeline(
 		err = vkCreateDescriptorPool(vk.device, &dpci, NULL, &vk.desc_pool);	//create6	setPipeline
 		assert(!err);
 	}
+*/
 	
 	//-----------------------------------------------------
 	// ディスクリプターの作成
 	//-----------------------------------------------------
+	for (unsigned int i = 0; i < vk.swapchainImageCount; i++) 
+	{
+		vk_AllocateDescriptorSets(
+			  vk.device
+//			, DEMO_TEXTURE_COUNT
+//			, vk.textures 
+  			, vk.desc_layout
+			, vk.desc_pool
+//			, sizeofStructDataVert
+//			, vk.sir_uniform_buffer[i]
+
+			, vk.sir_descriptor_set[i]
+		);
+		vk_UpdateDescriptorSets(
+			  vk.device
+			, DEMO_TEXTURE_COUNT
+			, vk.textures 
+//  			, vk.desc_layout
+//			, vk.desc_pool
+			, sizeofStructDataVert
+			, vk.sir_uniform_buffer[i]
+
+			, vk.sir_descriptor_set[i]
+		);
+	}
+/*
 	{
 		//-----------------------------------------------------
 		// 
@@ -835,10 +1746,25 @@ void	vk_setPipeline(
 			}
 		}
 	}
+*/
 
 	//-----------------------------------------------------
 	// フレームバッファの作成
 	//-----------------------------------------------------
+	for (int i = 0; i < vk.swapchainImageCount; i++) 
+	{
+		vk_createFramebuffer( 
+			  vk.device
+			, vk.sir_imgview[i]
+			, vk.render_pass
+			, vk.depth_inf.imgview
+			, _width
+			, _height
+
+			, vk.sir_framebuffer[i]
+		);
+	}
+/*
 	{
 		VkImageView attachments[2];
 		attachments[1] = vk.depth_inf.imgview;
@@ -864,6 +1790,7 @@ void	vk_setPipeline(
 			assert(!err);
 		}
 	}
+*/
 
 	//-----------------------------------------------------
 	// 描画コマンドバッファの作成
@@ -872,12 +1799,16 @@ void	vk_setPipeline(
 	{
 		vk.current_buffer = i;
 		
-		VkCommandBuffer cmd_buf = vk.sir_cmdbuf[i];
+//		VkCommandBuffer cmd_buf = vk.sir_cmdbuf[i];
 		{
 
 			//-----------------------------------------------------
 			// コマンドバッファの開始
 			//-----------------------------------------------------
+			vk_BeginCommandBuffer(
+				  vk.sir_cmdbuf[i]
+			);
+/*
 			{
 				const VkCommandBufferBeginInfo cbbi = 
 				{
@@ -887,13 +1818,21 @@ void	vk_setPipeline(
 					.pInheritanceInfo 	= NULL,
 				};
 				VkResult  err;
-				err = vkBeginCommandBuffer(cmd_buf, &cbbi);
+				err = vkBeginCommandBuffer(vk.sir_cmdbuf[i], &cbbi);
 				assert(!err);
 			}
-
+*/
 			//-----------------------------------------------------
 			// コマンド・レンダーパスの開始
 			//-----------------------------------------------------
+			vk_CmdBeginRenderPass(
+				  vk.render_pass
+				, vk.sir_framebuffer[i]
+				, vk.sir_cmdbuf[i]
+				, _width
+				, _height
+			);
+/*
 			{
 				const VkClearValue cv[2] = 
 				{
@@ -921,19 +1860,30 @@ void	vk_setPipeline(
 					.clearValueCount 			= 2,
 					.pClearValues 				= cv,
 				};
-				vkCmdBeginRenderPass(cmd_buf, &rpbi, VK_SUBPASS_CONTENTS_INLINE);
+				vkCmdBeginRenderPass(vk.sir_cmdbuf[i], &rpbi, VK_SUBPASS_CONTENTS_INLINE);
 			}
+*/
 			
 			//-----------------------------------------------------
 			// コマンド・パイプラインのバインド
 			//-----------------------------------------------------
-			vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.pipeline );
+			vk_CmdBindPipeline(
+				  vk.pipeline
+				, vk.sir_cmdbuf[i]
+			);
+//			vkCmdBindPipeline(vk.sir_cmdbuf[i], VK_PIPELINE_BIND_POINT_GRAPHICS, vk.pipeline );
 
 			//-----------------------------------------------------
 			// コマンド・ディスクリプターのバインド
 			//-----------------------------------------------------
+			vk_CmdBindDescriptorSets(
+				  vk.pipeline_layout
+				, vk.sir_descriptor_set[vk.current_buffer]
+				, vk.sir_cmdbuf[i]
+			);
+/*
 			vkCmdBindDescriptorSets(
-				 cmd_buf
+				 vk.sir_cmdbuf[i]
 				,VK_PIPELINE_BIND_POINT_GRAPHICS
 				,vk.pipeline_layout
 				,0
@@ -942,10 +1892,17 @@ void	vk_setPipeline(
 				,0
 				,NULL
 			);
+*/
 			
 			//-----------------------------------------------------
 			// ビューポートの設定
 			//-----------------------------------------------------
+			vk_CmdSetViewport(
+				  vk.sir_cmdbuf[i]
+				, _width
+				, _height
+			);
+/*
 			{
 				VkViewport viewport;
 				memset(&viewport, 0, sizeof(viewport));
@@ -953,12 +1910,19 @@ void	vk_setPipeline(
 				viewport.width = (float)_width;
 				viewport.minDepth = (float)0.0f;
 				viewport.maxDepth = (float)1.0f;
-				vkCmdSetViewport(cmd_buf, 0, 1, &viewport);
+				vkCmdSetViewport(vk.sir_cmdbuf[i], 0, 1, &viewport);
 			}
+*/
 
 			//-----------------------------------------------------
 			// シザリングエリアの設定
 			//-----------------------------------------------------
+			vk_CmdSetScissor(
+				  vk.sir_cmdbuf[i]
+				, _width
+				, _height
+			);
+/*
 			{
 				VkRect2D scissor;
 				memset(&scissor, 0, sizeof(scissor));
@@ -966,24 +1930,26 @@ void	vk_setPipeline(
 				scissor.extent.height = _height;
 				scissor.offset.x = 0;
 				scissor.offset.y = 0;
-				vkCmdSetScissor(cmd_buf, 0, 1, &scissor);
+				vkCmdSetScissor(vk.sir_cmdbuf[i], 0, 1, &scissor);
 			}
+*/
 
 			//-----------------------------------------------------
 			// 描画コマンド発行
 			//-----------------------------------------------------
-			vkCmdDraw(cmd_buf, _vertexCount, _instanceCount, _firstVertex, _firstInstance);
+			vkCmdDraw(vk.sir_cmdbuf[i], _vertexCount, _instanceCount, _firstVertex, _firstInstance);
 
 			//-----------------------------------------------------
 			// レンダーパス終了
 			//-----------------------------------------------------
 			// Note that ending the renderpass changes the image's layout from
 			// COLOR_ATTACHMENT_OPTIMAL to PRESENT_SRC_KHR
-			vkCmdEndRenderPass(cmd_buf);
+			vkCmdEndRenderPass(vk.sir_cmdbuf[i]);
 
 			//-----------------------------------------------------
 			// パイプラインバリアの設定
 			//-----------------------------------------------------
+/*
 			if (vk.flg_separate_present_queue) 
 			{
 				// We have to transfer ownership from the graphics queue family to the
@@ -1006,7 +1972,7 @@ void	vk_setPipeline(
 					{VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}};
 
 				vkCmdPipelineBarrier(
-					   cmd_buf
+					   vk.sir_cmdbuf[i]
 					 , VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
 					 , VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT
 					 , 0
@@ -1018,15 +1984,14 @@ void	vk_setPipeline(
 					 , &imb
 				);
 			}
+*/
 
 			//-----------------------------------------------------
 			// コマンドバッファ終了
 			//-----------------------------------------------------
-			{
-				VkResult  err;
-				err = vkEndCommandBuffer(cmd_buf);
-				assert(!err);
-			}
+			vk_EndCommandBuffer(
+				vk.sir_cmdbuf[i]
+			);
 		}
 	}
 }
@@ -1294,6 +2259,7 @@ void	vk2_draw( VulkanInf& vk
 	//---------------------------------------------------------
 	// 描画キューを登録
 	//---------------------------------------------------------
+/*
 	if (vk.flg_separate_present_queue) 
 	{
 		VkPipelineStageFlags psf;
@@ -1323,6 +2289,7 @@ void	vk2_draw( VulkanInf& vk
 		
 		}
 	}
+*/
 
 	// If we are using separate queues we have to wait for image ownership,
 	// otherwise wait for draw complete
@@ -1332,9 +2299,12 @@ void	vk2_draw( VulkanInf& vk
 			.sType 				= VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
 			.pNext 				= NULL,
 			.waitSemaphoreCount = 1,
+/*
 			.pWaitSemaphores 	= (vk.flg_separate_present_queue)
 								   ? &vk.image_ownership_semaphores[vk.frame_index]
 								   : &vk.draw_complete_semaphores[vk.frame_index],
+*/
+			.pWaitSemaphores 	=  &vk.draw_complete_semaphores[vk.frame_index],
 			.swapchainCount 		= 1,
 			.pSwapchains 		= &vk.swapchain,
 			.pImageIndices 		= &vk.current_buffer,
@@ -1390,10 +2360,12 @@ void	vk2_release( VulkanInf& vk )
 	vkDestroyRenderPass(vk.device, vk.render_pass, NULL);				//create9	*	setPipeline
 	vkDestroyPipelineLayout(vk.device, vk.pipeline_layout, NULL)	;	//create10	*	setPipeline
 	vkDestroyDescriptorSetLayout(vk.device, vk.desc_layout, NULL);		//create11	*	setPipeline
+/*
 	if (vk.flg_separate_present_queue) 
 	{
 		vkDestroyCommandPool(vk.device, vk.present_cmd_pool, NULL);		//create27	*	setPipeline
 	}
+*/
 
 //setVert
 
