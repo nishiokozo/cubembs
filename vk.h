@@ -2,17 +2,19 @@
 #define APP_SHORT_NAME "cube"
 #define FRAME_LAG 2// Allow a maximum of two outstanding presentation operations.
 
+/*
 typedef struct 
 {
-	VkImage image;
-	VkCommandBuffer 	cmdbuf;
-	VkCommandBuffer 	graphics_to_present_cmdbuf;
-	VkImageView 		imgview;
-	VkBuffer 			uniform_buffer;
-	VkDeviceMemory 		uniform_memory;
-	VkFramebuffer 		framebuffer;
-	VkDescriptorSet 	descriptor_set;
+	VkImage 			sir_image;
+	VkCommandBuffer 	sir_cmdbuf;
+	VkCommandBuffer 	sir_graphics_to_present_cmdbuf;
+	VkImageView 		sir_imgview;
+	VkBuffer 			sir_uniform_buffer;
+	VkDeviceMemory 		sir_uniform_memory;
+	VkFramebuffer 		sir_framebuffer;
+	VkDescriptorSet 	sir_descriptor_set;
 } SwapchainImageResources;
+*/
 
 struct texture_object 
 {
@@ -67,7 +69,16 @@ struct VulkanInf
 
 	uint32_t 					swapchainImageCount;
 	VkSwapchainKHR				swapchain;
-	SwapchainImageResources*	swapchain_image_resources;
+//	SwapchainImageResources*	swapchain_image_resources;
+		VkImage* 			sir_image;
+		VkCommandBuffer* 	sir_cmdbuf;
+		VkCommandBuffer* 	sir_graphics_to_present_cmdbuf;
+		VkImageView* 		sir_imgview;
+		VkBuffer* 			sir_uniform_buffer;
+		VkDeviceMemory* 	sir_uniform_memory;
+		VkFramebuffer* 		sir_framebuffer;
+		VkDescriptorSet* 	sir_descriptor_set;
+
 	VkPresentModeKHR 			presentMode;
 	VkFence 					fences[FRAME_LAG];
 	int 						frame_index;

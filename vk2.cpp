@@ -630,7 +630,7 @@ void	vk_setPipeline(
 			.commandBufferCount = 1,
 		};
 		VkResult  err;
-		err = vkAllocateCommandBuffers(vk.device, &cmai, &vk.swapchain_image_resources[i].cmdbuf);	//create21	setPipeline
+		err = vkAllocateCommandBuffers(vk.device, &cmai, &vk.sir_cmdbuf[i]);	//create21	setPipeline
 		assert(!err);
 	}
 
@@ -675,7 +675,7 @@ void	vk_setPipeline(
 				};
 
 				VkResult  err;
-				err = vkAllocateCommandBuffers( vk.device, &cbai, &vk.swapchain_image_resources[i].graphics_to_present_cmdbuf);
+				err = vkAllocateCommandBuffers( vk.device, &cbai, &vk.sir_graphics_to_present_cmdbuf[i]);
 				assert(!err);
 			}
 
@@ -691,7 +691,7 @@ void	vk_setPipeline(
 					.pInheritanceInfo = NULL,
 				};
 				VkResult  err;
-				err = vkBeginCommandBuffer(vk.swapchain_image_resources[i].graphics_to_present_cmdbuf, &cb);
+				err = vkBeginCommandBuffer(vk.sir_graphics_to_present_cmdbuf[i], &cb);
 				assert(!err);
 			}
 
@@ -709,13 +709,13 @@ void	vk_setPipeline(
 					.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 					.srcQueueFamilyIndex = vk.q_graphics_queue_family_index,
 					.dstQueueFamilyIndex = vk.q_present_queue_family_index,
-					.image = vk.swapchain_image_resources[i].image,
+					.image = vk.sir_image[i],
 					.subresourceRange = 
 					{VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}
 				};
 
 				vkCmdPipelineBarrier(
-					vk.swapchain_image_resources[i].graphics_to_present_cmdbuf,
+					vk.sir_graphics_to_present_cmdbuf[i],
 					VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 					VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0,
 					NULL, 0, NULL, 1, &imb
@@ -727,7 +727,7 @@ void	vk_setPipeline(
 			//-----------------------------------------------------
 			{
 				VkResult  err;
-				err = vkEndCommandBuffer(vk.swapchain_image_resources[i].graphics_to_present_cmdbuf);
+				err = vkEndCommandBuffer(vk.sir_graphics_to_present_cmdbuf[i]);
 				assert(!err);
 			}
 		}
@@ -821,16 +821,16 @@ void	vk_setPipeline(
 					.pSetLayouts 		= &vk.desc_layout
 				};
 				VkResult  err;
-				err = vkAllocateDescriptorSets(vk.device, &dsai, &vk.swapchain_image_resources[i].descriptor_set);
+				err = vkAllocateDescriptorSets(vk.device, &dsai, &vk.sir_descriptor_set[i]);
 				assert(!err);
 			}
 			//-----------------------------------------------------
 			// ディスクリプターセットの更新
 			//-----------------------------------------------------
 			{
-				dbi.buffer 			= vk.swapchain_image_resources[i].uniform_buffer;
-				writes[0].dstSet 	= vk.swapchain_image_resources[i].descriptor_set;
-				writes[1].dstSet 	= vk.swapchain_image_resources[i].descriptor_set;
+				dbi.buffer 			= vk.sir_uniform_buffer[i];
+				writes[0].dstSet 	= vk.sir_descriptor_set[i];
+				writes[1].dstSet 	= vk.sir_descriptor_set[i];
 				vkUpdateDescriptorSets(vk.device, 2, writes, 0, NULL);
 			}
 		}
@@ -859,8 +859,8 @@ void	vk_setPipeline(
 
 		for (i = 0; i < vk.swapchainImageCount; i++) 
 		{
-			attachments[0] = vk.swapchain_image_resources[i].imgview;
-			err = vkCreateFramebuffer(vk.device, &fci, NULL, &vk.swapchain_image_resources[i].framebuffer);	//create5	setPipeline
+			attachments[0] = vk.sir_imgview[i];
+			err = vkCreateFramebuffer(vk.device, &fci, NULL, &vk.sir_framebuffer[i]);	//create5	setPipeline
 			assert(!err);
 		}
 	}
@@ -872,7 +872,7 @@ void	vk_setPipeline(
 	{
 		vk.current_buffer = i;
 		
-		VkCommandBuffer cmd_buf = vk.swapchain_image_resources[i].cmdbuf;
+		VkCommandBuffer cmd_buf = vk.sir_cmdbuf[i];
 		{
 
 			//-----------------------------------------------------
@@ -913,7 +913,7 @@ void	vk_setPipeline(
 					.sType 						= VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 					.pNext 						= NULL,
 					.renderPass 				= vk.render_pass,
-					.framebuffer 				= vk.swapchain_image_resources[vk.current_buffer].framebuffer,
+					.framebuffer 				= vk.sir_framebuffer[vk.current_buffer],
 					.renderArea.offset.x 		= 0,
 					.renderArea.offset.y 		= 0,
 					.renderArea.extent.width 	= _width,
@@ -938,7 +938,7 @@ void	vk_setPipeline(
 				,vk.pipeline_layout
 				,0
 				,1
-				,&vk.swapchain_image_resources[vk.current_buffer].descriptor_set
+				,&vk.sir_descriptor_set[vk.current_buffer]
 				,0
 				,NULL
 			);
@@ -1001,7 +1001,7 @@ void	vk_setPipeline(
 					.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 					.srcQueueFamilyIndex = vk.q_graphics_queue_family_index,
 					.dstQueueFamilyIndex = vk.q_present_queue_family_index,
-					.image = vk.swapchain_image_resources[vk.current_buffer].image,
+					.image = vk.sir_image[vk.current_buffer],
 					.subresourceRange = 
 					{VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}};
 
@@ -1160,8 +1160,8 @@ void vk2_create( VulkanInf& vk, int _width, int _height
 				, vk.memory_properties
 				, pDataVert
 				, sizeofStructDataVert
-				, vk.swapchain_image_resources[i].uniform_buffer
-				, vk.swapchain_image_resources[i].uniform_memory
+				, vk.sir_uniform_buffer[i]
+				, vk.sir_uniform_memory[i]
 
 			);
 		}
@@ -1239,7 +1239,7 @@ void	vk2_draw( VulkanInf& vk
 			VkResult  err;
 			err = vkMapMemory( 
 				vk.device
-				, vk.swapchain_image_resources[vk.current_buffer].uniform_memory
+				, vk.sir_uniform_memory[vk.current_buffer]
 				, 0
 				, VK_WHOLE_SIZE
 				, 0
@@ -1256,7 +1256,7 @@ void	vk2_draw( VulkanInf& vk
 		//---------------------------------------------------------
 		// マップ解除
 		//---------------------------------------------------------
-		vkUnmapMemory(vk.device, vk.swapchain_image_resources[vk.current_buffer].uniform_memory);
+		vkUnmapMemory(vk.device, vk.sir_uniform_memory[vk.current_buffer]);
 	}
 
 
@@ -1280,7 +1280,7 @@ void	vk2_draw( VulkanInf& vk
 			si.waitSemaphoreCount 	= 1;
 			si.pWaitSemaphores 		= &vk.image_acquired_semaphores[vk.frame_index];
 			si.commandBufferCount 	= 1;
-			si.pCommandBuffers 		= &vk.swapchain_image_resources[vk.current_buffer].cmdbuf;
+			si.pCommandBuffers 		= &vk.sir_cmdbuf[vk.current_buffer];
 			si.signalSemaphoreCount = 1;
 			si.pSignalSemaphores 	= &vk.draw_complete_semaphores[vk.frame_index];
 			{
@@ -1310,7 +1310,7 @@ void	vk2_draw( VulkanInf& vk
 			si.waitSemaphoreCount 	= 1;
 			si.pWaitSemaphores 		= &vk.draw_complete_semaphores[vk.frame_index];
 			si.commandBufferCount 	= 1;
-			si.pCommandBuffers 		= &vk.swapchain_image_resources[vk.current_buffer].graphics_to_present_cmdbuf;
+			si.pCommandBuffers 		= &vk.sir_graphics_to_present_cmdbuf[vk.current_buffer];
 			si.signalSemaphoreCount = 1;
 			si.pSignalSemaphores 	= &vk.image_ownership_semaphores[vk.frame_index];
 
@@ -1381,7 +1381,7 @@ void	vk2_release( VulkanInf& vk )
 //setPipeline
 	for (i = 0; i < vk.swapchainImageCount; i++) 
 	{
-		vkDestroyFramebuffer(vk.device, vk.swapchain_image_resources[i].framebuffer, NULL);	//create5	*	setPipeline
+		vkDestroyFramebuffer(vk.device, vk.sir_framebuffer[i], NULL);	//create5	*	setPipeline
 	}
 	vkDestroyDescriptorPool(vk.device, vk.desc_pool, NULL);				//create6	*	setPipeline
 
@@ -1399,12 +1399,12 @@ void	vk2_release( VulkanInf& vk )
 
 	for (i = 0; i < vk.swapchainImageCount; i++) 
 	{
-		vkFreeCommandBuffers(vk.device, vk.cmd_pool, 1, &vk.swapchain_image_resources[i].cmdbuf);	//create21	*	setPipeline
+		vkFreeCommandBuffers(vk.device, vk.cmd_pool, 1, &vk.sir_cmdbuf[i]);	//create21	*	setPipeline
 	}
 	for (i = 0; i < vk.swapchainImageCount; i++) 
 	{
-		vkDestroyBuffer(vk.device, vk.swapchain_image_resources[i].uniform_buffer, NULL);			//create22	*	setVert
-		vkFreeMemory(vk.device, vk.swapchain_image_resources[i].uniform_memory, NULL);				//create23	*	setVert
+		vkDestroyBuffer(vk.device, vk.sir_uniform_buffer[i], NULL);			//create22	*	setVert
+		vkFreeMemory(vk.device, vk.sir_uniform_memory[i], NULL);				//create23	*	setVert
 	}
 
 

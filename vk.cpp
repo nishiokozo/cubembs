@@ -1242,8 +1242,16 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 		// イメージビューの作成
 		//---------------------------------------------------------
 		{
-			vk.swapchain_image_resources = (SwapchainImageResources *)malloc(sizeof(SwapchainImageResources) * vk.swapchainImageCount);	//create24s
-			assert(vk.swapchain_image_resources);
+//			vk.swapchain_image_resources = (SwapchainImageResources *)malloc(sizeof(SwapchainImageResources) * vk.swapchainImageCount);	//create24s
+//			assert(vk.swapchain_image_resources);
+			vk.sir_image						=(VkImage* 			)malloc(sizeof(VkImage			) * vk.swapchainImageCount);
+			vk.sir_cmdbuf						=(VkCommandBuffer* 	)malloc(sizeof(VkCommandBuffer	) * vk.swapchainImageCount);
+			vk.sir_graphics_to_present_cmdbuf	=(VkCommandBuffer* 	)malloc(sizeof(VkCommandBuffer	) * vk.swapchainImageCount);
+			vk.sir_imgview						=(VkImageView* 		)malloc(sizeof(VkImageView		) * vk.swapchainImageCount);
+			vk.sir_uniform_buffer				=(VkBuffer* 		)malloc(sizeof(VkBuffer			) * vk.swapchainImageCount);
+			vk.sir_uniform_memory				=(VkDeviceMemory* 	)malloc(sizeof(VkDeviceMemory	) * vk.swapchainImageCount);
+			vk.sir_framebuffer					=(VkFramebuffer* 	)malloc(sizeof(VkFramebuffer	) * vk.swapchainImageCount);
+			vk.sir_descriptor_set				=(VkDescriptorSet* 	)malloc(sizeof(VkDescriptorSet	) * vk.swapchainImageCount);
 
 			for (uint32_t i = 0; i < vk.swapchainImageCount; i++) 
 			{
@@ -1272,11 +1280,11 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 					.image = sci[i],
 				};
 
-				vk.swapchain_image_resources[i].image = sci[i];
+				vk.sir_image[i] = sci[i];
 
 				{
 					VkResult  err;
-					err = vkCreateImageView(vk.device, &ivci, NULL, &vk.swapchain_image_resources[i].imgview);	//create20s
+					err = vkCreateImageView(vk.device, &ivci, NULL, &vk.sir_imgview[i]);	//create20s
 					assert(!err);
 				}
 			}
@@ -1750,10 +1758,19 @@ void	vk_release( VulkanInf& vk )
 
 	for (int i = 0; i < vk.swapchainImageCount; i++) 
 	{
-		vkDestroyImageView(vk.device, vk.swapchain_image_resources[i].imgview, NULL);				//create20	*	setup
+		vkDestroyImageView(vk.device, vk.sir_imgview[i], NULL);				//create20	*	setup
 	}
 
-	free(vk.swapchain_image_resources);									//create24	*	setup
+//	free(vk.swapchain_image_resources);									//create24	*	setup
+	free(vk.sir_image);
+	free(vk.sir_cmdbuf);
+	free(vk.sir_graphics_to_present_cmdbuf);
+	free(vk.sir_imgview);
+	free(vk.sir_uniform_buffer);
+	free(vk.sir_uniform_memory);
+	free(vk.sir_framebuffer);
+	free(vk.sir_descriptor_set);
+
 	vkDestroyCommandPool(vk.device, vk.cmd_pool, NULL);					//create26	*	setup
 
 	vkDeviceWaitIdle(vk.device);
