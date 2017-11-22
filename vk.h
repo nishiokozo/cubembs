@@ -50,7 +50,7 @@ struct VulkanInf
 	uint32_t 	enabled_extension_count;
 	uint32_t 	enabled_layer_count;
 	const char*	extension_names[64];
-	char*		enabled_layers[64];
+//	char*		enabled_layers[64];
 
 	VkFormat 		format;
 	VkColorSpaceKHR color_space;
@@ -102,15 +102,16 @@ struct VulkanInf
 
 class VkInf
 {
+public:
 	VulkanInf vk;
 	bool	flgSetModel;
-public:
 
 	bool isNull()
 	{
 		return ((long long)this==0);
 	}
 
+/*
 	void setmodel( int _width, int _height
 		,void* pDataVert
 		,int sizeofStructDataVert
@@ -121,6 +122,7 @@ public:
 		 void*	pMVP
 		,int matrixSize
 	);
+*/
 	VkInf( HINSTANCE hInstance, HWND hWin, int _width, int _height );
 	~VkInf();
 

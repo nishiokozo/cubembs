@@ -25,6 +25,7 @@
 
 #include "key.h"
 #include "vk.h"
+#include "vk2.h"
 #include "win.h"
 
 // Converts degrees to radians.
@@ -696,8 +697,14 @@ int main(int argc, char *argv[])
 	//---
 	WinInf* pWin = new WinInf( "msb", 256, 256 );
 	VkInf* pVk = new VkInf( pWin->hInstance, pWin->hWin, pWin->win_width, pWin->win_height );
-	pVk->setmodel( pWin->win_width, pWin->win_height, (void*)&dataVert, sizeof(struct vktexcube_vs_uniform) );
-
+	if ( pVk == 0 ) 
+	{
+			if ( pVk->flgSetModel== false )
+			{
+				vk0_setmodel( pVk->vk, pWin->win_width, pWin->win_height, (void*)&dataVert, sizeof(struct vktexcube_vs_uniform) );
+				pVk->flgSetModel = true;
+			}
+	}
 	//-----------------------------------------------------
 	// メインループ
 	//-----------------------------------------------------
@@ -728,15 +735,19 @@ int main(int argc, char *argv[])
 		{
 			if ( pVk == 0 ) 
 			{
-//				pVk = new VkInf( pWin->hInstance, pWin->hWin, pWin->win_width, pWin->win_height );
+				pVk = new VkInf( pWin->hInstance, pWin->hWin, pWin->win_width, pWin->win_height );
 			}
 		}
 		
 		if ( key.hi._2 )
 		{
-			if ( pVk != 0 ) 
+			if ( pVk )
 			{
-				if ( pVk != 0 ) pVk->releaseModel();
+				if ( pVk->flgSetModel== true )
+				{
+					vk_vk_model_end( pVk->vk );
+					pVk->flgSetModel = false;
+				}
 				delete pVk;pVk=0;
 			}
 		}
@@ -747,11 +758,25 @@ int main(int argc, char *argv[])
 		}
 		if ( key.hi._4 )
 		{
-			if ( pVk != 0 ) pVk->setmodel( pWin->win_width, pWin->win_height, (void*)&dataVert, sizeof(struct vktexcube_vs_uniform) );
+			if ( pVk ) 
+			{
+				if ( pVk->flgSetModel== false )
+				{
+					vk0_setmodel( pVk->vk, pWin->win_width, pWin->win_height, (void*)&dataVert, sizeof(struct vktexcube_vs_uniform) );
+					pVk->flgSetModel = true;
+				}
+			}
 		}
 		if ( key.hi._5 )
 		{
-			if ( pVk != 0 ) pVk->releaseModel();
+			if ( pVk ) 
+			{
+				if ( pVk->flgSetModel== true )
+				{
+					vk_vk_model_end( pVk->vk );
+					pVk->flgSetModel = false;
+				}
+			}
 		}
 		if ( key.hi._6 )
 		{
@@ -760,21 +785,38 @@ int main(int argc, char *argv[])
 		
 		if ( lim1 )
 		{
-			if ( pVk != 0 ) pVk->releaseModel();
-			delete pVk;
-			pVk = new VkInf( pWin->hInstance, pWin->hWin, pWin->win_width, pWin->win_height );
-//			pVk->setmodel( pWin->win_width, pWin->win_height, (void*)&dataVert, sizeof(struct vktexcube_vs_uniform) );
-			lim1--;
-			printf("%d ",lim1 );
+			if ( pVk ) 
+			{
+				if ( pVk->flgSetModel== true )
+				{
+					vk_vk_model_end( pVk->vk );
+					pVk->flgSetModel = false;
+				}
+				delete pVk;pVk=0;
+				pVk = new VkInf( pWin->hInstance, pWin->hWin, pWin->win_width, pWin->win_height );
+				if ( pVk->flgSetModel== false )
+				{
+					vk0_setmodel( pVk->vk, pWin->win_width, pWin->win_height, (void*)&dataVert, sizeof(struct vktexcube_vs_uniform) );
+					pVk->flgSetModel = true;
+				}
+				lim1--;
+				printf("%d ",lim1 );
+			}
 		}
 		if ( lim2 )
 		{
 			if ( pVk != 0 ) 
 			{
-				pVk->releaseModel();
-	//			delete pVk;
-	//			pVk = new VkInf( pWin->hInstance, pWin->hWin, pWin->win_width, pWin->win_height );
-				pVk->setmodel( pWin->win_width, pWin->win_height, (void*)&dataVert, sizeof(struct vktexcube_vs_uniform) );
+				if ( pVk->flgSetModel== true )
+				{
+					vk_vk_model_end( pVk->vk );
+					pVk->flgSetModel = false;
+				}
+				if ( pVk->flgSetModel== false )
+				{
+					vk0_setmodel( pVk->vk, pWin->win_width, pWin->win_height, (void*)&dataVert, sizeof(struct vktexcube_vs_uniform) );
+					pVk->flgSetModel = true;
+				}
 				lim2--;
 				printf("%d ",lim2 );
 			}
@@ -794,7 +836,11 @@ int main(int argc, char *argv[])
 			mat4x4_dup(Model, apr_model_matrix);
 			mat4x4_rotate(apr_model_matrix, Model, 0.0f, 1.0f, 0.0f, (float)degreesToRadians(apr_spin_angle));
 			mat4x4_mul(MVP, VP, apr_model_matrix);
-			pVk->v_draw(MVP, matrixSize);
+
+			if ( pVk->flgSetModel )
+			{
+				vk_draw( pVk->vk, MVP, matrixSize);
+			}
 		}
 
 		key_update();
@@ -804,10 +850,14 @@ int main(int argc, char *argv[])
 	//-----------------------------------------------------
 	// 終了
 	//-----------------------------------------------------
-	if ( pVk != 0 ) pVk->releaseModel();
 	if ( pVk ) 
 	{
-		delete pVk;
+		if ( pVk->flgSetModel== true )
+		{
+			vk_vk_model_end( pVk->vk );
+			pVk->flgSetModel = false;
+		}
+		delete pVk;pVk=0;
 	}
 	if ( pWin ) delete pWin;
 
