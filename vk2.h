@@ -8,3 +8,9 @@ void	vk2_draw( VulkanInf& vk
 ,int& matrixSize
 );
 void	vk2_release( VulkanInf& vk );
+
+void vk3_create( VulkanInf& vk, int _width, int _height
+	,void* pDataVert
+	,int sizeofStructDataVert
+ );
+void	vk3_release( VulkanInf& vk );
