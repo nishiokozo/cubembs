@@ -1091,19 +1091,20 @@ void vk2_create( VulkanInf& vk, int _width, int _height
 					, vk.pipelineCache	//create8
 				);
 			}
-
 			//---------------------
 			// グラフィックパイプライン作成
 			//---------------------
-			const char* fn_vert = "cube-vert.spv";
-			const char* fn_flag = "cube-frag.spv";
+			const char* fn_vert = "s-phong-vert.spv";
+			const char* fn_frag = "s-phong-frag.spv";
+//			const char* fn_vert = "s-const-tex-vert.spv";
+//			const char* fn_frag = "s-const-tex-frag.spv";
 			{
 				void *vcode;
 				size_t vsize;
 				void *fcode;
 				size_t fsize;
 				vcode = demo_read_spv( fn_vert, &vsize);
-				fcode = demo_read_spv( fn_flag, &fsize);
+				fcode = demo_read_spv( fn_frag, &fsize);
 				vk_CreateGraphicsPipelines(
 					  vk.device 
 					, vk.pipeline_layout
@@ -1119,7 +1120,7 @@ void vk2_create( VulkanInf& vk, int _width, int _height
 				free(vcode);
 				free(fcode);
 			}
-		
+
 			//-----------------------------------------------------
 			// コマンドバッファの作成
 			//-----------------------------------------------------
@@ -1329,7 +1330,7 @@ void vk2_cmd1( VulkanInf& vk
 	//-----------------------------------------------------
 	for (uint32_t i = 0; i < vk.swapchainImageCount; i++) 
 	{
-		vk.current_buffer = i;
+//		vk.current_buffer = i;
 		
 		//-----------------------------------------------------
 		// コマンドバッファの開始

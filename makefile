@@ -1,6 +1,7 @@
 OBJS=main.o key.o vk.o win.o vk2.o vect.o
 SHDR=\
-	cube-frag.spv cube-vert.spv
+	s-const-tex-frag.spv s-const-tex-vert.spv \
+	s-phong-frag.spv s-phong-vert.spv
 
 LIBS= -LC:/VulkanSDK/1.0.54.0/Lib -lvulkan-1
 FLAGS=-g -m64 -c -g -IC:/VulkanSDK/1.0.54.0/Include -Wno-narrowing -fpermissive -Werror

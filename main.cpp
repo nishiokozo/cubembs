@@ -658,11 +658,106 @@ static vect44* 					g_model				= new vect44[unit_MAX];
 static vect44 g_view;
 static int unit_cnt=0;
 
+static vktexcube_vs_uniform 	dataVert0 = 
+{
+	{//mvp
+		0,0,0,0,
+		0,0,0,0,
+		0,0,0,0,
+		0,0,0,0,
+	},
+	{//xyzw
+		{ 0.00f ,  0.60f , -0.50f, 0.0f},  // -X side
+		{ 0.00f ,  0.00f ,  1.50f, 0.0f},
+		{ 0.00f ,  0.00f ,  1.50f, 0.0f},
+		{ 0.00f ,  0.00f ,  1.50f, 1.0f},
+		{ 0.50f ,  0.00f , -0.50f, 1.0f},
+		{ 0.00f ,  0.60f , -0.50f, 1.0f},
+
+		{ 0.00f ,  0.60f , -0.50f, 0.0f},  // -Z side
+		{-0.50f ,  0.00f , -0.50f, 0.0f},
+		{-0.00f ,  0.60f , -0.50f, 0.0f},
+		{ 0.00f ,  0.60f , -0.50f, 1.0f},
+		{ 0.50f ,  0.00f , -0.50f, 1.0f},
+		{-0.50f ,  0.00f , -0.50f, 1.0f},
+
+		{-0.00f , -0.10f , -0.00f, 0.0f},  // -Y side
+		{ 0.00f , -0.10f , -0.00f, 0.0f},
+		{ 0.00f , -0.10f ,  0.00f, 0.0f},
+		{-0.00f , -0.10f , -0.00f, 0.0f},
+		{ 0.00f , -0.10f ,  0.00f, 0.0f},
+		{-0.00f , -0.10f ,  0.00f, 0.0f},
+
+		{ 0.50f ,  0.00f , -0.50f, 0.0f},  // +Y side
+		{ 0.00f ,  0.00f ,  1.50f, 0.0f},
+		{-0.00f ,  0.00f ,  1.50f, 0.0f},
+		{ 0.50f ,  0.00f , -0.50f, 1.0f},
+		{-0.00f ,  0.00f ,  1.50f, 1.0f},
+		{-0.50f ,  0.00f , -0.50f, 1.0f},
+
+		{ 0.00f ,  0.00f ,  0.00f, 0.0f},  // +X side
+		{ 0.00f ,  0.00f ,  0.00f, 0.0f},
+		{ 0.00f , -0.00f ,  0.00f, 0.0f},
+		{-0.00f , -0.00f ,  1.50f, 1.0f},
+		{-0.00f ,  0.60f , -0.50f, 1.0f},
+		{-0.50f , -0.00f , -0.50f, 1.0f},
+
+		{-0.00f ,  0.00f ,  1.50f, 0.0f},  // +Z side
+		{-0.00f , -0.00f ,  1.50f, 0.0f},
+		{ 0.00f ,  0.00f ,  1.50f, 0.0f},
+		{-0.00f , -0.00f ,  1.50f, 0.0f},
+		{ 0.00f , -0.00f ,  1.50f, 0.0f},
+		{ 0.00f ,  0.00f ,  1.50f, 0.0f},
+	},
+	{//normal
+		{ 0.0f , 1.0f },   // -X side
+		{ 1.0f , 1.0f }, 
+		{ 1.0f , 0.0f }, 
+		{ 0.75f, 0.63f, 0.19f }, 
+		{ 0.75f, 0.63f, 0.19f }, 
+		{ 0.75f, 0.63f, 0.19f }, 
+		     
+		{ 1.0f , 1.0f },   // -Z side
+		{ 0.0f , 0.0f }, 
+		{ 0.0f , 1.0f }, 
+		{ 0.0f , 0.0f,-1.0f }, 
+		{ 0.0f , 0.0f,-1.0f }, 
+		{ 0.0f , 0.0f,-1.0f }, 
+		     
+		{ 1.0f , 0.0f },   // -Y side
+		{ 1.0f , 1.0f }, 
+		{ 0.0f , 1.0f }, 
+		{ 1.0f , 0.0f }, 
+		{ 0.0f , 1.0f }, 
+		{ 0.0f , 0.0f }, 
+		     
+		{ 1.0f , 0.0f },   // +Y side
+		{ 0.0f , 0.0f }, 
+		{ 0.0f , 1.0f }, 
+		{ 0.0f ,-1.0f, 0.0f }, 
+		{ 0.0f ,-1.0f, 0.0f }, 
+		{ 0.0f ,-1.0f, 0.0f }, 
+		     
+		{ 1.0f , 0.0f },   // +X side
+		{ 0.0f , 0.0f }, 
+		{ 0.0f , 1.0f }, 
+		{-0.75f, 0.63f, 0.19f }, 
+		{-0.75f, 0.63f, 0.19f }, 
+		{-0.75f, 0.63f, 0.19f }, 
+		     
+		{ 0.0f , 0.0f },   // +Z side
+		{ 0.0f , 1.0f }, 
+		{ 1.0f , 0.0f }, 
+		{ 0.0f , 1.0f }, 
+		{ 1.0f , 1.0f }, 
+		{ 1.0f , 0.0f }, 
+	}
+};
+
 //-----------------------------------------------------------------------------
 int main(int argc, char *argv[])
 //-----------------------------------------------------------------------------
 {
-//	struct vktexcube_vs_uniform dataVert;
 	//---------------------------------------------------------
 	// ìßéãïœä∑çsóÒÇÃçÏê¨
 	//---------------------------------------------------------
@@ -680,6 +775,12 @@ int main(int argc, char *argv[])
 		mat4x4_identity(apr_model_matrix);
 
 		apr_projection_matrix[1][1]*=-1;  //Flip projection matrix from GL to Vulkan orientation.
+	}
+
+	for ( int u = 0; u < unit_MAX; u++ )
+	{
+		memcpy( &dataVert[u], &dataVert0,  sizeof(vktexcube_vs_uniform) );
+		unit_cnt++;
 	}
 
 	//---------------------------------------------------------
@@ -723,9 +824,10 @@ int main(int argc, char *argv[])
 		{
 
 //			memcpy(dataVert[u].mvp, MVP, sizeof(MVP));
-			memcpy(dataVert[u].mvp, mvp[u].m, sizeof(mvp[u].m));
+//			memcpy(dataVert[u].mvp, mvp[u].m, sizeof(mvp[u].m));
 			//	dumpMatrix("MVP", MVP);
 
+/*
 			for (unsigned int i = 0; i < 12 * 3; i++) 
 			{
 				dataVert[u].position[i][0] = g_vertex_buffer_data[i * 3];
@@ -738,6 +840,7 @@ int main(int argc, char *argv[])
 				dataVert[u].attr[i][3] = 0;
 			}
 			unit_cnt++;
+*/
 		}
 	}
 	//---
@@ -830,7 +933,8 @@ int main(int argc, char *argv[])
 //				if ( pVk->flgSetModel== false )
 				{
 					vk2_create( pVk->vk, pWin->win_width, pWin->win_height, unit_MAX );
-					for ( int u = 0 ; u < unit_cnt ; u++ )
+//					for ( int u = 0 ; u < unit_cnt ; u++ )
+int u = 1;
 					{
 						vk2_loadModel( pVk->vk
 							, (void*)&dataVert[u]
@@ -884,20 +988,22 @@ int main(int argc, char *argv[])
 				int _firstInstance		= 0;
 
 				vk2_updateBegin( pVk->vk );
-				for ( int u =0 ; u < unit_cnt ; u++ )
 				{
 					vk2_cmd1( pVk->vk, pWin->win_width, pWin->win_height );
-					vk2_cmd2( pVk->vk 
-						,_vertexCount
-						,_instanceCount
-						,_firstVertex
-						,_firstInstance
-						, sc_descriptor_set[u]
-					);
+					for ( int u =0 ; u < unit_cnt ; u++ )
+					{
+						vk2_cmd2( pVk->vk 
+							,_vertexCount
+							,_instanceCount
+							,_firstVertex
+							,_firstInstance
+							, sc_descriptor_set[u]
+						);
+						vk2_drawPolygon( pVk->vk, mvp[u].m, matrixSize, sc_uniform_memory[u]);
+					}
 					vk2_cmd3( pVk->vk ); 
-//					vk2_drawPolygon( pVk->vk, &MVP, matrixSize, sc_uniform_memory[u]);
-					vk2_drawPolygon( pVk->vk, mvp[u].m, matrixSize, sc_uniform_memory[u]);
 				}
+
 				vk2_updateEnd( pVk->vk );
 			}
 		}
