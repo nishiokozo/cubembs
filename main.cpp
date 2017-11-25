@@ -27,6 +27,7 @@
 #include "vk.h"
 #include "vk2.h"
 #include "win.h"
+#include "vect.h"
 
 // Converts degrees to radians.
 #define degreesToRadians(angleDegrees) (angleDegrees * M_PI / 180.0)
@@ -647,11 +648,21 @@ float 	apr_spin_angle;
 float 	apr_spin_increment;
 bool	apr_pause;
 
+static const	int	unit_MAX = 5;
+static vktexcube_vs_uniform*	dataVert			= new vktexcube_vs_uniform[unit_MAX];
+static VkBuffer** 				sc_uniform_buffer	= new VkBuffer*[unit_MAX];
+static VkDeviceMemory** 		sc_uniform_memory	= new VkDeviceMemory*[unit_MAX];
+static VkDescriptorSet** 		sc_descriptor_set	= new VkDescriptorSet*[unit_MAX];
+static vect44*					mvp					= new vect44[unit_MAX];
+static vect44* 					g_model				= new vect44[unit_MAX];
+static vect44 g_view;
+static int unit_cnt=0;
+
 //-----------------------------------------------------------------------------
 int main(int argc, char *argv[])
 //-----------------------------------------------------------------------------
 {
-	struct vktexcube_vs_uniform dataVert;
+//	struct vktexcube_vs_uniform dataVert;
 	//---------------------------------------------------------
 	// ìßéãïœä∑çsóÒÇÃçÏê¨
 	//---------------------------------------------------------
@@ -671,6 +682,35 @@ int main(int argc, char *argv[])
 		apr_projection_matrix[1][1]*=-1;  //Flip projection matrix from GL to Vulkan orientation.
 	}
 
+	//---------------------------------------------------------
+	// ìßéãïœä∑çsóÒÇÃçÏê¨
+	//---------------------------------------------------------
+	{
+		for ( int u = 0; u < unit_cnt; u++ )
+		{
+			g_model[u].identity();
+			g_model[u].translate( (-(unit_cnt-1)/2)+u*1.0,0,0);
+		}
+		g_view.identity();
+		g_view.translate(0,0,-5);
+	}
+
+	{
+		for ( int u = 0; u < unit_cnt; u++ )
+		{
+//		 	g_model[u].rotX(RAD(0.1));
+		 	g_model[u].rotY(RAD(80));
+		}
+		for ( int u = 0; u < unit_cnt; u++ )
+		{
+			mvp[u].identity();
+			mvp[u].perspectiveGL( 45, 512.0/512.0,0.1,100		 );
+			mvp[u].m[1][1] *= -1; // GL to Vulkan
+			mvp[u] =  g_model[u] * g_view * mvp[u];
+		}
+	}
+
+
 	{
 		mat4x4 VP;
 		mat4x4_mul(VP, apr_projection_matrix, apr_view_matrix);
@@ -679,19 +719,25 @@ int main(int argc, char *argv[])
 		mat4x4_mul(MVP, VP, apr_model_matrix);
 
 
-		memcpy(dataVert.mvp, MVP, sizeof(MVP));
-		//	dumpMatrix("MVP", MVP);
-
-		for (unsigned int i = 0; i < 12 * 3; i++) 
+		for ( int u = 0; u < unit_MAX; u++ )
 		{
-			dataVert.position[i][0] = g_vertex_buffer_data[i * 3];
-			dataVert.position[i][1] = g_vertex_buffer_data[i * 3 + 1];
-			dataVert.position[i][2] = g_vertex_buffer_data[i * 3 + 2];
-			dataVert.position[i][3] = 1.0f;
-			dataVert.attr[i][0] = g_uv_buffer_data[2 * i];
-			dataVert.attr[i][1] = g_uv_buffer_data[2 * i + 1];
-			dataVert.attr[i][2] = 0;
-			dataVert.attr[i][3] = 0;
+
+//			memcpy(dataVert[u].mvp, MVP, sizeof(MVP));
+			memcpy(dataVert[u].mvp, mvp[u].m, sizeof(mvp[u].m));
+			//	dumpMatrix("MVP", MVP);
+
+			for (unsigned int i = 0; i < 12 * 3; i++) 
+			{
+				dataVert[u].position[i][0] = g_vertex_buffer_data[i * 3];
+				dataVert[u].position[i][1] = g_vertex_buffer_data[i * 3 + 1];
+				dataVert[u].position[i][2] = g_vertex_buffer_data[i * 3 + 2];
+				dataVert[u].position[i][3] = 1.0f;
+				dataVert[u].attr[i][0] = g_uv_buffer_data[2 * i];
+				dataVert[u].attr[i][1] = g_uv_buffer_data[2 * i + 1];
+				dataVert[u].attr[i][2] = 0;
+				dataVert[u].attr[i][3] = 0;
+			}
+			unit_cnt++;
 		}
 	}
 	//---
@@ -700,11 +746,9 @@ int main(int argc, char *argv[])
 
 	if ( pVk ) 
 	{
-			if ( pVk->flgSetModel== false )
+//			if ( pVk->flgSetModel== false )
 			{
-				vk2_create( pVk->vk, pWin->win_width, pWin->win_height, (void*)&dataVert, sizeof(struct vktexcube_vs_uniform) );
-				vk2_loadModel( pVk->vk, (void*)&dataVert, sizeof(struct vktexcube_vs_uniform) );
-				pVk->flgSetModel = true;
+				vk2_create( pVk->vk, pWin->win_width, pWin->win_height, unit_MAX );
 			}
 	}
 	//-----------------------------------------------------
@@ -717,6 +761,18 @@ int main(int argc, char *argv[])
 
 	int lim1 = 0;
 	int lim2 = 0;
+
+			for ( int u = 0 ; u < unit_cnt ; u++ )
+			{
+					vk2_loadModel( pVk->vk
+						, (void*)&dataVert[u]
+						, sizeof(struct vktexcube_vs_uniform)
+						, sc_uniform_buffer[u]
+						, sc_uniform_memory[u]
+						, sc_descriptor_set[u]
+					);
+			}
+					pVk->flgSetModel = true;
 
 	while (true) 
 	{
@@ -733,15 +789,17 @@ int main(int argc, char *argv[])
 		}
 		if (msg.message != WM_PAINT) continue;
 
+		if ( key.hi._1 )
+		{
+		}
+		
 		if ( key.hi._4 )
 		{
 			if ( pVk ) 
 			{
-				if ( pVk->flgSetModel== false )
+		//		if ( pVk->flgSetModel== false )
 				{
-					vk2_create( pVk->vk, pWin->win_width, pWin->win_height, (void*)&dataVert, sizeof(struct vktexcube_vs_uniform) );
-					vk2_loadModel( pVk->vk, (void*)&dataVert, sizeof(struct vktexcube_vs_uniform) );
-					pVk->flgSetModel = true;
+//					vk2_create( pVk->vk, pWin->win_width, pWin->win_height, (void*)&dataVert, sizeof(struct vktexcube_vs_uniform), unit_MAX );
 				}
 			}
 		}
@@ -749,10 +807,10 @@ int main(int argc, char *argv[])
 		{
 			if ( pVk ) 
 			{
-				if ( pVk->flgSetModel== true )
+		//		if ( pVk->flgSetModel== true )
 				{
-					vk2_release( pVk->vk );
-					pVk->flgSetModel = false;
+//					vk2_release( pVk->vk );
+//					pVk->flgSetModel = false;
 				}
 			}
 		}
@@ -764,15 +822,24 @@ int main(int argc, char *argv[])
 		{
 			if ( pVk != 0 ) 
 			{
-				if ( pVk->flgSetModel== true )
+//				if ( pVk->flgSetModel== true )
 				{
 					vk2_release( pVk->vk );
-					pVk->flgSetModel = false;
+//					pVk->flgSetModel = false;
 				}
-				if ( pVk->flgSetModel== false )
+//				if ( pVk->flgSetModel== false )
 				{
-					vk2_create( pVk->vk, pWin->win_width, pWin->win_height, (void*)&dataVert, sizeof(struct vktexcube_vs_uniform) );
-					vk2_loadModel( pVk->vk, (void*)&dataVert, sizeof(struct vktexcube_vs_uniform) );
+					vk2_create( pVk->vk, pWin->win_width, pWin->win_height, unit_MAX );
+					for ( int u = 0 ; u < unit_cnt ; u++ )
+					{
+						vk2_loadModel( pVk->vk
+							, (void*)&dataVert[u]
+							, sizeof(struct vktexcube_vs_uniform)
+							, sc_uniform_buffer[u]
+							, sc_uniform_memory[u]
+							, sc_descriptor_set[u]
+						);
+					}
 					pVk->flgSetModel = true;
 				}
 				lim2--;
@@ -797,21 +864,40 @@ int main(int argc, char *argv[])
 
 			if ( pVk->flgSetModel )
 			{
+	for ( int u = 0; u < unit_cnt; u++ )
+	{
+	 	g_model[u].rotX(RAD(0.1));
+	 	g_model[u].rotY(RAD(1));
+	}
+	for ( int u = 0; u < unit_cnt; u++ )
+	{
+		mvp[u].identity();
+		mvp[u].perspectiveGL( 45, 512.0/512.0,0.1,100		 );
+		mvp[u].m[1][1] *= -1; // GL to Vulkan
+		mvp[u] =  g_model[u] * g_view * mvp[u];
+	}
+
+
 				int _vertexCount		= 12*3;
 				int _instanceCount		= 1;
 				int _firstVertex		= 0;
 				int _firstInstance		= 0;
 
 				vk2_updateBegin( pVk->vk );
-				vk2_cmd1( pVk->vk, pWin->win_width, pWin->win_height );
-				vk2_cmd2( pVk->vk 
-					,_vertexCount
-					,_instanceCount
-					,_firstVertex
-					,_firstInstance
-				);
-				vk2_cmd3( pVk->vk ); 
-				vk2_drawPolygon( pVk->vk, &MVP, matrixSize);
+				for ( int u =0 ; u < unit_cnt ; u++ )
+				{
+					vk2_cmd1( pVk->vk, pWin->win_width, pWin->win_height );
+					vk2_cmd2( pVk->vk 
+						,_vertexCount
+						,_instanceCount
+						,_firstVertex
+						,_firstInstance
+						, sc_descriptor_set[u]
+					);
+					vk2_cmd3( pVk->vk ); 
+//					vk2_drawPolygon( pVk->vk, &MVP, matrixSize, sc_uniform_memory[u]);
+					vk2_drawPolygon( pVk->vk, mvp[u].m, matrixSize, sc_uniform_memory[u]);
+				}
 				vk2_updateEnd( pVk->vk );
 			}
 		}

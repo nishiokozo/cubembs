@@ -57,6 +57,7 @@ struct VulkanInf
 	VkFormat 		format;
 	VkColorSpaceKHR color_space;
 
+/*
 	PFN_vkGetPhysicalDeviceSurfaceSupportKHR 		fpGetPhysicalDeviceSurfaceSupportKHR;
 	PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR	fpGetPhysicalDeviceSurfaceCapabilitiesKHR;
 	PFN_vkGetPhysicalDeviceSurfaceFormatsKHR		fpGetPhysicalDeviceSurfaceFormatsKHR;
@@ -66,6 +67,7 @@ struct VulkanInf
 	PFN_vkGetSwapchainImagesKHR						fpGetSwapchainImagesKHR;
 	PFN_vkAcquireNextImageKHR						fpAcquireNextImageKHR;
 	PFN_vkQueuePresentKHR							fpQueuePresentKHR;
+*/
 
 	uint32_t 					swapchainImageCount;
 	VkSwapchainKHR				swapchain;

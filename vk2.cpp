@@ -1019,8 +1019,9 @@ static void	vk_CmdSetScissor(
 //-----------------------------------------------------------------------------
 void vk2_create( VulkanInf& vk, int _width, int _height
 //-----------------------------------------------------------------------------
-	,void* pDataVert
-	,int sizeofStructDataVert
+//	,void* pDataVert
+//	,int sizeofStructDataVert
+	, int unit_cnt
  )
 {
 
@@ -1051,7 +1052,7 @@ void vk2_create( VulkanInf& vk, int _width, int _height
 				vk_createDescripterPool(									
 					  vk.device
 					, DEMO_TEXTURE_COUNT
-					, vk.swapchainImageCount //* unit_cnt
+					, vk.swapchainImageCount * unit_cnt
 
 					, vk.desc_pool	//create6
 				);
@@ -1268,53 +1269,52 @@ void vk2_loadModel( VulkanInf& vk
 //-----------------------------------------------------------------------------
 	,void* pDataVert
 	,int sizeofStructDataVert
- )
+
+	, VkBuffer* 				&	sir_uniform_buffer
+	, VkDeviceMemory* 			&	sir_uniform_memory
+	, VkDescriptorSet* 			&	sir_descriptor_set
+)
 {
 
-	//-----------------------------------------------------
-	// モデルデータの作成
-	//-----------------------------------------------------
+	sir_uniform_buffer 	= (VkBuffer *)			malloc(sizeof(VkBuffer) 		* vk.swapchainImageCount);
+	sir_uniform_memory 	= (VkDeviceMemory *)	malloc(sizeof(VkDeviceMemory) 	* vk.swapchainImageCount);
+	sir_descriptor_set 	= (VkDescriptorSet *)	malloc(sizeof(VkDescriptorSet) 	* vk.swapchainImageCount);
+
+	for ( int i = 0; i < vk.swapchainImageCount; i++) 
 	{
+		//-----------------------------------------------------
+		// モデルデータの作成
+		//-----------------------------------------------------
+		vk_setVert(
+			  vk.device
+			, vk.memory_properties
+			, pDataVert
+			, sizeofStructDataVert
 
-		for ( int i = 0; i < vk.swapchainImageCount; i++) 
-		{
-			//---------------------
-			// モデルデータの作成
-			//---------------------
-			vk_setVert(
-				  vk.device
-				, vk.memory_properties
-				, pDataVert
-				, sizeofStructDataVert
+			, sir_uniform_buffer[i]
+			, sir_uniform_memory[i]
+		);
 
-				, vk.sir_uniform_buffer[i]
-				, vk.sir_uniform_memory[i]
-			);
-		}
+		//-----------------------------------------------------
+		// ディスクリプターの作成
+		//-----------------------------------------------------
+		vk_AllocateDescriptorSets(
+			  vk.device
+  			, vk.desc_layout
+			, vk.desc_pool
+
+			, sir_descriptor_set[i]
+		);
+
+		vk_UpdateDescriptorSets(
+			  vk.device
+			, DEMO_TEXTURE_COUNT
+			, vk.textures 
+			, sizeofStructDataVert
+			, sir_uniform_buffer[i]
+			, sir_descriptor_set[i]
+		);
 	}
-			//-----------------------------------------------------
-			// ディスクリプターの作成
-			//-----------------------------------------------------
-			for (unsigned int i = 0; i < vk.swapchainImageCount; i++) 
-			{
-				vk_AllocateDescriptorSets(
-					  vk.device
-		  			, vk.desc_layout
-					, vk.desc_pool
-
-					, vk.sir_descriptor_set[i]
-				);
-
-				vk_UpdateDescriptorSets(
-					  vk.device
-					, DEMO_TEXTURE_COUNT
-					, vk.textures 
-					, sizeofStructDataVert
-					, vk.sir_uniform_buffer[i]
-
-					, vk.sir_descriptor_set[i]
-				);
-			}
 }
 //-----------------------------------------------------------------------------
 void vk2_cmd1( VulkanInf& vk
@@ -1380,10 +1380,11 @@ void vk2_cmd1( VulkanInf& vk
 //-----------------------------------------------------------------------------
 void vk2_cmd2( VulkanInf& vk
 //-----------------------------------------------------------------------------
-		,int _vertexCount		//	= 12*3;
-		,int _instanceCount		//	= 1;
-		,int _firstVertex		//	= 0;
-		,int _firstInstance		// = 0;
+	,int _vertexCount		//	= 12*3;
+	,int _instanceCount		//	= 1;
+	,int _firstVertex		//	= 0;
+	,int _firstInstance		// = 0;
+	, VkDescriptorSet* 			&	sir_descriptor_set
 )
 {
 	//-----------------------------------------------------
@@ -1396,7 +1397,7 @@ void vk2_cmd2( VulkanInf& vk
 		//-----------------------------------------------------
 		vk_CmdBindDescriptorSets(
 			  vk.pipeline_layout
-			, vk.sir_descriptor_set[vk.current_buffer]
+			, sir_descriptor_set[vk.current_buffer]
 			, vk.sir_cmdbuf[i]
 		);
 
@@ -1446,7 +1447,7 @@ void	vk2_updateBegin( VulkanInf& vk)
 		do 
 		{
 			// Get the index of the next available swapchain image:
-			err = vk.fpAcquireNextImageKHR(vk.device, vk.swapchain, UINT64_MAX,
+			err = vkAcquireNextImageKHR(vk.device, vk.swapchain, UINT64_MAX,
 											  vk.image_acquired_semaphores[vk.frame_index],
 											  VK_NULL_HANDLE, &vk.current_buffer);
 
@@ -1471,11 +1472,11 @@ void	vk2_updateBegin( VulkanInf& vk)
 void	vk2_drawPolygon( VulkanInf& vk
 ,const void* pMVP
 ,int matrixSize
+, VkDeviceMemory* 			&	sir_uniform_memory
 )
 //-----------------------------------------------------------------------------
 {
 
-	//demo_update_data_buffer(&vk);
 	{
 
 		uint8_t *pData;
@@ -1487,7 +1488,7 @@ void	vk2_drawPolygon( VulkanInf& vk
 			VkResult  err;
 			err = vkMapMemory( 
 				vk.device
-				, vk.sir_uniform_memory[vk.current_buffer]
+				, sir_uniform_memory[vk.current_buffer]
 				, 0
 				, VK_WHOLE_SIZE
 				, 0
@@ -1504,7 +1505,7 @@ void	vk2_drawPolygon( VulkanInf& vk
 		//---------------------------------------------------------
 		// マップ解除
 		//---------------------------------------------------------
-		vkUnmapMemory(vk.device, vk.sir_uniform_memory[vk.current_buffer]);
+		vkUnmapMemory(vk.device, sir_uniform_memory[vk.current_buffer]);
 	}
 }
 //-----------------------------------------------------------------------------
@@ -1604,7 +1605,7 @@ void	vk2_updateEnd( VulkanInf& vk)
 		//---------------------------------------------------------
 		{
 			VkResult  err;
-			err = vk.fpQueuePresentKHR(vk.present_queue, &present);
+			err = vkQueuePresentKHR(vk.present_queue, &present);
 			vk.frame_index += 1;
 			vk.frame_index %= FRAME_LAG;
 
@@ -1632,7 +1633,6 @@ void	vk2_release( VulkanInf& vk )
 	// 終了
 	//---------------------------------------------------------
 	uint32_t i;
-
 	vkDeviceWaitIdle(vk.device);
 
 	for (i = 0; i < vk.swapchainImageCount; i++) 
@@ -1653,10 +1653,27 @@ void	vk2_release( VulkanInf& vk )
 
 
 	vkDestroyDescriptorPool(vk.device, vk.desc_pool, NULL);				//create6	*	vk2_create
+/*
+	if ( vk.sir_uniform_buffer )
+	{
+		for (int i = 0; i < vk.swapchainImageCount; i++) 
+		{
+			vkDestroyBuffer(vk.device, vk.sir_uniform_buffer[i], NULL);			//create22	*	vk3_create
+		}
+		free(vk.sir_uniform_buffer);
+	}
 
+	if ( vk.sir_uniform_memory )
 	for (int i = 0; i < vk.swapchainImageCount; i++) 
 	{
-		vkDestroyBuffer(vk.device, vk.sir_uniform_buffer[i], NULL);			//create22	*	vk3_create
+
 		vkFreeMemory(vk.device, vk.sir_uniform_memory[i], NULL);			//create23	*	vk3_create
+		free(vk.sir_uniform_memory);
 	}
+
+	if ( vk.sir_descriptor_set )
+	{
+		free(vk.sir_descriptor_set);
+	}
+*/
 }

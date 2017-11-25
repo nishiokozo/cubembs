@@ -572,40 +572,42 @@ void	vk_init( VulkanInf& vk )
 		vkGetPhysicalDeviceFeatures(vk.gpu, &physDevFeatures);
 	}
 
+/*
 	//---------------------------------------------------------
 	// 拡張関数取得
 	//---------------------------------------------------------
 	{
-		vk.fpGetPhysicalDeviceSurfaceSupportKHR = (PFN_vkGetPhysicalDeviceSurfaceSupportKHR)vkGetInstanceProcAddr(vk.inst, "vk" "GetPhysicalDeviceSurfaceSupportKHR");
-		if (vk.fpGetPhysicalDeviceSurfaceSupportKHR == NULL) 
+		vkGetPhysicalDeviceSurfaceSupportKHR = (PFN_vkGetPhysicalDeviceSurfaceSupportKHR)vkGetInstanceProcAddr(vk.inst, "vk" "GetPhysicalDeviceSurfaceSupportKHR");
+		if (vkGetPhysicalDeviceSurfaceSupportKHR == NULL) 
 		{
 			ERR_EXIT("vkGetInstanceProcAddr failed to find vk" "GetPhysicalDeviceSurfaceSupportKHR", "vkGetInstanceProcAddr Failure");
 		}
 
-		vk.fpGetPhysicalDeviceSurfaceCapabilitiesKHR = (PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR)vkGetInstanceProcAddr(vk.inst, "vk" "GetPhysicalDeviceSurfaceCapabilitiesKHR");
-		if (vk.fpGetPhysicalDeviceSurfaceCapabilitiesKHR == NULL) 
+		vkGetPhysicalDeviceSurfaceCapabilitiesKHR = (PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR)vkGetInstanceProcAddr(vk.inst, "vk" "GetPhysicalDeviceSurfaceCapabilitiesKHR");
+		if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR == NULL) 
 		{
 			ERR_EXIT("vkGetInstanceProcAddr failed to find vk" "GetPhysicalDeviceSurfaceCapabilitiesKHR", "vkGetInstanceProcAddr Failure");
 		}
 
-		vk.fpGetPhysicalDeviceSurfaceFormatsKHR = (PFN_vkGetPhysicalDeviceSurfaceFormatsKHR)vkGetInstanceProcAddr(vk.inst, "vk" "GetPhysicalDeviceSurfaceFormatsKHR");
-		if (vk.fpGetPhysicalDeviceSurfaceFormatsKHR == NULL) 
+		vkGetPhysicalDeviceSurfaceFormatsKHR = (PFN_vkGetPhysicalDeviceSurfaceFormatsKHR)vkGetInstanceProcAddr(vk.inst, "vk" "GetPhysicalDeviceSurfaceFormatsKHR");
+		if (vkGetPhysicalDeviceSurfaceFormatsKHR == NULL) 
 		{
 			ERR_EXIT("vkGetInstanceProcAddr failed to find vk" "GetPhysicalDeviceSurfaceFormatsKHR", "vkGetInstanceProcAddr Failure");
 		}
 
-		vk.fpGetPhysicalDeviceSurfacePresentModesKHR = (PFN_vkGetPhysicalDeviceSurfacePresentModesKHR)vkGetInstanceProcAddr(vk.inst, "vk" "GetPhysicalDeviceSurfacePresentModesKHR");
-		if (vk.fpGetPhysicalDeviceSurfacePresentModesKHR == NULL) 
+		vkGetPhysicalDeviceSurfacePresentModesKHR = (PFN_vkGetPhysicalDeviceSurfacePresentModesKHR)vkGetInstanceProcAddr(vk.inst, "vk" "GetPhysicalDeviceSurfacePresentModesKHR");
+		if (vkGetPhysicalDeviceSurfacePresentModesKHR == NULL) 
 		{
 			ERR_EXIT("vkGetInstanceProcAddr failed to find vk" "GetPhysicalDeviceSurfacePresentModesKHR", "vkGetInstanceProcAddr Failure");
 		}
 
-		vk.fpGetSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR)vkGetInstanceProcAddr(vk.inst, "vk" "GetSwapchainImagesKHR");
-		if (vk.fpGetSwapchainImagesKHR == NULL) 
+		vkGetSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR)vkGetInstanceProcAddr(vk.inst, "vk" "GetSwapchainImagesKHR");
+		if (vkGetSwapchainImagesKHR == NULL) 
 		{
 			ERR_EXIT("vkGetInstanceProcAddr failed to find vk" "GetSwapchainImagesKHR", "vkGetInstanceProcAddr Failure");
 		}
 	}
+*/
 
 }
 
@@ -639,7 +641,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 		VkBool32 *supportsPresent = (VkBool32 *)malloc(vk.queue_family_count * sizeof(VkBool32));
 		for (uint32_t i = 0; i < vk.queue_family_count; i++) 
 		{
-			vk.fpGetPhysicalDeviceSurfaceSupportKHR(vk.gpu, i, vk.surface, &supportsPresent[i]);
+			vkGetPhysicalDeviceSurfaceSupportKHR(vk.gpu, i, vk.surface, &supportsPresent[i]);
 		}
 
 		// Search for a graphics and a present queue in the array of queue
@@ -736,53 +738,53 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 		assert(!err);
 	}
 
-
+/*
 	//---------------------------------------------------------
 	// 
 	//---------------------------------------------------------
 	{
 		{
 			if (!g_gdpa) g_gdpa = (PFN_vkGetDeviceProcAddr)vkGetInstanceProcAddr(vk.inst, "vkGetDeviceProcAddr");
-			vk.fpCreateSwapchainKHR = (PFN_vkCreateSwapchainKHR)g_gdpa(vk.device, "vk" "CreateSwapchainKHR");
-			if (vk.fpCreateSwapchainKHR == NULL) 
+			vkCreateSwapchainKHR = (PFN_vkCreateSwapchainKHR)g_gdpa(vk.device, "vk" "CreateSwapchainKHR");
+			if (vkCreateSwapchainKHR == NULL) 
 			{
 				ERR_EXIT("vkGetDeviceProcAddr failed to find vk" "CreateSwapchainKHR", "vkGetDeviceProcAddr Failure");
 			}
 		}
 		{
 			if (!g_gdpa) g_gdpa = (PFN_vkGetDeviceProcAddr)vkGetInstanceProcAddr(vk.inst, "vkGetDeviceProcAddr");
-			vk.fpDestroySwapchainKHR = (PFN_vkDestroySwapchainKHR)g_gdpa(vk.device, "vk" "DestroySwapchainKHR");
-			if (vk.fpDestroySwapchainKHR == NULL) 
+			vkDestroySwapchainKHR = (PFN_vkDestroySwapchainKHR)g_gdpa(vk.device, "vk" "DestroySwapchainKHR");
+			if (vkDestroySwapchainKHR == NULL) 
 			{
 				ERR_EXIT("vkGetDeviceProcAddr failed to find vk" "DestroySwapchainKHR", "vkGetDeviceProcAddr Failure");
 			}
 		}
 		{
 			if (!g_gdpa) g_gdpa = (PFN_vkGetDeviceProcAddr)vkGetInstanceProcAddr(vk.inst, "vkGetDeviceProcAddr");
-			vk.fpGetSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR)g_gdpa(vk.device, "vk" "GetSwapchainImagesKHR");
-			if (vk.fpGetSwapchainImagesKHR == NULL) 
+			vkGetSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR)g_gdpa(vk.device, "vk" "GetSwapchainImagesKHR");
+			if (vkGetSwapchainImagesKHR == NULL) 
 			{
 				ERR_EXIT("vkGetDeviceProcAddr failed to find vk" "GetSwapchainImagesKHR", "vkGetDeviceProcAddr Failure");
 			}
 		}
 		{
 			if (!g_gdpa) g_gdpa = (PFN_vkGetDeviceProcAddr)vkGetInstanceProcAddr(vk.inst, "vkGetDeviceProcAddr");
-			vk.fpAcquireNextImageKHR = (PFN_vkAcquireNextImageKHR)g_gdpa(vk.device, "vk" "AcquireNextImageKHR");
-			if (vk.fpAcquireNextImageKHR == NULL) 
+			vkAcquireNextImageKHR = (PFN_vkAcquireNextImageKHR)g_gdpa(vk.device, "vk" "AcquireNextImageKHR");
+			if (vkAcquireNextImageKHR == NULL) 
 			{
 				ERR_EXIT("vkGetDeviceProcAddr failed to find vk" "AcquireNextImageKHR", "vkGetDeviceProcAddr Failure");
 			}
 		}
 		{
 			if (!g_gdpa) g_gdpa = (PFN_vkGetDeviceProcAddr)vkGetInstanceProcAddr(vk.inst, "vkGetDeviceProcAddr");
-			vk.fpQueuePresentKHR = (PFN_vkQueuePresentKHR)g_gdpa(vk.device, "vk" "QueuePresentKHR");
-			if (vk.fpQueuePresentKHR == NULL) 
+			vkQueuePresentKHR = (PFN_vkQueuePresentKHR)g_gdpa(vk.device, "vk" "QueuePresentKHR");
+			if (vkQueuePresentKHR == NULL) 
 			{
 				ERR_EXIT("vkGetDeviceProcAddr failed to find vk" "QueuePresentKHR", "vkGetDeviceProcAddr Failure");
 			}
 		}
 	}
-
+*/
 
 	//---------------------------------------------------------
 	// 
@@ -812,7 +814,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 		uint32_t formatCount;
 		{
 			VkResult  err;
-			err = vk.fpGetPhysicalDeviceSurfaceFormatsKHR(vk.gpu, vk.surface, &formatCount, NULL);
+			err = vkGetPhysicalDeviceSurfaceFormatsKHR(vk.gpu, vk.surface, &formatCount, NULL);
 			assert(!err);
 		}
 
@@ -826,7 +828,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 		//---------------------------------------------------------
 		{
 			VkResult  err;
-			err = vk.fpGetPhysicalDeviceSurfaceFormatsKHR(vk.gpu, vk.surface, &formatCount, surfFormats);
+			err = vkGetPhysicalDeviceSurfaceFormatsKHR(vk.gpu, vk.surface, &formatCount, surfFormats);
 			assert(!err);
 		}
 
@@ -1009,7 +1011,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 		uint32_t presentModeCount;
 		{
 			VkResult  err;
-			err = vk.fpGetPhysicalDeviceSurfacePresentModesKHR( vk.gpu, vk.surface, &presentModeCount, NULL);
+			err = vkGetPhysicalDeviceSurfacePresentModesKHR( vk.gpu, vk.surface, &presentModeCount, NULL);
 			assert(!err);
 		}
 
@@ -1022,7 +1024,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 			assert(presentModes);
 
 			VkResult  err;
-			err = vk.fpGetPhysicalDeviceSurfacePresentModesKHR( vk.gpu, vk.surface, &presentModeCount, presentModes);
+			err = vkGetPhysicalDeviceSurfacePresentModesKHR( vk.gpu, vk.surface, &presentModeCount, presentModes);
 			assert(!err);
 		}
 
@@ -1062,7 +1064,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 	VkSurfaceCapabilitiesKHR surfCapabilities;
 	{
 		VkResult  err;
-		err = vk.fpGetPhysicalDeviceSurfaceCapabilitiesKHR( vk.gpu, vk.surface, &surfCapabilities);
+		err = vkGetPhysicalDeviceSurfaceCapabilitiesKHR( vk.gpu, vk.surface, &surfCapabilities);
 		assert(!err);
 	}
 
@@ -1205,7 +1207,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 				.clipped 				= true,
 			};
 			VkResult  err;
-			err = vk.fpCreateSwapchainKHR(vk.device, &sci, NULL, &vk.swapchain);	//create16s
+			err = vkCreateSwapchainKHR(vk.device, &sci, NULL, &vk.swapchain);	//create16s
 			assert(!err);
 		}
 		//---------------------------------------------------------
@@ -1218,7 +1220,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 			// presentable images once the platform is done with them.
 			if (oldSwapchain != VK_NULL_HANDLE) 
 			{
-				vk.fpDestroySwapchainKHR(vk.device, oldSwapchain, NULL);
+				vkDestroySwapchainKHR(vk.device, oldSwapchain, NULL);
 			}
 		}
 	}
@@ -1228,7 +1230,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 	//---------------------------------------------------------
 	{
 		VkResult  err;
-		err = vk.fpGetSwapchainImagesKHR(vk.device, vk.swapchain, &vk.swapchainImageCount, NULL);
+		err = vkGetSwapchainImagesKHR(vk.device, vk.swapchain, &vk.swapchainImageCount, NULL);
 		assert(!err);
 	}
 
@@ -1240,7 +1242,7 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 		assert(sci);
 		{
 			VkResult  err;
-			err = vk.fpGetSwapchainImagesKHR(vk.device, vk.swapchain, &vk.swapchainImageCount, sci);
+			err = vkGetSwapchainImagesKHR(vk.device, vk.swapchain, &vk.swapchainImageCount, sci);
 			assert(!err);
 		}
 
@@ -1254,10 +1256,10 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 			vk.sir_cmdbuf						=(VkCommandBuffer* 	)malloc(sizeof(VkCommandBuffer	) * vk.swapchainImageCount);
 			vk.sir_graphics_to_present_cmdbuf	=(VkCommandBuffer* 	)malloc(sizeof(VkCommandBuffer	) * vk.swapchainImageCount);
 			vk.sir_imgview						=(VkImageView* 		)malloc(sizeof(VkImageView		) * vk.swapchainImageCount);
-			vk.sir_uniform_buffer				=(VkBuffer* 		)malloc(sizeof(VkBuffer			) * vk.swapchainImageCount);
-			vk.sir_uniform_memory				=(VkDeviceMemory* 	)malloc(sizeof(VkDeviceMemory	) * vk.swapchainImageCount);
+//			vk.sir_uniform_buffer				=(VkBuffer* 		)malloc(sizeof(VkBuffer			) * vk.swapchainImageCount);
+//			vk.sir_uniform_memory				=(VkDeviceMemory* 	)malloc(sizeof(VkDeviceMemory	) * vk.swapchainImageCount);
 			vk.sir_framebuffer					=(VkFramebuffer* 	)malloc(sizeof(VkFramebuffer	) * vk.swapchainImageCount);
-			vk.sir_descriptor_set				=(VkDescriptorSet* 	)malloc(sizeof(VkDescriptorSet	) * vk.swapchainImageCount);
+//			vk.sir_descriptor_set				=(VkDescriptorSet* 	)malloc(sizeof(VkDescriptorSet	) * vk.swapchainImageCount);
 
 			for (uint32_t i = 0; i < vk.swapchainImageCount; i++) 
 			{
@@ -1758,7 +1760,7 @@ void	vk_release( VulkanInf& vk )
 		vkFreeMemory(vk.device, vk.textures[i].devmem, NULL);			//create14	*	setup
 		vkDestroySampler(vk.device, vk.textures[i].sampler, NULL);		//create15	*	setup
 	}
-	vk.fpDestroySwapchainKHR(vk.device, vk.swapchain, NULL);			//create16	*	setup
+	vkDestroySwapchainKHR(vk.device, vk.swapchain, NULL);			//create16	*	setup
 
 	vkDestroyImageView(vk.device, vk.depth_inf.imgview, NULL);			//create17	*	setup
 	vkDestroyImage(vk.device, vk.depth_inf.image, NULL);				//create18	*	setup
@@ -1774,10 +1776,10 @@ void	vk_release( VulkanInf& vk )
 	free(vk.sir_cmdbuf);
 	free(vk.sir_graphics_to_present_cmdbuf);
 	free(vk.sir_imgview);
-	free(vk.sir_uniform_buffer);
-	free(vk.sir_uniform_memory);
+//	free(vk.sir_uniform_buffer);
+//	free(vk.sir_uniform_memory);
 	free(vk.sir_framebuffer);
-	free(vk.sir_descriptor_set);
+//	free(vk.sir_descriptor_set);
 
 	vkDestroyCommandPool(vk.device, vk.cmd_pool, NULL);					//create26	*	setup
 
