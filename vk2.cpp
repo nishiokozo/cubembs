@@ -1043,7 +1043,20 @@ void vk2_create( VulkanInf& vk, int _width, int _height
 
 					, vk.desc_layout	//create11
 				);
-	
+
+			//-----------------------------------------------------
+			// デスクリプタプールの作成
+			//-----------------------------------------------------
+			{
+				vk_createDescripterPool(									
+					  vk.device
+					, DEMO_TEXTURE_COUNT
+					, vk.swapchainImageCount //* unit_cnt
+
+					, vk.desc_pool	//create6
+				);
+			}
+
 			//-----------------------------------------------------
 			// パイプラインレイアウトの作成
 			//-----------------------------------------------------
@@ -1251,25 +1264,12 @@ void vk2_create( VulkanInf& vk, int _width, int _height
 //============
 }
 //-----------------------------------------------------------------------------
-void vk3_create( VulkanInf& vk, int _width, int _height
+void vk2_loadModel( VulkanInf& vk
 //-----------------------------------------------------------------------------
 	,void* pDataVert
 	,int sizeofStructDataVert
  )
 {
-
-			//-----------------------------------------------------
-			// デスクリプタプールの作成
-			//-----------------------------------------------------
-			{
-				vk_createDescripterPool(									
-					  vk.device
-					, DEMO_TEXTURE_COUNT
-					, vk.swapchainImageCount //* unit_cnt
-
-					, vk.desc_pool	//create6
-				);
-			}
 
 	//-----------------------------------------------------
 	// モデルデータの作成
@@ -1315,100 +1315,123 @@ void vk3_create( VulkanInf& vk, int _width, int _height
 					, vk.sir_descriptor_set[i]
 				);
 			}
-
-
-			//-----------------------------------------------------
-			// 描画コマンドバッファの作成
-			//-----------------------------------------------------
-			for (uint32_t i = 0; i < vk.swapchainImageCount; i++) 
-			{
-				vk.current_buffer = i;
-				
-				{
-
-					//-----------------------------------------------------
-					// コマンドバッファの開始
-					//-----------------------------------------------------
-					vk_BeginCommandBuffer(
-						  vk.sir_cmdbuf[i]
-					);
-	
-					//-----------------------------------------------------
-					// コマンド・レンダーパスの開始
-					//-----------------------------------------------------
-					vk_CmdBeginRenderPass(
-						  vk.render_pass
-						, vk.sir_framebuffer[i]
-						, vk.sir_cmdbuf[i]
-						, _width
-						, _height
-					);
-					
-					//-----------------------------------------------------
-					// コマンド・パイプラインのバインド
-					//-----------------------------------------------------
-					vk_CmdBindPipeline(
-						  vk.pipeline
-						, vk.sir_cmdbuf[i]
-					);
-
-					//-----------------------------------------------------
-					// コマンド・ディスクリプターのバインド
-					//-----------------------------------------------------
-					vk_CmdBindDescriptorSets(
-						  vk.pipeline_layout
-						, vk.sir_descriptor_set[vk.current_buffer]
-						, vk.sir_cmdbuf[i]
-					);
-					
-					//-----------------------------------------------------
-					// ビューポートの設定
-					//-----------------------------------------------------
-					vk_CmdSetViewport(
-						  vk.sir_cmdbuf[i]
-						, _width
-						, _height
-					);
-
-					//-----------------------------------------------------
-					// シザリングエリアの設定
-					//-----------------------------------------------------
-					vk_CmdSetScissor(
-						  vk.sir_cmdbuf[i]
-						, _width
-						, _height
-					);
-
-					//-----------------------------------------------------
-					// 描画コマンド発行
-					//-----------------------------------------------------
-					uint32_t _vertexCount	= 12*3;
-					uint32_t _instanceCount	= 1;
-					uint32_t _firstVertex	= 0;
-					uint32_t _firstInstance = 0;
-					vkCmdDraw(vk.sir_cmdbuf[i], _vertexCount, _instanceCount, _firstVertex, _firstInstance);
-
-					//-----------------------------------------------------
-					// レンダーパス終了
-					//-----------------------------------------------------
-					// Note that ending the renderpass changes the image's layout from
-					// COLOR_ATTACHMENT_OPTIMAL to PRESENT_SRC_KHR
-					vkCmdEndRenderPass(vk.sir_cmdbuf[i]);
-
-					//-----------------------------------------------------
-					// コマンドバッファ終了
-					//-----------------------------------------------------
-					vk_EndCommandBuffer(
-						vk.sir_cmdbuf[i]
-					);
-				}
-			}
 }
 //-----------------------------------------------------------------------------
-void	vk2_draw( VulkanInf& vk
-,const void* pMVP
-,int& matrixSize
+void vk2_cmd1( VulkanInf& vk
+//-----------------------------------------------------------------------------
+	, const int 		_width
+	, const int 		_height
 )
+{
+
+	//-----------------------------------------------------
+	// 描画コマンドバッファの作成
+	//-----------------------------------------------------
+	for (uint32_t i = 0; i < vk.swapchainImageCount; i++) 
+	{
+		vk.current_buffer = i;
+		
+		//-----------------------------------------------------
+		// コマンドバッファの開始
+		//-----------------------------------------------------
+		vk_BeginCommandBuffer(
+			  vk.sir_cmdbuf[i]
+		);
+
+		//-----------------------------------------------------
+		// コマンド・レンダーパスの開始
+		//-----------------------------------------------------
+		vk_CmdBeginRenderPass(
+			  vk.render_pass
+			, vk.sir_framebuffer[i]
+			, vk.sir_cmdbuf[i]
+			, _width
+			, _height
+		);
+		
+		//-----------------------------------------------------
+		// コマンド・パイプラインのバインド
+		//-----------------------------------------------------
+		vk_CmdBindPipeline(
+			  vk.pipeline
+			, vk.sir_cmdbuf[i]
+		);
+
+		
+		//-----------------------------------------------------
+		// ビューポートの設定
+		//-----------------------------------------------------
+		vk_CmdSetViewport(
+			  vk.sir_cmdbuf[i]
+			, _width
+			, _height
+		);
+
+		//-----------------------------------------------------
+		// シザリングエリアの設定
+		//-----------------------------------------------------
+		vk_CmdSetScissor(
+			  vk.sir_cmdbuf[i]
+			, _width
+			, _height
+		);
+	}
+}
+//-----------------------------------------------------------------------------
+void vk2_cmd2( VulkanInf& vk
+//-----------------------------------------------------------------------------
+		,int _vertexCount		//	= 12*3;
+		,int _instanceCount		//	= 1;
+		,int _firstVertex		//	= 0;
+		,int _firstInstance		// = 0;
+)
+{
+	//-----------------------------------------------------
+	// 描画コマンドバッファの作成
+	//-----------------------------------------------------
+	for (uint32_t i = 0; i < vk.swapchainImageCount; i++) 
+	{
+		//-----------------------------------------------------
+		// コマンド・ディスクリプターのバインド
+		//-----------------------------------------------------
+		vk_CmdBindDescriptorSets(
+			  vk.pipeline_layout
+			, vk.sir_descriptor_set[vk.current_buffer]
+			, vk.sir_cmdbuf[i]
+		);
+
+		//-----------------------------------------------------
+		// 描画コマンド発行
+		//-----------------------------------------------------
+		vkCmdDraw(vk.sir_cmdbuf[i], _vertexCount, _instanceCount, _firstVertex, _firstInstance);
+	}
+}
+//-----------------------------------------------------------------------------
+void vk2_cmd3( VulkanInf& vk )
+//-----------------------------------------------------------------------------
+{
+	//-----------------------------------------------------
+	// 描画コマンドバッファの作成
+	//-----------------------------------------------------
+	for (uint32_t i = 0; i < vk.swapchainImageCount; i++) 
+	{
+		//-----------------------------------------------------
+		// レンダーパス終了
+		//-----------------------------------------------------
+		// Note that ending the renderpass changes the image's layout from
+		// COLOR_ATTACHMENT_OPTIMAL to PRESENT_SRC_KHR
+		vkCmdEndRenderPass(vk.sir_cmdbuf[i]);
+
+		//-----------------------------------------------------
+		// コマンドバッファ終了
+		//-----------------------------------------------------
+		vk_EndCommandBuffer(
+			vk.sir_cmdbuf[i]
+		);
+	}
+}
+//-----------------------------------------------------------------------------
+void	vk2_updateBegin( VulkanInf& vk)
 //-----------------------------------------------------------------------------
 {
 	// Ensure no more than FRAME_LAG renderings are outstanding
@@ -1443,6 +1466,14 @@ void	vk2_draw( VulkanInf& vk
 			}
 		} while (err != VK_SUCCESS);
 	}
+}
+//-----------------------------------------------------------------------------
+void	vk2_drawPolygon( VulkanInf& vk
+,const void* pMVP
+,int matrixSize
+)
+//-----------------------------------------------------------------------------
+{
 
 	//demo_update_data_buffer(&vk);
 	{
@@ -1475,6 +1506,11 @@ void	vk2_draw( VulkanInf& vk
 		//---------------------------------------------------------
 		vkUnmapMemory(vk.device, vk.sir_uniform_memory[vk.current_buffer]);
 	}
+}
+//-----------------------------------------------------------------------------
+void	vk2_updateEnd( VulkanInf& vk)
+//-----------------------------------------------------------------------------
+{
 
 
 	// Wait for the image acquired semaphore to be signaled to ensure
@@ -1614,11 +1650,7 @@ void	vk2_release( VulkanInf& vk )
 	{
 		vkFreeCommandBuffers(vk.device, vk.cmd_pool, 1, &vk.sir_cmdbuf[i]);	//create21	*	vk2_create
 	}
-}
-//-----------------------------------------------------------------------------
-void	vk3_release( VulkanInf& vk )
-//-----------------------------------------------------------------------------
-{
+
 
 	vkDestroyDescriptorPool(vk.device, vk.desc_pool, NULL);				//create6	*	vk2_create
 
@@ -1627,6 +1659,4 @@ void	vk3_release( VulkanInf& vk )
 		vkDestroyBuffer(vk.device, vk.sir_uniform_buffer[i], NULL);			//create22	*	vk3_create
 		vkFreeMemory(vk.device, vk.sir_uniform_memory[i], NULL);			//create23	*	vk3_create
 	}
-
-
 }
