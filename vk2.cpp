@@ -1317,19 +1317,107 @@ void vk2_loadModel( VulkanInf& vk
 		);
 	}
 }
+
 //-----------------------------------------------------------------------------
-void vk2_cmd1( VulkanInf& vk
 //-----------------------------------------------------------------------------
+static void	vk_AcquireNextImage(
+	  const VkDevice				&	vk_sc_device
+	, const VkSwapchainKHR			&	vk_sc_base
+	, const VkSemaphore 			&	vk_s_image_acquired_semaphores	//[vk_FRAME_LAG]
+
+	, uint32_t 						&	vk_current_buffer
+)
+{
+
+	//=========================================================================================
+	// 次のイメージと入れ替え
+	//=========================================================================================
+	{
+		VkResult  err;
+		do 
+		{
+			// Get the index of the next available vk_sc_base image:
+			err = vkAcquireNextImageKHR(
+				  vk_sc_device
+				, vk_sc_base
+				, UINT64_MAX
+				, vk_s_image_acquired_semaphores	//[vk_frame_index]
+				, VK_NULL_HANDLE
+				, &vk_current_buffer
+			);
+			if (err == VK_ERROR_OUT_OF_DATE_KHR) 
+			{
+				// vk_sc_base is out of date (e.g. the window was resized) and
+				// must be recreated:
+				//demo_resize(&vk);
+			} else if (err == VK_SUBOPTIMAL_KHR) 
+			{
+				// vk_sc_base is not as optimal as it could be, but the platform's
+				// presentation engine will still present the image correctly.
+				break;
+			} else 
+			{
+				ASSERTW(!err,"中断します");
+			}
+		} while (err != VK_SUCCESS);
+	}
+}
+//-----------------------------------------------------------------------------
+void	vk2_updateBegin( VulkanInf& vk
 	, const int 		_width
 	, const int 		_height
 )
+//-----------------------------------------------------------------------------
 {
+	// Ensure no more than FRAME_LAG renderings are outstanding
+	vkWaitForFences(vk.device, 1, &vk.fences[vk.frame_index], VK_TRUE, UINT64_MAX);
+	vkResetFences(vk.device, 1, &vk.fences[vk.frame_index]);
+
+	vk_AcquireNextImage(
+		  vk.device
+		, vk.swapchain
+		, vk.image_acquired_semaphores[vk.frame_index]
+
+		, vk.current_buffer
+	);
+/*
+	//---------------------------------------------------------
+	// 
+	//---------------------------------------------------------
+	{
+		VkResult  err;
+		do 
+		{
+			// Get the index of the next available swapchain image:
+			err = vkAcquireNextImageKHR(vk.device, vk.swapchain, UINT64_MAX,
+											  vk.image_acquired_semaphores[vk.frame_index],
+											  VK_NULL_HANDLE, &vk.current_buffer);
+
+			if (err == VK_ERROR_OUT_OF_DATE_KHR) 
+			{
+				// vk.swapchain is out of date (e.g. the window was resized) and
+				// must be recreated:
+				//demo_resize(&vk);
+			} else if (err == VK_SUBOPTIMAL_KHR) 
+			{
+				// vk.swapchain is not as optimal as it could be, but the platform's
+				// presentation engine will still present the image correctly.
+				break;
+			} else 
+			{
+				assert(!err);
+			}
+		} while (err != VK_SUCCESS);
+	}
+*/
+
 
 	//-----------------------------------------------------
 	// 描画コマンドバッファの作成
 	//-----------------------------------------------------
-	for (uint32_t i = 0; i < vk.swapchainImageCount; i++) 
+//	for (uint32_t i = 0; i < vk.swapchainImageCount; i++) 
 	{
+int i = vk.current_buffer;
 //		vk.current_buffer = i;
 		
 		//-----------------------------------------------------
@@ -1379,8 +1467,10 @@ void vk2_cmd1( VulkanInf& vk
 	}
 }
 //-----------------------------------------------------------------------------
-void vk2_cmd2( VulkanInf& vk
-//-----------------------------------------------------------------------------
+void	vk2_drawPolygon( VulkanInf& vk
+,const void* pMVP
+,int matrixSize
+, VkDeviceMemory* 			&	sir_uniform_memory
 	,int _vertexCount		//	= 12*3;
 	,int _instanceCount		//	= 1;
 	,int _firstVertex		//	= 0;
@@ -1391,8 +1481,9 @@ void vk2_cmd2( VulkanInf& vk
 	//-----------------------------------------------------
 	// 描画コマンドバッファの作成
 	//-----------------------------------------------------
-	for (uint32_t i = 0; i < vk.swapchainImageCount; i++) 
+//	for (uint32_t i = 0; i < vk.swapchainImageCount; i++) 
 	{
+int i = vk.current_buffer;
 		//-----------------------------------------------------
 		// コマンド・ディスクリプターのバインド
 		//-----------------------------------------------------
@@ -1407,76 +1498,6 @@ void vk2_cmd2( VulkanInf& vk
 		//-----------------------------------------------------
 		vkCmdDraw(vk.sir_cmdbuf[i], _vertexCount, _instanceCount, _firstVertex, _firstInstance);
 	}
-}
-//-----------------------------------------------------------------------------
-void vk2_cmd3( VulkanInf& vk )
-//-----------------------------------------------------------------------------
-{
-	//-----------------------------------------------------
-	// 描画コマンドバッファの作成
-	//-----------------------------------------------------
-	for (uint32_t i = 0; i < vk.swapchainImageCount; i++) 
-	{
-		//-----------------------------------------------------
-		// レンダーパス終了
-		//-----------------------------------------------------
-		// Note that ending the renderpass changes the image's layout from
-		// COLOR_ATTACHMENT_OPTIMAL to PRESENT_SRC_KHR
-		vkCmdEndRenderPass(vk.sir_cmdbuf[i]);
-
-		//-----------------------------------------------------
-		// コマンドバッファ終了
-		//-----------------------------------------------------
-		vk_EndCommandBuffer(
-			vk.sir_cmdbuf[i]
-		);
-	}
-}
-//-----------------------------------------------------------------------------
-void	vk2_updateBegin( VulkanInf& vk)
-//-----------------------------------------------------------------------------
-{
-	// Ensure no more than FRAME_LAG renderings are outstanding
-	vkWaitForFences(vk.device, 1, &vk.fences[vk.frame_index], VK_TRUE, UINT64_MAX);
-	vkResetFences(vk.device, 1, &vk.fences[vk.frame_index]);
-
-	//---------------------------------------------------------
-	// 
-	//---------------------------------------------------------
-	{
-		VkResult  err;
-		do 
-		{
-			// Get the index of the next available swapchain image:
-			err = vkAcquireNextImageKHR(vk.device, vk.swapchain, UINT64_MAX,
-											  vk.image_acquired_semaphores[vk.frame_index],
-											  VK_NULL_HANDLE, &vk.current_buffer);
-
-			if (err == VK_ERROR_OUT_OF_DATE_KHR) 
-			{
-				// vk.swapchain is out of date (e.g. the window was resized) and
-				// must be recreated:
-				//demo_resize(&vk);
-			} else if (err == VK_SUBOPTIMAL_KHR) 
-			{
-				// vk.swapchain is not as optimal as it could be, but the platform's
-				// presentation engine will still present the image correctly.
-				break;
-			} else 
-			{
-				assert(!err);
-			}
-		} while (err != VK_SUCCESS);
-	}
-}
-//-----------------------------------------------------------------------------
-void	vk2_drawPolygon( VulkanInf& vk
-,const void* pMVP
-,int matrixSize
-, VkDeviceMemory* 			&	sir_uniform_memory
-)
-//-----------------------------------------------------------------------------
-{
 
 	{
 
@@ -1513,6 +1534,26 @@ void	vk2_drawPolygon( VulkanInf& vk
 void	vk2_updateEnd( VulkanInf& vk)
 //-----------------------------------------------------------------------------
 {
+	//-----------------------------------------------------
+	// 描画コマンドバッファの作成
+	//-----------------------------------------------------
+//	for (uint32_t i = 0; i < vk.swapchainImageCount; i++) 
+	{
+int i = vk.current_buffer;
+		//-----------------------------------------------------
+		// レンダーパス終了
+		//-----------------------------------------------------
+		// Note that ending the renderpass changes the image's layout from
+		// COLOR_ATTACHMENT_OPTIMAL to PRESENT_SRC_KHR
+		vkCmdEndRenderPass(vk.sir_cmdbuf[i]);
+
+		//-----------------------------------------------------
+		// コマンドバッファ終了
+		//-----------------------------------------------------
+		vk_EndCommandBuffer(
+			vk.sir_cmdbuf[i]
+		);
+	}
 
 
 	// Wait for the image acquired semaphore to be signaled to ensure
