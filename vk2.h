@@ -24,6 +24,12 @@ void	vk2_drawPolygon( VulkanInf& vk
 );
 void	vk2_release( VulkanInf& vk );
 
+void	vk2_removeModel( VulkanInf& vk
+	, VkBuffer* 				&	sir_uniform_buffer
+	, VkDeviceMemory* 			&	sir_uniform_memory
+	, VkDescriptorSet* 			&	sir_descriptor_set
+
+ );
 void vk2_loadModel( VulkanInf& vk
 	,void* pDataVert
 	,int sizeofStructDataVert

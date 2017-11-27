@@ -1851,6 +1851,33 @@ void vk2_loadModel( VulkanInf& vk
 		);
 	}
 }
+//-----------------------------------------------------------------------------
+void	vk2_removeModel( VulkanInf& vk
+//-----------------------------------------------------------------------------
+	, VkBuffer* 				&	sir_uniform_buffer
+	, VkDeviceMemory* 			&	sir_uniform_memory
+	, VkDescriptorSet* 			&	sir_descriptor_set
+)
+{
+
+	for (int i = 0; i < vk.swapchainImageCount; i++) 
+	{
+		vkDestroyBuffer(vk.device, sir_uniform_buffer[i], NULL);			//create22	*	vk3_create
+		vkFreeMemory(vk.device, sir_uniform_memory[i], NULL);			//create23	*	vk3_create
+
+		vkFreeDescriptorSets(
+			  vk.device				//	VkDevice device
+			, vk.desc_pool			//	VkDescriptorPool descriptorPool
+			, 1						//	uint32_t descriptorSetCount
+			, &sir_descriptor_set[i]	//	const VkDescriptorSet* pDescriptorSets
+		);
+	}
+
+
+		free(sir_uniform_buffer);
+		free(sir_uniform_memory);
+		free(sir_descriptor_set);
+}
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
@@ -2229,27 +2256,4 @@ void	vk2_release( VulkanInf& vk )
 
 
 	vkDestroyDescriptorPool(vk.device, vk.desc_pool, NULL);				//create6	*	vk2_create
-/*
-	if ( vk.sir_uniform_buffer )
-	{
-		for (int i = 0; i < vk.swapchainImageCount; i++) 
-		{
-			vkDestroyBuffer(vk.device, vk.sir_uniform_buffer[i], NULL);			//create22	*	vk3_create
-		}
-		free(vk.sir_uniform_buffer);
-	}
-
-	if ( vk.sir_uniform_memory )
-	for (int i = 0; i < vk.swapchainImageCount; i++) 
-	{
-
-		vkFreeMemory(vk.device, vk.sir_uniform_memory[i], NULL);			//create23	*	vk3_create
-		free(vk.sir_uniform_memory);
-	}
-
-	if ( vk.sir_descriptor_set )
-	{
-		free(vk.sir_descriptor_set);
-	}
-*/
 }

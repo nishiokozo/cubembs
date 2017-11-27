@@ -33,14 +33,14 @@ struct vktexcube_vs_uniform
 
 
 static const	int	unit_MAX = 5;
-static vktexcube_vs_uniform*	dataVert			= new vktexcube_vs_uniform[unit_MAX];
-static VkBuffer** 				sc_uniform_buffer	= new VkBuffer*[unit_MAX];
-static VkDeviceMemory** 		sc_uniform_memory	= new VkDeviceMemory*[unit_MAX];
-static VkDescriptorSet** 		sc_descriptor_set	= new VkDescriptorSet*[unit_MAX];
-static vect44*					mvp					= new vect44[unit_MAX];
-static vect44* 					g_model				= new vect44[unit_MAX];
 static vect44 g_view;
 static int unit_cnt=0;
+static vktexcube_vs_uniform*	dataVert			;//= new vktexcube_vs_uniform[unit_MAX];
+static VkBuffer** 				sc_uniform_buffer	;//= new VkBuffer*[unit_MAX];
+static VkDeviceMemory** 		sc_uniform_memory	;//= new VkDeviceMemory*[unit_MAX];
+static VkDescriptorSet** 		sc_descriptor_set	;//= new VkDescriptorSet*[unit_MAX];
+static vect44*					mvp					;//= new vect44[unit_MAX];
+static vect44* 					g_model				;//= new vect44[unit_MAX];
 
 static vktexcube_vs_uniform 	dataVert0 = 
 {
@@ -139,11 +139,27 @@ static vktexcube_vs_uniform 	dataVert0 =
 };
 const char *tex_files[] = {"lunarg.ppm"};
 
+	VkInf* g_pVk;
+
 //-----------------------------------------------------------------------------
-int main(int argc, char *argv[])
+void enemy_create()
 //-----------------------------------------------------------------------------
 {
 
+	dataVert			= new vktexcube_vs_uniform[unit_MAX];
+	sc_uniform_buffer	= new VkBuffer*[unit_MAX];
+	sc_uniform_memory	= new VkDeviceMemory*[unit_MAX];
+	sc_descriptor_set	= new VkDescriptorSet*[unit_MAX];
+	mvp					= new vect44[unit_MAX];
+	g_model				= new vect44[unit_MAX];
+
+	//---------------------------------------------------------
+	//	
+	//---------------------------------------------------------
+	unit_cnt=0;
+	//---------------------------------------------------------
+	//	モデルコピー 
+	//---------------------------------------------------------
 	for ( int u = 0; u < unit_MAX; u++ )
 	{
 		memcpy( &dataVert[u], &dataVert0,  sizeof(vktexcube_vs_uniform) );
@@ -153,21 +169,73 @@ int main(int argc, char *argv[])
 	//---------------------------------------------------------
 	// 透視変換行列の作成
 	//---------------------------------------------------------
+	for ( int u = 0; u < unit_cnt; u++ )
 	{
-		for ( int u = 0; u < unit_cnt; u++ )
-		{
-			g_model[u].identity();
-			g_model[u].translate( (-(unit_cnt-1)/2)+u*1.0,0,0);
-		}
-		g_view.identity();
-		g_view.translate(0,0,-5);
+		g_model[u].identity();
+		g_model[u].translate( (-(unit_cnt-1)/2)+u*1.0,0,0);
 	}
 
+	for ( int u = 0; u < unit_cnt; u++ )
 	{
+//		 	g_model[u].rotX(RAD(0.1));
+	 	g_model[u].rotY(RAD(80));
+	}
+	for ( int u = 0; u < unit_cnt; u++ )
+	{
+		mvp[u].identity();
+		mvp[u].perspectiveGL( 45, 512.0/512.0,0.1,100		 );
+		mvp[u].m[1][1] *= -1; // GL to Vulkan
+		mvp[u] =  g_model[u] * g_view * mvp[u];
+	}
+
+
+	//---------------------------------------------------------
+	//	モデル登録 
+	//---------------------------------------------------------
+	for ( int u = 0 ; u < unit_cnt ; u++ )
+	{
+		vk2_loadModel( g_pVk->vk
+			, (void*)&dataVert[u]
+			, sizeof(struct vktexcube_vs_uniform)
+			, sc_uniform_buffer[u]
+			, sc_uniform_memory[u]
+			, sc_descriptor_set[u]
+		);
+	}
+}
+//-----------------------------------------------------------------------------
+void enemy_remove()
+//-----------------------------------------------------------------------------
+{
+
+	//---------------------------------------------------------
+	//	モデル 
+	//---------------------------------------------------------
+	for ( int u = 0 ; u < unit_cnt ; u++ )
+	{
+		vk2_removeModel( g_pVk->vk
+			, sc_uniform_buffer[u]
+			, sc_uniform_memory[u]
+			, sc_descriptor_set[u]
+		);
+	}
+
+	delete	[] dataVert;
+	delete	[] sc_uniform_buffer;
+	delete 	[] sc_uniform_memory;
+	delete 	[] sc_descriptor_set;
+	delete	[] mvp;
+	delete	[] g_model;
+
+}
+//-----------------------------------------------------------------------------
+void enemy_update()
+//-----------------------------------------------------------------------------
+{
 		for ( int u = 0; u < unit_cnt; u++ )
 		{
-//		 	g_model[u].rotX(RAD(0.1));
-		 	g_model[u].rotY(RAD(80));
+		 	g_model[u].rotX(RAD(0.1));
+		 	g_model[u].rotY(RAD(1));
 		}
 		for ( int u = 0; u < unit_cnt; u++ )
 		{
@@ -176,36 +244,51 @@ int main(int argc, char *argv[])
 			mvp[u].m[1][1] *= -1; // GL to Vulkan
 			mvp[u] =  g_model[u] * g_view * mvp[u];
 		}
-	}
+
+				for ( int u =0 ; u < unit_cnt ; u++ )
+				{
+					vk2_drawPolygon( g_pVk->vk
+						, mvp[u].m
+						, sizeof(vect44)
+						, sc_uniform_memory[u]
+						, 12*3	//_vertexCount
+						, 1		//_instanceCount
+						, 0		//_firstVertex
+						, 0		//_firstInstance
+						, sc_descriptor_set[u]
+					);
+				}
+
+
+}
+
+//-----------------------------------------------------------------------------
+int main(int argc, char *argv[])
+//-----------------------------------------------------------------------------
+{
+
+	g_view.identity();
+	g_view.translate(0,0,-5);
 
 
 	//---
 	WinInf* pWin = new WinInf( "msb", 128, 128 );
-	VkInf* pVk = new VkInf( pWin->hInstance, pWin->hWin, pWin->win_width, pWin->win_height );
+	g_pVk = new VkInf( pWin->hInstance, pWin->hWin, pWin->win_width, pWin->win_height );
 
-	if ( pVk ) 
+	if ( g_pVk ) 
 	{
-//			if ( pVk->flgSetModel== false )
+//			if ( g_pVk->flgSetModel== false )
 			{
-					vk2_create( pVk->vk
+					vk2_create( g_pVk->vk
 						, pWin->win_width
 						, pWin->win_height
-						, unit_MAX
+						, 200//unit_MAX
 						, "s-phong-vert.spv"
 						, "s-phong-frag.spv"
 						, tex_files
 					);
-					for ( int u = 0 ; u < unit_cnt ; u++ )
-					{
-							vk2_loadModel( pVk->vk
-								, (void*)&dataVert[u]
-								, sizeof(struct vktexcube_vs_uniform)
-								, sc_uniform_buffer[u]
-								, sc_uniform_memory[u]
-								, sc_descriptor_set[u]
-							);
-					}
-							pVk->flgSetModel = true;
+					enemy_create();
+							g_pVk->flgSetModel = true;
 			}
 	}
 	//-----------------------------------------------------
@@ -242,77 +325,25 @@ int main(int argc, char *argv[])
 		}
 		if ( lim2 )
 		{
-			if ( pVk != 0 ) 
-			{
-				if ( pVk->flgSetModel== true )
-				{
-					vk2_release( pVk->vk );
-					pVk->flgSetModel = false;
-				}
-				if ( pVk->flgSetModel== false )
-				{
-					vk2_create( pVk->vk
-						, pWin->win_width
-						, pWin->win_height
-						, unit_MAX
-						, "s-phong-vert.spv"
-						, "s-phong-frag.spv"
-						, tex_files
-					);
-
-					for ( int u = 0 ; u < unit_cnt ; u++ )
-					{
-						vk2_loadModel( pVk->vk
-							, (void*)&dataVert[u]
-							, sizeof(struct vktexcube_vs_uniform)
-							, sc_uniform_buffer[u]
-							, sc_uniform_memory[u]
-							, sc_descriptor_set[u]
-						);
-					}
-					pVk->flgSetModel = true;
-				}
+			enemy_remove();
+			enemy_create();
+		
 				lim2--;
 				printf("%d ",lim2 );
-			}
 		}
 		
-		for ( int u = 0; u < unit_cnt; u++ )
-		{
-		 	g_model[u].rotX(RAD(0.1));
-		 	g_model[u].rotY(RAD(1));
-		}
-		for ( int u = 0; u < unit_cnt; u++ )
-		{
-			mvp[u].identity();
-			mvp[u].perspectiveGL( 45, 512.0/512.0,0.1,100		 );
-			mvp[u].m[1][1] *= -1; // GL to Vulkan
-			mvp[u] =  g_model[u] * g_view * mvp[u];
-		}
 		//-----------------------------------------------------
 		// 描画
 		//-----------------------------------------------------
-		if ( pVk ) 
+		if ( g_pVk ) 
 		{
-			if ( pVk->flgSetModel )
+			if ( g_pVk->flgSetModel )
 			{
-				vk2_updateBegin( pVk->vk, pWin->win_width, pWin->win_height );
+				vk2_updateBegin( g_pVk->vk, pWin->win_width, pWin->win_height );
 
-				for ( int u =0 ; u < unit_cnt ; u++ )
-				{
-					vk2_drawPolygon( pVk->vk
-						, mvp[u].m
-						, sizeof(vect44)
-						, sc_uniform_memory[u]
-						, 12*3	//_vertexCount
-						, 1		//_instanceCount
-						, 0		//_firstVertex
-						, 0		//_firstInstance
-						, sc_descriptor_set[u]
-					);
-				}
-
-				vk2_updateEnd( pVk->vk );
+				enemy_update();
+				
+				vk2_updateEnd( g_pVk->vk );
 			}
 		}
 
@@ -323,21 +354,16 @@ int main(int argc, char *argv[])
 	//-----------------------------------------------------
 	// 終了
 	//-----------------------------------------------------
-	if ( pVk ) 
+	if ( g_pVk ) 
 	{
-		if ( pVk->flgSetModel== true )
+		if ( g_pVk->flgSetModel== true )
 		{
-			vk2_release( pVk->vk );
-			pVk->flgSetModel = false;
+			vk2_release( g_pVk->vk );
+			enemy_remove();
+			g_pVk->flgSetModel = false;
 		}
-		delete pVk;pVk=0;
+		delete g_pVk;g_pVk=0;
 	}
-	delete	[] dataVert;
-	delete	[] sc_uniform_buffer;
-	delete 	[] sc_uniform_memory;
-	delete 	[] sc_descriptor_set;
-	delete	[] mvp;
-	delete	[] g_model;
 
 
 	if ( pWin ) delete pWin;

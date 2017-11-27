@@ -76,10 +76,10 @@ struct VulkanInf
 		VkCommandBuffer* 	sir_cmdbuf;
 		VkCommandBuffer* 	sir_graphics_to_present_cmdbuf;
 		VkImageView* 		sir_imgview;
-		VkBuffer* 			sir_uniform_buffer;
-		VkDeviceMemory* 	sir_uniform_memory;
+//		VkBuffer* 			sir_uniform_buffer;
+//		VkDeviceMemory* 	sir_uniform_memory;
 		VkFramebuffer* 		sir_framebuffer;
-		VkDescriptorSet* 	sir_descriptor_set;
+//		VkDescriptorSet* 	sir_descriptor_set;
 
 	VkPresentModeKHR 			presentMode;
 	VkFence 					fences[FRAME_LAG];
