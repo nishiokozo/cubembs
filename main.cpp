@@ -137,6 +137,7 @@ static vktexcube_vs_uniform 	dataVert0 =
 		{ 1.0f , 0.0f }, 
 	}
 };
+const char *tex_files[] = {"lunarg.ppm"};
 
 //-----------------------------------------------------------------------------
 int main(int argc, char *argv[])
@@ -186,7 +187,25 @@ int main(int argc, char *argv[])
 	{
 //			if ( pVk->flgSetModel== false )
 			{
-				vk2_create( pVk->vk, pWin->win_width, pWin->win_height, unit_MAX );
+					vk2_create( pVk->vk
+						, pWin->win_width
+						, pWin->win_height
+						, unit_MAX
+						, "s-phong-vert.spv"
+						, "s-phong-frag.spv"
+						, tex_files
+					);
+					for ( int u = 0 ; u < unit_cnt ; u++ )
+					{
+							vk2_loadModel( pVk->vk
+								, (void*)&dataVert[u]
+								, sizeof(struct vktexcube_vs_uniform)
+								, sc_uniform_buffer[u]
+								, sc_uniform_memory[u]
+								, sc_descriptor_set[u]
+							);
+					}
+							pVk->flgSetModel = true;
 			}
 	}
 	//-----------------------------------------------------
@@ -200,17 +219,6 @@ int main(int argc, char *argv[])
 	int lim1 = 0;
 	int lim2 = 0;
 
-			for ( int u = 0 ; u < unit_cnt ; u++ )
-			{
-					vk2_loadModel( pVk->vk
-						, (void*)&dataVert[u]
-						, sizeof(struct vktexcube_vs_uniform)
-						, sc_uniform_buffer[u]
-						, sc_uniform_memory[u]
-						, sc_descriptor_set[u]
-					);
-			}
-					pVk->flgSetModel = true;
 
 	while (true) 
 	{
@@ -225,7 +233,7 @@ int main(int argc, char *argv[])
 			DispatchMessage(&msg);
 			RedrawWindow(pWin->hWin, NULL, NULL, RDW_INTERNALPAINT);
 		}
-		if (msg.message != WM_PAINT) continue;
+//		if (msg.message != WM_PAINT) continue;
 
 		
 		if ( key.hi._6 )
@@ -243,7 +251,15 @@ int main(int argc, char *argv[])
 				}
 				if ( pVk->flgSetModel== false )
 				{
-					vk2_create( pVk->vk, pWin->win_width, pWin->win_height, unit_MAX );
+					vk2_create( pVk->vk
+						, pWin->win_width
+						, pWin->win_height
+						, unit_MAX
+						, "s-phong-vert.spv"
+						, "s-phong-frag.spv"
+						, tex_files
+					);
+
 					for ( int u = 0 ; u < unit_cnt ; u++ )
 					{
 						vk2_loadModel( pVk->vk
@@ -316,6 +332,14 @@ int main(int argc, char *argv[])
 		}
 		delete pVk;pVk=0;
 	}
+	delete	[] dataVert;
+	delete	[] sc_uniform_buffer;
+	delete 	[] sc_uniform_memory;
+	delete 	[] sc_descriptor_set;
+	delete	[] mvp;
+	delete	[] g_model;
+
+
 	if ( pWin ) delete pWin;
 
 	return (int)msg.wParam;

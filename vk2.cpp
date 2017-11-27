@@ -25,6 +25,7 @@
 
 #include "key.h"
 #include "vk.h"
+#include "vk2.h"
 
 #define ASSERTW(flg,err_msg)											 \
 	if ( !(flg) ) {																		 \
@@ -36,16 +37,252 @@
 		exit(1);																 \
 	} 
 
-#define ERR_EXIT(err_msg, err_class)											 \
-	do {																		 \
-		MessageBox(NULL, err_msg, err_class, MB_OK); \
-		exit(1);																 \
-	} while (0)
+//#define ERR_EXIT(err_msg, err_class)											 \
+//	do {																		 \
+//		MessageBox(NULL, err_msg, err_class, MB_OK); \
+//		exit(1);																 \
+//	} while (0)
 
 
-PFN_vkGetDeviceProcAddr g_gdpa = NULL;
-const char *tex_files[] = {"lunarg.ppm"};
+//PFN_vkGetDeviceProcAddr g_gdpa = NULL;
+//const char *tex_files[] = {"lunarg.ppm"};
 
+//-----------------------------------------------------------------------------
+bool loadTexture(
+//-----------------------------------------------------------------------------
+	const char *filename, uint8_t *rgba_data,
+	VkSubresourceLayout *layout, int32_t *width, int32_t *height) 
+
+{
+
+	FILE *fPtr = fopen(filename, "rb");
+	char header[256], *cPtr, *tmp;
+
+	if (!fPtr)
+		return false;
+
+	cPtr = fgets(header, 256, fPtr); // P6
+	if (cPtr == NULL || strncmp(header, "P6\n", 3)) 
+	{
+		fclose(fPtr);
+		return false;
+	}
+
+	do 
+	{
+		cPtr = fgets(header, 256, fPtr);
+		if (cPtr == NULL) 
+		{
+			fclose(fPtr);
+			return false;
+		}
+	} while (!strncmp(header, "#", 1));
+
+	sscanf(header, "%u %u", width, height);
+	if (rgba_data == NULL) 
+	{
+		fclose(fPtr);
+		return true;
+	}
+	tmp = fgets(header, 256, fPtr); // Format
+	(void)tmp;
+	if (cPtr == NULL || strncmp(header, "255\n", 3)) 
+	{
+		fclose(fPtr);
+		return false;
+	}
+
+	for (int y = 0; y < *height; y++) 
+	{
+		uint8_t *rowPtr = rgba_data;
+		for (int x = 0; x < *width; x++) 
+		{
+			size_t s = fread(rowPtr, 3, 1, fPtr);
+			(void)s;
+			rowPtr[3] = 255; /* Alpha of 1 */
+			rowPtr += 4;
+		}
+		rgba_data += layout->rowPitch;
+	}
+	fclose(fPtr);
+	return true;
+}
+//-----------------------------------------------------------------------------
+void demo_prepare_texture_image(
+//-----------------------------------------------------------------------------
+	VkDevice device,
+	VkPhysicalDeviceMemoryProperties* pMemory_properties,
+	const char *filename,
+	struct texture_object *tex_obj,
+	VkImageTiling tiling,
+	VkImageUsageFlags usage,
+	VkFlags required_props
+) 
+{
+	//-----------------------------------------------------
+	// 
+	//-----------------------------------------------------
+	int32_t tex_width;
+	int32_t tex_height;
+	{
+
+		if (!loadTexture(filename, NULL, NULL, &tex_width, &tex_height)) 
+		{
+			ASSERTW(false,"Failed to load textures Load Texture Failure");
+		}
+
+		tex_obj->tex_width = tex_width;
+		tex_obj->tex_height = tex_height;
+	}
+
+	//-----------------------------------------------------
+	// イメージの作成
+	//-----------------------------------------------------
+	{
+		const VkFormat tex_format = VK_FORMAT_R8G8B8A8_UNORM;
+		const VkImageCreateInfo ici = 
+		{
+			.sType 					= VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+			.pNext 					= NULL,
+			.flags 					= 0,
+			.imageType 				= VK_IMAGE_TYPE_2D,
+			.format 				= tex_format,
+			.extent 				= 
+			{ 
+				  tex_width
+				, tex_height
+				, 1
+			},
+			.mipLevels 				= 1,
+			.arrayLayers 			= 1,
+			.samples 				= VK_SAMPLE_COUNT_1_BIT,
+			.tiling 				= tiling,
+			.usage 					= usage,
+			.sharingMode			= VK_SHARING_MODE_EXCLUSIVE,
+			.queueFamilyIndexCount	= 0,
+			.pQueueFamilyIndices	= 0,
+			.initialLayout 			= VK_IMAGE_LAYOUT_PREINITIALIZED,
+
+		};
+		VkResult  err;
+		err = vkCreateImage(device, &ici, NULL, &tex_obj->image);		//create13	setup
+		assert(!err);
+	}
+
+	//---------------------------------------------------------
+	// 
+	//---------------------------------------------------------
+	{
+		VkMemoryRequirements mr;
+		{
+			//---------------------------------------------------------
+			// イメージメモリ要求の取得
+			//---------------------------------------------------------
+			vkGetImageMemoryRequirements(device, tex_obj->image, &mr);
+
+			tex_obj->mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+			tex_obj->mem_alloc.pNext = NULL;
+			tex_obj->mem_alloc.allocationSize = mr.size;
+			tex_obj->mem_alloc.memoryTypeIndex = 0;
+
+			//-----------------------------------------------------
+			// プロパティーの取得
+			//-----------------------------------------------------
+			bool  pass = false;
+			{
+				uint32_t 							typeBits			= mr.memoryTypeBits;
+				VkFlags 							requirements_mask	= required_props;
+				uint32_t*							typeIndex			= &tex_obj->mem_alloc.memoryTypeIndex;
+
+				// Search memtypes to find first index with those properties
+				for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++) 
+				{
+					if ((typeBits & 1) == 1) 
+					{
+						// Type is available, does it match user properties?
+						if ((pMemory_properties->memoryTypes[i].propertyFlags & requirements_mask) == requirements_mask) 
+						{
+							*typeIndex = i;
+							pass = true;
+							break;
+						}
+					}
+					typeBits >>= 1;
+				}
+			}
+			assert(pass);
+		}
+	}
+
+	/* allocate memory */
+	//---------------------------------------------------------
+	// メモリの確保
+	//---------------------------------------------------------
+	{
+		VkResult  err;
+		err = vkAllocateMemory(device, &tex_obj->mem_alloc, NULL, &(tex_obj->devmem));	//create14	setup
+		assert(!err);
+	}
+
+	/* bind memory */
+	//---------------------------------------------------------
+	// イメージメモリのバインド
+	//---------------------------------------------------------
+	{
+		VkResult  err;
+		err = vkBindImageMemory(device, tex_obj->image, tex_obj->devmem, 0);
+		assert(!err);
+	}
+
+	//---------------------------------------------------------
+	// 
+	//---------------------------------------------------------
+	if (required_props & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) 
+	{
+		//---------------------------------------------------------
+		// イメージサブリソースレイアウトの取得
+		//---------------------------------------------------------
+		VkSubresourceLayout layout;
+		{
+			const VkImageSubresource subres = 
+			{
+				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+				.mipLevel = 0,
+				.arrayLayer = 0,
+			};
+
+			vkGetImageSubresourceLayout(device, tex_obj->image, &subres, &layout);
+
+		}
+
+		//---------------------------------------------------------
+		// マップメモリ
+		//---------------------------------------------------------
+		{
+			void *data;
+			VkResult  err;
+			err = vkMapMemory(device, tex_obj->devmem, 0, tex_obj->mem_alloc.allocationSize, 0, &data);
+			assert(!err);
+
+			//---------------------------------------------------------
+			// テクスチャ転送
+			//---------------------------------------------------------
+			if ( !loadTexture( filename, (uint8_t*)data, &layout, &tex_width, &tex_height ) )
+			{
+				fprintf(stderr, "Error loading texture: %s\n", filename);
+			}
+		}
+
+		//---------------------------------------------------------
+		// マップ解除
+		//---------------------------------------------------------
+		{
+			vkUnmapMemory(device, tex_obj->devmem);
+		}
+	}
+
+	tex_obj->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+}
 
 //-----------------------------------------------------------------------------
 bool memory_type_from_properties(
@@ -1022,9 +1259,306 @@ void vk2_create( VulkanInf& vk, int _width, int _height
 //	,void* pDataVert
 //	,int sizeofStructDataVert
 	, int unit_cnt
+	, const char* fn_vert
+	, const char* fn_frag
+	, const char** tex_files
  )
 {
 
+	//-----------------------------------------------------
+	// テクスチャイメージビューの作成
+	//-----------------------------------------------------
+	//demo_prepare_textures(&vk);
+	{
+		const VkFormat tex_format = VK_FORMAT_R8G8B8A8_UNORM;
+		VkFormatProperties props;
+		uint32_t i;
+
+		vkGetPhysicalDeviceFormatProperties(vk.gpu, tex_format, &props);
+
+		for (i = 0; i < DEMO_TEXTURE_COUNT; i++) 
+		{
+
+			if ((props.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) ) 
+			{
+printf("1 tex %d: %x %x\n", i, (int)props.linearTilingFeatures, (int)VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT);
+				/* Device can texture using linear textures */
+				demo_prepare_texture_image(
+					  vk.device
+					, &vk.memory_properties
+					, tex_files[i]
+					, &vk.textures[i]
+					, VK_IMAGE_TILING_LINEAR
+					, VK_IMAGE_USAGE_SAMPLED_BIT
+					, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+				);
+
+				// Nothing in the pipeline needs to be complete to start, and don't allow fragment
+				// shader to run until layout transition completes
+				//-----------------------------------------------------
+				//
+				//-----------------------------------------------------
+				{
+					VkImage 				image				= vk.textures[i].image;
+					VkImageAspectFlags 		aspectMask			= VK_IMAGE_ASPECT_COLOR_BIT;
+					VkImageLayout 			old_image_layout	= VK_IMAGE_LAYOUT_PREINITIALIZED;
+					VkImageLayout 			new_image_layout	= vk.textures[i].imageLayout;
+					VkAccessFlagBits 		srcAccessMask		= VK_ACCESS_HOST_WRITE_BIT;
+					VkPipelineStageFlags 	src_stages			= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+					VkPipelineStageFlags 	dest_stages			= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+
+					assert(vk.cmdbuf);
+
+					VkImageMemoryBarrier imb = 
+					{
+						.sType 				= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+						.pNext 				= NULL,
+						.srcAccessMask 		= srcAccessMask,
+						.dstAccessMask 		= 0,
+						.oldLayout 			= old_image_layout,
+						.newLayout 			= new_image_layout,
+						.image 				= image,
+						.subresourceRange 	= {aspectMask, 0, 1, 0, 1}
+					};
+					switch (new_image_layout) 
+					{
+					case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:				imb.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;										break;
+					case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:			imb.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;								break;
+					case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:	imb.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT; 						break;
+					case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:			imb.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;	break;
+					case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL: 				imb.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;										break;
+					case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:					imb.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;											break;
+					default:												imb.dstAccessMask = 0;																	break;
+					}
+					vkCmdPipelineBarrier(vk.cmdbuf, src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, &imb);
+				}
+
+				vk.staging_texture.image = 0;
+			} 
+			else 
+			if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) 
+			{
+printf("2 tex %d: %x %x\n", i, props.optimalTilingFeatures, VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT);
+				/* Must use staging buffer to copy linear texture to optimized */
+
+				memset(&vk.staging_texture, 0, sizeof(vk.staging_texture));
+				demo_prepare_texture_image(
+					  vk.device
+					, &vk.memory_properties
+					, tex_files[i]
+					, &vk.staging_texture
+					, VK_IMAGE_TILING_LINEAR
+					, VK_IMAGE_USAGE_TRANSFER_SRC_BIT
+					, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+				);
+
+				demo_prepare_texture_image(
+					  vk.device
+					, &vk.memory_properties
+					, tex_files[i]
+					, &vk.textures[i]
+					, VK_IMAGE_TILING_OPTIMAL
+					,(VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
+					,VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+				);				
+
+				//-----------------------------------------------------
+				//
+				//-----------------------------------------------------
+				{
+					VkImage 				image				= vk.staging_texture.image;
+					VkImageAspectFlags 		aspectMask 			= VK_IMAGE_ASPECT_COLOR_BIT;
+					VkImageLayout 			old_image_layout 	= VK_IMAGE_LAYOUT_PREINITIALIZED;
+					VkImageLayout 			new_image_layout 	= VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+					VkAccessFlagBits 		srcAccessMask		= VK_ACCESS_HOST_WRITE_BIT;
+					VkPipelineStageFlags 	src_stages			= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+					VkPipelineStageFlags 	dest_stages			= VK_PIPELINE_STAGE_TRANSFER_BIT;
+					assert(vk.cmdbuf);
+					VkImageMemoryBarrier imb = 
+					{
+						.sType 				= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+						.pNext 				= NULL,
+						.srcAccessMask 		= srcAccessMask,
+						.dstAccessMask 		= 0,
+						.oldLayout 			= old_image_layout,
+						.newLayout 			= new_image_layout,
+						.image 				= image,
+						.subresourceRange 	= {aspectMask, 0, 1, 0, 1}
+					};
+					switch (new_image_layout) 
+					{
+					case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:				imb.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;										break;
+					case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:			imb.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;								break;
+					case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:	imb.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT; 						break;
+					case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:			imb.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;	break;
+					case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL: 				imb.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;										break;
+					case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:					imb.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;											break;
+					default:												imb.dstAccessMask = 0;																	break;
+					}
+					vkCmdPipelineBarrier(vk.cmdbuf, src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, &imb);
+				}
+
+				//-----------------------------------------------------
+				//
+				//-----------------------------------------------------
+				{
+					VkImage 				image				= vk.textures[i].image;
+					VkImageAspectFlags 		aspectMask 			= VK_IMAGE_ASPECT_COLOR_BIT;
+					VkImageLayout 			old_image_layout 	= VK_IMAGE_LAYOUT_PREINITIALIZED;
+					VkImageLayout 			new_image_layout 	= VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+					VkAccessFlagBits 		srcAccessMask		= VK_ACCESS_HOST_WRITE_BIT;
+					VkPipelineStageFlags 	src_stages			= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+					VkPipelineStageFlags 	dest_stages			= VK_PIPELINE_STAGE_TRANSFER_BIT;
+					assert(vk.cmdbuf);
+					VkImageMemoryBarrier imb = 
+					{
+						.sType 				= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+						.pNext 				= NULL,
+						.srcAccessMask 		= srcAccessMask,
+						.dstAccessMask 		= 0,
+						.oldLayout 			= old_image_layout,
+						.newLayout 			= new_image_layout,
+						.image 				= image,
+						.subresourceRange 	= {aspectMask, 0, 1, 0, 1}
+					};
+					switch (new_image_layout) 
+					{
+					case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:				imb.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;										break;
+					case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:			imb.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;								break;
+					case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:	imb.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT; 						break;
+					case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:			imb.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;	break;
+					case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL: 				imb.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;										break;
+					case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:					imb.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;											break;
+					default:												imb.dstAccessMask = 0;																	break;
+					}
+					vkCmdPipelineBarrier(vk.cmdbuf, src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, &imb);
+				}
+
+				//-----------------------------------------------------
+				//
+				//-----------------------------------------------------
+				{
+					VkImageCopy ic = 
+					{
+						.srcSubresource 	= {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1},
+						.srcOffset 			= {0, 0, 0},
+						.dstSubresource 	= {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1},
+						.dstOffset 			= {0, 0, 0},
+						.extent 			= {vk.staging_texture.tex_width,vk.staging_texture.tex_height, 1},
+					};
+					vkCmdCopyImage(
+						  vk.cmdbuf
+						, vk.staging_texture.image
+						, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
+						, vk.textures[i].image
+						, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+						, 1
+						, &ic
+					);
+				}
+
+				
+				//-----------------------------------------------------
+				//
+				//-----------------------------------------------------
+				{
+					VkImage 				image				= vk.textures[i].image;
+					VkImageAspectFlags 		aspectMask 			= VK_IMAGE_ASPECT_COLOR_BIT;
+					VkImageLayout 			old_image_layout 	= VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+					VkImageLayout 			new_image_layout 	= vk.textures[i].imageLayout;
+					VkAccessFlagBits 		srcAccessMask		= VK_ACCESS_TRANSFER_WRITE_BIT;
+					VkPipelineStageFlags 	src_stages			= VK_PIPELINE_STAGE_TRANSFER_BIT;
+					VkPipelineStageFlags 	dest_stages			= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+					assert(vk.cmdbuf);
+					VkImageMemoryBarrier imb = 
+					{
+						.sType 				= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+						.pNext 				= NULL,
+						.srcAccessMask 		= srcAccessMask,
+						.dstAccessMask 		= 0,
+						.oldLayout 			= old_image_layout,
+						.newLayout		 	= new_image_layout,
+						.image 				= image,
+						.subresourceRange 	= {aspectMask, 0, 1, 0, 1}
+					};
+					switch (new_image_layout) 
+					{
+					case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:				imb.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;										break;
+					case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:			imb.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;								break;
+					case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:	imb.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT; 						break;
+					case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:			imb.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;	break;
+					case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL: 				imb.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;										break;
+					case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:					imb.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;											break;
+					default:												imb.dstAccessMask = 0;																	break;
+					}
+					vkCmdPipelineBarrier(vk.cmdbuf, src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, &imb);
+				}
+
+			} 
+			else 
+			{
+				/* Can't support VK_FORMAT_R8G8B8A8_UNORM !? */
+				assert(!"No support for R8G8B8A8_UNORM as texture image format");
+			}
+
+
+			//-----------------------------------------------------
+			// サンプラーの作成
+			//-----------------------------------------------------
+			{
+				/* create sampler */
+				const VkSamplerCreateInfo sci = 
+				{
+					.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+					.pNext = NULL,
+					.magFilter = VK_FILTER_NEAREST,
+					.minFilter = VK_FILTER_NEAREST,
+					.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
+					.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+					.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+					.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+					.mipLodBias = 0.0f,
+					.anisotropyEnable = VK_FALSE,
+					.maxAnisotropy = 1,
+					.compareOp = VK_COMPARE_OP_NEVER,
+					.minLod = 0.0f,
+					.maxLod = 0.0f,
+					.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
+					.unnormalizedCoordinates = VK_FALSE,
+				};
+				VkResult  err;
+				err = vkCreateSampler(vk.device, &sci, NULL, &vk.textures[i].sampler);	//create15s
+				assert(!err);
+			}
+
+			//-----------------------------------------------------
+			// イメージビューの作成
+			//-----------------------------------------------------
+			{
+				/* create image imgview */
+				VkImageViewCreateInfo ivc = 
+				{
+					.sType 		= VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+					.pNext 		= NULL,
+					.image 		= VK_NULL_HANDLE,
+					.viewType 	= VK_IMAGE_VIEW_TYPE_2D,
+					.format 	= tex_format,
+					.components =
+						{
+							VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G,
+							VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A,
+						},
+					.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1},
+					.flags = 0,
+				};
+				ivc.image = vk.textures[i].image;
+				VkResult  err;
+				err = vkCreateImageView(vk.device, &ivc, NULL, &vk.textures[i].imgview);	//create12s
+				assert(!err);
+			}
+			
+		}
+	}
 
 	//-----------------------------------------------------
 	// パイプライン作成
@@ -1094,8 +1628,8 @@ void vk2_create( VulkanInf& vk, int _width, int _height
 			//---------------------
 			// グラフィックパイプライン作成
 			//---------------------
-			const char* fn_vert = "s-phong-vert.spv";
-			const char* fn_frag = "s-phong-frag.spv";
+//			const char* fn_vert = "s-phong-vert.spv";
+//			const char* fn_frag = "s-phong-frag.spv";
 //			const char* fn_vert = "s-const-tex-vert.spv";
 //			const char* fn_frag = "s-const-tex-frag.spv";
 			{

@@ -2,6 +2,9 @@ void vk2_create( VulkanInf& vk, int _width, int _height
 //	,void* pDataVert
 //	,int sizeofStructDataVert
 	, int unit_cnt
+	, const char* fn_vert
+	, const char* fn_frag
+	, const char** tex_files
 );
 
 void	vk2_updateBegin( VulkanInf& vk
