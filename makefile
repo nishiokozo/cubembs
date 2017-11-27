@@ -1,4 +1,4 @@
-OBJS=main.o key.o vk.o win.o vk2.o vect.o enemy.o
+OBJS=main.o key.o vk.o win.o vect.o enemy.o
 SHDR=\
 	s-const-tex-frag.spv s-const-tex-vert.spv \
 	s-phong-frag.spv s-phong-vert.spv

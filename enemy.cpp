@@ -18,7 +18,6 @@
 
 #include "key.h"
 #include "vk.h"
-#include "vk2.h"
 #include "win.h"
 #include "vect.h"
 #include "enemy.h"
@@ -300,10 +299,10 @@ void enemy_create()
 			, sc_uniform_buffer[u]
 			, sc_uniform_memory[u]
 			, sc_descriptor_set[u]
-//						, "s-const-tex-vert.spv", "s-const-tex-frag.spv"
-						, "s-phong-vert.spv", "s-phong-frag.spv"
-						, tex_files
-						, 1
+//			, "s-const-tex-vert.spv", "s-const-tex-frag.spv"
+			, "s-phong-vert.spv", "s-phong-frag.spv"
+			, tex_files
+			, 1
 		);
 	}
 }
@@ -336,32 +335,32 @@ void enemy_remove()
 void enemy_update()
 //-----------------------------------------------------------------------------
 {
-		for ( int u = 0; u < unit_cnt; u++ )
-		{
-		 	g_model[u].rotX(RAD(0.1));
-		 	g_model[u].rotY(RAD(1));
-		}
-		for ( int u = 0; u < unit_cnt; u++ )
-		{
-			mvp[u].identity();
-			mvp[u].perspectiveGL( 45, 512.0/512.0,0.1,100		 );
-			mvp[u].m[1][1] *= -1; // GL to Vulkan
-			mvp[u] =  g_model[u] * g_view * mvp[u];
-		}
+	for ( int u = 0; u < unit_cnt; u++ )
+	{
+	 	g_model[u].rotX(RAD(0.1));
+	 	g_model[u].rotY(RAD(1));
+	}
+	for ( int u = 0; u < unit_cnt; u++ )
+	{
+		mvp[u].identity();
+		mvp[u].perspectiveGL( 45, 512.0/512.0,0.1,100		 );
+		mvp[u].m[1][1] *= -1; // GL to Vulkan
+		mvp[u] =  g_model[u] * g_view * mvp[u];
+	}
 
-				for ( int u =0 ; u < unit_cnt ; u++ )
-				{
-					vk2_drawPolygon( g_pVk->vk
-						, mvp[u].m
-						, sizeof(vect44)
-						, sc_uniform_memory[u]
-						, 12*3	//_vertexCount
-						, 1		//_instanceCount
-						, 0		//_firstVertex
-						, 0		//_firstInstance
-						, sc_descriptor_set[u]
-					);
-				}
+	for ( int u =0 ; u < unit_cnt ; u++ )
+	{
+		vk2_drawPolygon( g_pVk->vk
+			, mvp[u].m
+			, sizeof(vect44)
+			, sc_uniform_memory[u]
+			, 12*3	//_vertexCount
+			, 1		//_instanceCount
+			, 0		//_firstVertex
+			, 0		//_firstInstance
+			, sc_descriptor_set[u]
+		);
+	}
 
 
 }

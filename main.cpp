@@ -18,7 +18,6 @@
 
 #include "key.h"
 #include "vk.h"
-#include "vk2.h"
 #include "win.h"
 #include "vect.h"
 #include "enemy.h"
@@ -32,25 +31,22 @@ const char *tex_files[] = {"lunarg.ppm"};
 int main(int argc, char *argv[])
 //-----------------------------------------------------------------------------
 {
-
 	g_view.identity();
 	g_view.translate(0,0,-5);
 
-
 	//---
 	WinInf* pWin = new WinInf( "msb", 128, 128 );
-	g_pVk = new VkInf( pWin->hInstance, pWin->hWin, pWin->win_width, pWin->win_height );
+	g_pVk = new VkInf( 
+		  pWin->hInstance
+		, pWin->hWin
+		, pWin->win_width
+		, pWin->win_height
+		, 200//unit_MAX
+		, 100//DEMO_TEXTURE_COUNT
+	);
 
-	if ( g_pVk ) 
-	{
-		vk2_create( g_pVk->vk
-			, pWin->win_width
-			, pWin->win_height
-			, 200//unit_MAX
-			, 100//DEMO_TEXTURE_COUNT
-		);
-		enemy_create();
-	}
+	enemy_create();
+
 	//-----------------------------------------------------
 	// ƒƒCƒ“ƒ‹[ƒv
 	//-----------------------------------------------------
@@ -114,7 +110,6 @@ int main(int argc, char *argv[])
 	//-----------------------------------------------------
 	if ( g_pVk ) 
 	{
-		vk2_release( g_pVk->vk );
 		enemy_remove();
 		delete g_pVk;g_pVk=0;
 	}
