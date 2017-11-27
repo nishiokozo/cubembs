@@ -700,39 +700,6 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 
 
 
-	//---------------------------------------------------------
-	// コマンドバッファの確保
-	//---------------------------------------------------------
-	{
-		const VkCommandBufferAllocateInfo cmai = 
-		{
-			.sType 				= VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-			.pNext 				= NULL,
-			.commandPool 		= vk.cmd_pool,
-			.level 				= VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-			.commandBufferCount = 1,
-		};
-		VkResult  err;
-		err = vkAllocateCommandBuffers(vk.device, &cmai, &vk.cmdbuf);
-		assert(!err);
-	}
-
-	//---------------------------------------------------------
-	// コマンドバッファの開始
-	//---------------------------------------------------------
-	{
-		VkCommandBufferBeginInfo cb = 
-		{
-			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-			.pNext = NULL,
-			.flags = 0,
-			.pInheritanceInfo = NULL,
-		};
-		VkResult  err;
-		err = vkBeginCommandBuffer(vk.cmdbuf, &cb);
-		assert(!err);
-	}
-
 
 	//---------------------------------------------------------
 	// 描画モード値
@@ -1200,6 +1167,9 @@ void vk_setup( VulkanInf& vk, HINSTANCE hInstance, HWND hWin, int _width, int _h
 			assert(!err);
 		}
 	}
+
+
+
 
 
 }

@@ -98,9 +98,9 @@ struct VulkanInf
 	} depth_inf;
 
 	struct texture_object textures[DEMO_TEXTURE_COUNT];
-	struct texture_object staging_texture;
+//	struct texture_object staging_texture;
 
-	VkCommandBuffer 		cmdbuf;  // Buffer for initialization commands
+	VkCommandBuffer 		nor_cmdbuf;  // Buffer for initialization commands
 	VkPipelineLayout		pipeline_layout;
 	VkDescriptorSetLayout 	desc_layout;
 	VkPipelineCache 		pipelineCache;

@@ -1,10 +1,6 @@
 void vk2_create( VulkanInf& vk, int _width, int _height
-//	,void* pDataVert
-//	,int sizeofStructDataVert
 	, int unit_cnt
-	, const char* fn_vert
-	, const char* fn_frag
-	, const char** tex_files
+	, const int		tex_cnt
 );
 
 void	vk2_updateBegin( VulkanInf& vk
@@ -30,6 +26,13 @@ void	vk2_removeModel( VulkanInf& vk
 	, VkDescriptorSet* 			&	sir_descriptor_set
 
  );
+ 
+//-----------------------------------------------------------------------------
+void vk2_loadTexture( VulkanInf& vk
+//-----------------------------------------------------------------------------
+	, const char** tex_files
+);
+
 void vk2_loadModel( VulkanInf& vk
 	,void* pDataVert
 	,int sizeofStructDataVert
@@ -37,6 +40,10 @@ void vk2_loadModel( VulkanInf& vk
 	, VkBuffer* 				&	sc_uniform_buffer
 	, VkDeviceMemory* 			&	sc_uniform_memory
 	, VkDescriptorSet* 			&	sc_descriptor_set
+	, const char* fn_vert
+	, const char* fn_frag
+	, const char** 	tex_files
+	, const int		tex_cnt
  );
 //-----------------------------------------------------------------------------
 void vk2_cmd2( VulkanInf& vk

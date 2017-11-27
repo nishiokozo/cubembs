@@ -1256,325 +1256,24 @@ static void	vk_CmdSetScissor(
 //-----------------------------------------------------------------------------
 void vk2_create( VulkanInf& vk, int _width, int _height
 //-----------------------------------------------------------------------------
-//	,void* pDataVert
-//	,int sizeofStructDataVert
-	, int unit_cnt
-	, const char* fn_vert
-	, const char* fn_frag
-	, const char** tex_files
+	, int unit_max
+	, int tex_max
  )
 {
 
-	//-----------------------------------------------------
-	// テクスチャイメージビューの作成
-	//-----------------------------------------------------
-	//demo_prepare_textures(&vk);
-	{
-		const VkFormat tex_format = VK_FORMAT_R8G8B8A8_UNORM;
-		VkFormatProperties props;
-		uint32_t i;
-
-		vkGetPhysicalDeviceFormatProperties(vk.gpu, tex_format, &props);
-
-		for (i = 0; i < DEMO_TEXTURE_COUNT; i++) 
-		{
-
-			if ((props.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) ) 
-			{
-printf("1 tex %d: %x %x\n", i, (int)props.linearTilingFeatures, (int)VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT);
-				/* Device can texture using linear textures */
-				demo_prepare_texture_image(
-					  vk.device
-					, &vk.memory_properties
-					, tex_files[i]
-					, &vk.textures[i]
-					, VK_IMAGE_TILING_LINEAR
-					, VK_IMAGE_USAGE_SAMPLED_BIT
-					, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-				);
-
-				// Nothing in the pipeline needs to be complete to start, and don't allow fragment
-				// shader to run until layout transition completes
-				//-----------------------------------------------------
-				//
-				//-----------------------------------------------------
-				{
-					VkImage 				image				= vk.textures[i].image;
-					VkImageAspectFlags 		aspectMask			= VK_IMAGE_ASPECT_COLOR_BIT;
-					VkImageLayout 			old_image_layout	= VK_IMAGE_LAYOUT_PREINITIALIZED;
-					VkImageLayout 			new_image_layout	= vk.textures[i].imageLayout;
-					VkAccessFlagBits 		srcAccessMask		= VK_ACCESS_HOST_WRITE_BIT;
-					VkPipelineStageFlags 	src_stages			= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-					VkPipelineStageFlags 	dest_stages			= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-
-					assert(vk.cmdbuf);
-
-					VkImageMemoryBarrier imb = 
-					{
-						.sType 				= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-						.pNext 				= NULL,
-						.srcAccessMask 		= srcAccessMask,
-						.dstAccessMask 		= 0,
-						.oldLayout 			= old_image_layout,
-						.newLayout 			= new_image_layout,
-						.image 				= image,
-						.subresourceRange 	= {aspectMask, 0, 1, 0, 1}
-					};
-					switch (new_image_layout) 
-					{
-					case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:				imb.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;										break;
-					case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:			imb.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;								break;
-					case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:	imb.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT; 						break;
-					case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:			imb.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;	break;
-					case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL: 				imb.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;										break;
-					case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:					imb.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;											break;
-					default:												imb.dstAccessMask = 0;																	break;
-					}
-					vkCmdPipelineBarrier(vk.cmdbuf, src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, &imb);
-				}
-
-				vk.staging_texture.image = 0;
-			} 
-			else 
-			if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) 
-			{
-printf("2 tex %d: %x %x\n", i, props.optimalTilingFeatures, VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT);
-				/* Must use staging buffer to copy linear texture to optimized */
-
-				memset(&vk.staging_texture, 0, sizeof(vk.staging_texture));
-				demo_prepare_texture_image(
-					  vk.device
-					, &vk.memory_properties
-					, tex_files[i]
-					, &vk.staging_texture
-					, VK_IMAGE_TILING_LINEAR
-					, VK_IMAGE_USAGE_TRANSFER_SRC_BIT
-					, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-				);
-
-				demo_prepare_texture_image(
-					  vk.device
-					, &vk.memory_properties
-					, tex_files[i]
-					, &vk.textures[i]
-					, VK_IMAGE_TILING_OPTIMAL
-					,(VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
-					,VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-				);				
-
-				//-----------------------------------------------------
-				//
-				//-----------------------------------------------------
-				{
-					VkImage 				image				= vk.staging_texture.image;
-					VkImageAspectFlags 		aspectMask 			= VK_IMAGE_ASPECT_COLOR_BIT;
-					VkImageLayout 			old_image_layout 	= VK_IMAGE_LAYOUT_PREINITIALIZED;
-					VkImageLayout 			new_image_layout 	= VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-					VkAccessFlagBits 		srcAccessMask		= VK_ACCESS_HOST_WRITE_BIT;
-					VkPipelineStageFlags 	src_stages			= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-					VkPipelineStageFlags 	dest_stages			= VK_PIPELINE_STAGE_TRANSFER_BIT;
-					assert(vk.cmdbuf);
-					VkImageMemoryBarrier imb = 
-					{
-						.sType 				= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-						.pNext 				= NULL,
-						.srcAccessMask 		= srcAccessMask,
-						.dstAccessMask 		= 0,
-						.oldLayout 			= old_image_layout,
-						.newLayout 			= new_image_layout,
-						.image 				= image,
-						.subresourceRange 	= {aspectMask, 0, 1, 0, 1}
-					};
-					switch (new_image_layout) 
-					{
-					case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:				imb.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;										break;
-					case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:			imb.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;								break;
-					case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:	imb.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT; 						break;
-					case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:			imb.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;	break;
-					case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL: 				imb.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;										break;
-					case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:					imb.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;											break;
-					default:												imb.dstAccessMask = 0;																	break;
-					}
-					vkCmdPipelineBarrier(vk.cmdbuf, src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, &imb);
-				}
-
-				//-----------------------------------------------------
-				//
-				//-----------------------------------------------------
-				{
-					VkImage 				image				= vk.textures[i].image;
-					VkImageAspectFlags 		aspectMask 			= VK_IMAGE_ASPECT_COLOR_BIT;
-					VkImageLayout 			old_image_layout 	= VK_IMAGE_LAYOUT_PREINITIALIZED;
-					VkImageLayout 			new_image_layout 	= VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-					VkAccessFlagBits 		srcAccessMask		= VK_ACCESS_HOST_WRITE_BIT;
-					VkPipelineStageFlags 	src_stages			= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-					VkPipelineStageFlags 	dest_stages			= VK_PIPELINE_STAGE_TRANSFER_BIT;
-					assert(vk.cmdbuf);
-					VkImageMemoryBarrier imb = 
-					{
-						.sType 				= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-						.pNext 				= NULL,
-						.srcAccessMask 		= srcAccessMask,
-						.dstAccessMask 		= 0,
-						.oldLayout 			= old_image_layout,
-						.newLayout 			= new_image_layout,
-						.image 				= image,
-						.subresourceRange 	= {aspectMask, 0, 1, 0, 1}
-					};
-					switch (new_image_layout) 
-					{
-					case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:				imb.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;										break;
-					case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:			imb.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;								break;
-					case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:	imb.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT; 						break;
-					case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:			imb.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;	break;
-					case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL: 				imb.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;										break;
-					case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:					imb.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;											break;
-					default:												imb.dstAccessMask = 0;																	break;
-					}
-					vkCmdPipelineBarrier(vk.cmdbuf, src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, &imb);
-				}
-
-				//-----------------------------------------------------
-				//
-				//-----------------------------------------------------
-				{
-					VkImageCopy ic = 
-					{
-						.srcSubresource 	= {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1},
-						.srcOffset 			= {0, 0, 0},
-						.dstSubresource 	= {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1},
-						.dstOffset 			= {0, 0, 0},
-						.extent 			= {vk.staging_texture.tex_width,vk.staging_texture.tex_height, 1},
-					};
-					vkCmdCopyImage(
-						  vk.cmdbuf
-						, vk.staging_texture.image
-						, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
-						, vk.textures[i].image
-						, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-						, 1
-						, &ic
-					);
-				}
-
-				
-				//-----------------------------------------------------
-				//
-				//-----------------------------------------------------
-				{
-					VkImage 				image				= vk.textures[i].image;
-					VkImageAspectFlags 		aspectMask 			= VK_IMAGE_ASPECT_COLOR_BIT;
-					VkImageLayout 			old_image_layout 	= VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-					VkImageLayout 			new_image_layout 	= vk.textures[i].imageLayout;
-					VkAccessFlagBits 		srcAccessMask		= VK_ACCESS_TRANSFER_WRITE_BIT;
-					VkPipelineStageFlags 	src_stages			= VK_PIPELINE_STAGE_TRANSFER_BIT;
-					VkPipelineStageFlags 	dest_stages			= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-					assert(vk.cmdbuf);
-					VkImageMemoryBarrier imb = 
-					{
-						.sType 				= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-						.pNext 				= NULL,
-						.srcAccessMask 		= srcAccessMask,
-						.dstAccessMask 		= 0,
-						.oldLayout 			= old_image_layout,
-						.newLayout		 	= new_image_layout,
-						.image 				= image,
-						.subresourceRange 	= {aspectMask, 0, 1, 0, 1}
-					};
-					switch (new_image_layout) 
-					{
-					case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:				imb.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;										break;
-					case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:			imb.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;								break;
-					case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:	imb.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT; 						break;
-					case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:			imb.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;	break;
-					case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL: 				imb.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;										break;
-					case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:					imb.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;											break;
-					default:												imb.dstAccessMask = 0;																	break;
-					}
-					vkCmdPipelineBarrier(vk.cmdbuf, src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, &imb);
-				}
-
-			} 
-			else 
-			{
-				/* Can't support VK_FORMAT_R8G8B8A8_UNORM !? */
-				assert(!"No support for R8G8B8A8_UNORM as texture image format");
-			}
-
-
-			//-----------------------------------------------------
-			// サンプラーの作成
-			//-----------------------------------------------------
-			{
-				/* create sampler */
-				const VkSamplerCreateInfo sci = 
-				{
-					.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-					.pNext = NULL,
-					.magFilter = VK_FILTER_NEAREST,
-					.minFilter = VK_FILTER_NEAREST,
-					.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
-					.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-					.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-					.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-					.mipLodBias = 0.0f,
-					.anisotropyEnable = VK_FALSE,
-					.maxAnisotropy = 1,
-					.compareOp = VK_COMPARE_OP_NEVER,
-					.minLod = 0.0f,
-					.maxLod = 0.0f,
-					.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
-					.unnormalizedCoordinates = VK_FALSE,
-				};
-				VkResult  err;
-				err = vkCreateSampler(vk.device, &sci, NULL, &vk.textures[i].sampler);	//create15s
-				assert(!err);
-			}
-
-			//-----------------------------------------------------
-			// イメージビューの作成
-			//-----------------------------------------------------
-			{
-				/* create image imgview */
-				VkImageViewCreateInfo ivc = 
-				{
-					.sType 		= VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-					.pNext 		= NULL,
-					.image 		= VK_NULL_HANDLE,
-					.viewType 	= VK_IMAGE_VIEW_TYPE_2D,
-					.format 	= tex_format,
-					.components =
-						{
-							VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G,
-							VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A,
-						},
-					.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1},
-					.flags = 0,
-				};
-				ivc.image = vk.textures[i].image;
-				VkResult  err;
-				err = vkCreateImageView(vk.device, &ivc, NULL, &vk.textures[i].imgview);	//create12s
-				assert(!err);
-			}
-			
-		}
-	}
 
 	//-----------------------------------------------------
 	// パイプライン作成
 	//-----------------------------------------------------
 	{
 
-//		vk_setPipeline( vk, _width, _height, _vertexCount, _instanceCount, _firstVertex, _firstInstance
-//			, sizeofStructDataVert
-//		 );
 		{
 			//---------------------
 			// ディスクリプターレイアウト作成
 			//---------------------
 				vk_createDescriptionLayout(
 					  vk.device
-					, DEMO_TEXTURE_COUNT
+					, tex_max	//DEMO_TEXTURE_COUNT
 
 					, vk.desc_layout	//create11
 				);
@@ -1585,8 +1284,8 @@ printf("2 tex %d: %x %x\n", i, props.optimalTilingFeatures, VK_FORMAT_FEATURE_SA
 			{
 				vk_createDescripterPool(									
 					  vk.device
-					, DEMO_TEXTURE_COUNT
-					, vk.swapchainImageCount * unit_cnt
+					, tex_max	//DEMO_TEXTURE_COUNT
+					, vk.swapchainImageCount * unit_max
 
 					, vk.desc_pool	//create6
 				);
@@ -1625,35 +1324,6 @@ printf("2 tex %d: %x %x\n", i, props.optimalTilingFeatures, VK_FORMAT_FEATURE_SA
 					, vk.pipelineCache	//create8
 				);
 			}
-			//---------------------
-			// グラフィックパイプライン作成
-			//---------------------
-//			const char* fn_vert = "s-phong-vert.spv";
-//			const char* fn_frag = "s-phong-frag.spv";
-//			const char* fn_vert = "s-const-tex-vert.spv";
-//			const char* fn_frag = "s-const-tex-frag.spv";
-			{
-				void *vcode;
-				size_t vsize;
-				void *fcode;
-				size_t fsize;
-				vcode = demo_read_spv( fn_vert, &vsize);
-				fcode = demo_read_spv( fn_frag, &fsize);
-				vk_CreateGraphicsPipelines(
-					  vk.device 
-					, vk.pipeline_layout
-					, vk.render_pass
-					, vcode
-					, vsize 
-					, fcode
-					, fsize 
-					, vk.pipelineCache
-
-					, vk.pipeline		//create7
-				);
-				free(vcode);
-				free(fcode);
-			}
 
 			//-----------------------------------------------------
 			// コマンドバッファの作成
@@ -1691,9 +1361,199 @@ printf("2 tex %d: %x %x\n", i, props.optimalTilingFeatures, VK_FORMAT_FEATURE_SA
 	}
 
 	//-----------------------------------------------------
-	// 終了待ち
+	// 
 	//-----------------------------------------------------
 	{
+		vk.current_buffer = 0;
+	}
+
+
+
+
+
+	
+
+//============
+}
+//-----------------------------------------------------------------------------
+void vk2_loadTexture( VulkanInf& vk
+//-----------------------------------------------------------------------------
+	, const char** tex_files
+	, const int tex_cnt 
+)
+{
+	
+	//-----------------------------------------------------
+	// テクスチャ転送
+	//-----------------------------------------------------
+	{
+		//---------------------------------------------------------
+		// コマンドバッファの確保
+		//---------------------------------------------------------
+		{
+			const VkCommandBufferAllocateInfo cmai = 
+			{
+				.sType 				= VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+				.pNext 				= NULL,
+				.commandPool 		= vk.cmd_pool,
+				.level 				= VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+				.commandBufferCount = 1,
+			};
+			VkResult  err;
+			err = vkAllocateCommandBuffers(vk.device, &cmai, &vk.nor_cmdbuf);
+			assert(!err);
+		}
+
+		//---------------------------------------------------------
+		// コマンドバッファの開始
+		//---------------------------------------------------------
+		{
+			VkCommandBufferBeginInfo cb = 
+			{
+				.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+				.pNext = NULL,
+				.flags = 0,
+				.pInheritanceInfo = NULL,
+			};
+			VkResult  err;
+			err = vkBeginCommandBuffer(vk.nor_cmdbuf, &cb);
+			assert(!err);
+		}
+
+		{
+			const VkFormat tex_format = VK_FORMAT_R8G8B8A8_UNORM;
+			VkFormatProperties props;
+			uint32_t i;
+
+			vkGetPhysicalDeviceFormatProperties(vk.gpu, tex_format, &props);
+
+			for (i = 0; i < tex_cnt; i++) 
+			{
+
+				if ((props.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) ) 
+				{
+	//printf("1 tex %d: %x %x\n", i, (int)props.linearTilingFeatures, (int)VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT);
+					/* Device can texture using linear textures */
+					demo_prepare_texture_image(
+						  vk.device
+						, &vk.memory_properties
+						, tex_files[i]
+						, &vk.textures[i]
+						, VK_IMAGE_TILING_LINEAR
+						, VK_IMAGE_USAGE_SAMPLED_BIT
+						, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+					);
+
+					// Nothing in the pipeline needs to be complete to start, and don't allow fragment
+					// shader to run until layout transition completes
+					//-----------------------------------------------------
+					//
+					//-----------------------------------------------------
+					{
+						VkImage 				image				= vk.textures[i].image;
+						VkImageAspectFlags 		aspectMask			= VK_IMAGE_ASPECT_COLOR_BIT;
+						VkImageLayout 			old_image_layout	= VK_IMAGE_LAYOUT_PREINITIALIZED;
+						VkImageLayout 			new_image_layout	= vk.textures[i].imageLayout;
+						VkAccessFlagBits 		srcAccessMask		= VK_ACCESS_HOST_WRITE_BIT;
+						VkPipelineStageFlags 	src_stages			= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+						VkPipelineStageFlags 	dest_stages			= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+
+						assert(vk.nor_cmdbuf);
+
+						VkImageMemoryBarrier imb = 
+						{
+							.sType 				= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+							.pNext 				= NULL,
+							.srcAccessMask 		= srcAccessMask,
+							.dstAccessMask 		= 0,
+							.oldLayout 			= old_image_layout,
+							.newLayout 			= new_image_layout,
+							.image 				= image,
+							.subresourceRange 	= {aspectMask, 0, 1, 0, 1}
+						};
+						switch (new_image_layout) 
+						{
+						case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:				imb.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;										break;
+						case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:			imb.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;								break;
+						case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:	imb.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT; 						break;
+						case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:			imb.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;	break;
+						case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL: 				imb.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;										break;
+						case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:					imb.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;											break;
+						default:												imb.dstAccessMask = 0;																	break;
+						}
+						vkCmdPipelineBarrier(vk.nor_cmdbuf, src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, &imb);
+					}
+
+	//				vk.staging_texture.image = 0;
+				} 
+				else 
+				{
+					// Can't support VK_FORMAT_R8G8B8A8_UNORM !? 
+					assert(!"No support for R8G8B8A8_UNORM as texture image format");
+				}
+
+
+				//-----------------------------------------------------
+				// サンプラーの作成
+				//-----------------------------------------------------
+				{
+					/* create sampler */
+					const VkSamplerCreateInfo sci = 
+					{
+						.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+						.pNext = NULL,
+						.magFilter = VK_FILTER_NEAREST,
+						.minFilter = VK_FILTER_NEAREST,
+						.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
+						.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+						.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+						.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+						.mipLodBias = 0.0f,
+						.anisotropyEnable = VK_FALSE,
+						.maxAnisotropy = 1,
+						.compareOp = VK_COMPARE_OP_NEVER,
+						.minLod = 0.0f,
+						.maxLod = 0.0f,
+						.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
+						.unnormalizedCoordinates = VK_FALSE,
+					};
+					VkResult  err;
+					err = vkCreateSampler(vk.device, &sci, NULL, &vk.textures[i].sampler);	//create15s
+					assert(!err);
+				}
+
+				//-----------------------------------------------------
+				// イメージビューの作成
+				//-----------------------------------------------------
+				{
+					/* create image imgview */
+					VkImageViewCreateInfo ivc = 
+					{
+						.sType 		= VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+						.pNext 		= NULL,
+						.image 		= VK_NULL_HANDLE,
+						.viewType 	= VK_IMAGE_VIEW_TYPE_2D,
+						.format 	= tex_format,
+						.components =
+							{
+								VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G,
+								VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A,
+							},
+						.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1},
+						.flags = 0,
+					};
+					ivc.image = vk.textures[i].image;
+					VkResult  err;
+					err = vkCreateImageView(vk.device, &ivc, NULL, &vk.textures[i].imgview);	//create12s
+					assert(!err);
+				}
+				
+			}
+		}
+
+		//-----------------------------------------------------
+		// 終了待ち
+		//-----------------------------------------------------
 		/*
 		 * Prepare functions above may generate pipeline commands
 		 * that need to be flushed before beginning the render loop.
@@ -1701,7 +1561,7 @@ printf("2 tex %d: %x %x\n", i, props.optimalTilingFeatures, VK_FORMAT_FEATURE_SA
 
 		// This function could get called twice if the texture uses a staging buffer
 		// In that case the second call should be ignored
-		if (vk.cmdbuf == VK_NULL_HANDLE)
+		if (vk.nor_cmdbuf == VK_NULL_HANDLE)
 		{
 		//	return;
 		}
@@ -1712,13 +1572,10 @@ printf("2 tex %d: %x %x\n", i, props.optimalTilingFeatures, VK_FORMAT_FEATURE_SA
 			//-----------------------------------------------------
 			{
 				VkResult  err;
-				err = vkEndCommandBuffer(vk.cmdbuf);
+				err = vkEndCommandBuffer(vk.nor_cmdbuf);
 				assert(!err);
 			}
 
-			//-----------------------------------------------------
-			// フェンス処理
-			//-----------------------------------------------------
 			{	
 				//-----------------------------------------------------
 				// フェンスの作成
@@ -1740,7 +1597,7 @@ printf("2 tex %d: %x %x\n", i, props.optimalTilingFeatures, VK_FORMAT_FEATURE_SA
 				// フェンス待ち
 				//-----------------------------------------------------
 				{
-					const VkCommandBuffer cmd_bufs[] = {vk.cmdbuf};
+					const VkCommandBuffer cmd_bufs[] = {vk.nor_cmdbuf};
 					{
 						VkSubmitInfo si = 
 						{
@@ -1774,9 +1631,10 @@ printf("2 tex %d: %x %x\n", i, props.optimalTilingFeatures, VK_FORMAT_FEATURE_SA
 				vkDestroyFence(vk.device, fence, NULL);		//createTmp1
 
 			}
-			vk.cmdbuf = VK_NULL_HANDLE;
+			vk.nor_cmdbuf = VK_NULL_HANDLE;
 		}
 
+/*
 		//-----------------------------------------------------
 		// 
 		//-----------------------------------------------------
@@ -1784,21 +1642,17 @@ printf("2 tex %d: %x %x\n", i, props.optimalTilingFeatures, VK_FORMAT_FEATURE_SA
 		{
 			//demo_destroy_texture_image(&vk, &vk.staging_texture);
 			{
-				/* clean up staging resources */
+				// clean up staging resources 
 				vkFreeMemory(vk.device, vk.staging_texture.devmem, NULL);
 				vkDestroyImage(vk.device, vk.staging_texture.image, NULL);
 			}
 		}
+*/
 
-		//-----------------------------------------------------
-		// 
-		//-----------------------------------------------------
-		{
-			vk.current_buffer = 0;
-		}
 	}
-//============
+
 }
+
 //-----------------------------------------------------------------------------
 void vk2_loadModel( VulkanInf& vk
 //-----------------------------------------------------------------------------
@@ -1808,8 +1662,39 @@ void vk2_loadModel( VulkanInf& vk
 	, VkBuffer* 				&	sir_uniform_buffer
 	, VkDeviceMemory* 			&	sir_uniform_memory
 	, VkDescriptorSet* 			&	sir_descriptor_set
+
+	, const char* fn_vert
+	, const char* fn_frag
+	, const char** tex_files
+	, const int		tex_cnt
 )
 {
+	vk2_loadTexture( vk, tex_files, tex_cnt );
+
+
+			{
+				void *vcode;
+				size_t vsize;
+				void *fcode;
+				size_t fsize;
+				vcode = demo_read_spv( fn_vert, &vsize);
+				fcode = demo_read_spv( fn_frag, &fsize);
+				vk_CreateGraphicsPipelines(
+					  vk.device 
+					, vk.pipeline_layout
+					, vk.render_pass
+					, vcode
+					, vsize 
+					, fcode
+					, fsize 
+					, vk.pipelineCache
+
+					, vk.pipeline		//create7
+				);
+				free(vcode);
+				free(fcode);
+			}
+
 
 	sir_uniform_buffer 	= (VkBuffer *)			malloc(sizeof(VkBuffer) 		* vk.swapchainImageCount);
 	sir_uniform_memory 	= (VkDeviceMemory *)	malloc(sizeof(VkDeviceMemory) 	* vk.swapchainImageCount);
