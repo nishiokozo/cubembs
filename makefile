@@ -8,10 +8,10 @@ FLAGS=-g -m64 -c -g -IC:/VulkanSDK/1.0.54.0/Include -Wno-narrowing -fpermissive 
 
 
 main.exe	:	obj $(OBJS:%.o=obj/%.o) $(SHDR)
-	clang++ -m64 -o main.exe $(OBJS:%.o=obj/%.o) $(LIBS)
+	g++ -m64 -o main.exe $(OBJS:%.o=obj/%.o) $(LIBS)
 
 obj/%.o:%.cpp
-	clang++  $(FLAGS) $< -o $@
+	g++  $(FLAGS) $< -o $@
 
 %.spv:%.frag
 	glslangValidator.exe $< -V -o $@

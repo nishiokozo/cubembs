@@ -60,84 +60,6 @@ VKAPI_ATTR VkBool32 VKAPI_CALL BreakCallback(VkFlags msgFlags, VkDebugReportObje
 }
 
 
-// On MS-Windows, make this a global, so it's available to WndProc()
-
-
-
-
-
-
-
-
-
-
-//-----------------------------------------------------------------------------
-void	vk_release( VulkanInf& vk )
-//-----------------------------------------------------------------------------
-{
-// setup
-	// Wait for fences from present operations
-	for (int i = 0; i < FRAME_LAG; i++) 
-	{
-		vkWaitForFences(vk.device, 1, &vk.fences[i], VK_TRUE, UINT64_MAX);
-		vkDestroyFence(vk.device, vk.fences[i], NULL);										//create1	*	setup
-		vkDestroySemaphore(vk.device, vk.image_acquired_semaphores[i], NULL)	;			//create2	*	setup
-		vkDestroySemaphore(vk.device, vk.draw_complete_semaphores[i], NULL);				//create3	*	setup
-/*
-		if (vk.flg_separate_present_queue) 
-		{
-			vkDestroySemaphore(vk.device, vk.image_ownership_semaphores[i], NULL);			//create4	*	setup
-		}
-*/
-	}
-	for (int i = 0; i < DEMO_TEXTURE_COUNT; i++) 
-	{
-		vkDestroyImageView(vk.device, vk.textures[i].imgview, NULL);	//create12	*	setup
-		vkDestroyImage(vk.device, vk.textures[i].image, NULL);			//create13	*	setup
-		vkFreeMemory(vk.device, vk.textures[i].devmem, NULL);			//create14	*	setup
-		vkDestroySampler(vk.device, vk.textures[i].sampler, NULL);		//create15	*	setup
-	}
-	vkDestroySwapchainKHR(vk.device, vk.swapchain, NULL);			//create16	*	setup
-
-	vkDestroyImageView(vk.device, vk.depth_inf.imgview, NULL);			//create17	*	setup
-	vkDestroyImage(vk.device, vk.depth_inf.image, NULL);				//create18	*	setup
-	vkFreeMemory(vk.device, vk.depth_inf.devmem, NULL);					//create19	*	setup
-
-	for (int i = 0; i < vk.swapchainImageCount; i++) 
-	{
-		vkDestroyImageView(vk.device, vk.sir_imgview[i], NULL);				//create20	*	setup
-	}
-
-//	free(vk.swapchain_image_resources);									//create24	*	setup
-	free(vk.sir_image);
-	free(vk.sir_cmdbuf);
-	free(vk.sir_graphics_to_present_cmdbuf);
-	free(vk.sir_imgview);
-//	free(vk.sir_uniform_buffer);
-//	free(vk.sir_uniform_memory);
-	free(vk.sir_framebuffer);
-//	free(vk.sir_descriptor_set);
-
-	vkDestroyCommandPool(vk.device, vk.cmd_pool, NULL);					//create26	*	setup
-
-	vkDeviceWaitIdle(vk.device);
-	vkDestroyDevice(vk.device, NULL);									//create29	*	setup
-
-	vkDestroySurfaceKHR(vk.inst, vk.surface, NULL);						//create30	*	setup
-
-// init
-	free(vk.queue_props);												//create25	*	init
-	vkDestroyInstance(vk.inst, NULL);									//create31	*	init
-
-	printf("vk released\n");
-}
-
-
-//=================
-
-
-
-
 //-----------------------------------------------------------------------------
 bool loadTexture(
 //-----------------------------------------------------------------------------
@@ -201,13 +123,13 @@ bool loadTexture(
 //-----------------------------------------------------------------------------
 void demo_prepare_texture_image(
 //-----------------------------------------------------------------------------
-	VkDevice device,
-	VkPhysicalDeviceMemoryProperties* pMemory_properties,
-	const char *filename,
-	struct texture_object *tex_obj,
-	VkImageTiling tiling,
-	VkImageUsageFlags usage,
-	VkFlags required_props
+	VkDevice 							device,
+	VkPhysicalDeviceMemoryProperties* 	pMemory_properties,
+	const char *						filename,
+	struct texture_object *				tex_obj,
+	VkImageTiling			 			tiling,
+	VkImageUsageFlags					usage,
+	VkFlags				 				required_props
 ) 
 {
 	//-----------------------------------------------------
@@ -433,15 +355,15 @@ char *demo_read_spv(const char *filename, size_t *psize)
 }
 
 //-----------------------------------------------------------------------------
-void vk_setVert(
+void vk_vert_CreateBuffer(
 //-----------------------------------------------------------------------------
-	  const VkDevice							& 	vk_sc_device 
-	, const VkPhysicalDeviceMemoryProperties	&	vk_pdmemory_properties
-	, const void* 									pDataVert
+	  const VkDevice							& 	vk_sc_device
+//	, const VkPhysicalDeviceMemoryProperties	&	vk_pdmemory_properties
+//	, const void* 									pDataVert
 	, const int 									sizeofDataVert
 
 	, VkBuffer 									&	sir_uniform_buffer
-	, VkDeviceMemory 							&	sir_uniform_memory
+//	, VkDeviceMemory 							&	sir_uniform_memory
 )
 {
 
@@ -460,6 +382,19 @@ void vk_setVert(
 		err = vkCreateBuffer(vk_sc_device, &bci, NULL, &sir_uniform_buffer);	//create22 setVert
 		ASSERTW(!err,"中断します");
 	}
+}
+//-----------------------------------------------------------------------------
+void vk_vert_AllocateMemory(
+//-----------------------------------------------------------------------------
+	  const VkDevice							& 	vk_sc_device
+	, const VkPhysicalDeviceMemoryProperties	&	vk_pdmemory_properties
+//	, const void* 									pDataVert
+//	, const int 									sizeofDataVert
+	, VkBuffer 									&	sir_uniform_buffer
+
+	, VkDeviceMemory 							&	sir_uniform_memory
+)
+{
 
 	//---------------------
 	// バッファのメモリ要求取得
@@ -507,6 +442,18 @@ void vk_setVert(
 			ASSERTW(!err,"中断します");
 		}
 	}
+}
+//-----------------------------------------------------------------------------
+void vk_vert_MapMemory(
+//-----------------------------------------------------------------------------
+	  const VkDevice							& 	vk_sc_device 
+//	, const VkPhysicalDeviceMemoryProperties	&	vk_pdmemory_properties
+	, const void* 									pDataVert
+	, const int 									sizeofDataVert
+//	, VkBuffer 									&	sir_uniform_buffer
+	, const VkDeviceMemory 						&	sir_uniform_memory
+)
+{
 
 
 	//---------------------
@@ -533,6 +480,19 @@ void vk_setVert(
 		//---------------------
 		vkUnmapMemory(vk_sc_device, sir_uniform_memory);
 	}
+}
+//-----------------------------------------------------------------------------
+void vk_vert_BindBufferMemory(
+//-----------------------------------------------------------------------------
+	  const VkDevice							& 	vk_sc_device 
+//	, const VkPhysicalDeviceMemoryProperties	&	vk_pdmemory_properties
+//	, const void* 									pDataVert
+//	, const int 									sizeofDataVert
+
+	, VkBuffer 									&	sir_uniform_buffer
+	, VkDeviceMemory 							&	sir_uniform_memory
+)
+{
 
 
 	//---------------------
@@ -1079,60 +1039,56 @@ static void	vk_UpdateDescriptorSets(
 )
 {
 	//---------------------
-	// ディスクリプターセット・更新
+	// ディスクリプターセット・バッファ設定
 	//---------------------
+	VkDescriptorBufferInfo dbi;
+	dbi.offset 				= 0;
+	dbi.range 				= sizeofStructDataVert;
+	dbi.buffer 				= uniform_buffer;
+
+	//---------------------
+	// ディスクリプターセット・イメージ設定
+	//---------------------
+	VkDescriptorImageInfo dif[tex_count];
+	memset(&dif, 0, sizeof(dif));
+	for (unsigned int i = 0; i < tex_count; i++) 
 	{
-		//---------------------
-		// ディスクリプターセット・バッファ設定
-		//---------------------
-		VkDescriptorBufferInfo dbi;
-		dbi.offset 				= 0;
-		dbi.range 				= sizeofStructDataVert;
-		dbi.buffer 				= uniform_buffer;
-
-		//---------------------
-		// ディスクリプターセット・イメージ設定
-		//---------------------
-		VkDescriptorImageInfo dif[tex_count];
-		memset(&dif, 0, sizeof(dif));
-		for (unsigned int i = 0; i < tex_count; i++) 
-		{
-			dif[i].sampler		= pTex[i].sampler;
-			dif[i].imageView 	= pTex[i].imgview;
-			dif[i].imageLayout 	= VK_IMAGE_LAYOUT_GENERAL;
-		}
-
-		VkWriteDescriptorSet wds[2];
-		memset(&wds, 0, sizeof(wds));
-
-		wds[0].sType 			= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		wds[0].pNext 			= 0;
-		wds[0].dstSet 			= descriptor_set;
-		wds[0].dstBinding 		= 0;
-		wds[0].dstArrayElement	= 0;
-		wds[0].descriptorCount 	= 1;
-		wds[0].descriptorType 	= VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		wds[0].pImageInfo 		= NULL;
-		wds[0].pBufferInfo 		= &dbi;
-		wds[0].pTexelBufferView	= 0;
-
-		wds[1].sType 			= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		wds[1].pNext 			= 0;
-		wds[1].dstSet 			= descriptor_set;
-		wds[1].dstBinding 		= 1;
-		wds[1].dstArrayElement	= 0;
-		wds[1].descriptorCount 	= tex_count;
-		wds[1].descriptorType 	= VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		wds[1].pImageInfo 		= dif;
-		wds[1].pBufferInfo 		= NULL;
-		wds[1].pTexelBufferView	= 0;
-
-		vkUpdateDescriptorSets(vk_sc_device, 2, wds, 0, NULL);
+		dif[i].sampler		= pTex[i].sampler;
+		dif[i].imageView 	= pTex[i].imgview;
+		dif[i].imageLayout 	= VK_IMAGE_LAYOUT_GENERAL;
 	}
+
+	VkWriteDescriptorSet wds[2];
+	memset(&wds, 0, sizeof(wds));
+
+	wds[0].sType 			= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	wds[0].pNext 			= 0;
+	wds[0].dstSet 			= descriptor_set;
+	wds[0].dstBinding 		= 0;
+	wds[0].dstArrayElement	= 0;
+	wds[0].descriptorCount 	= 1;
+	wds[0].descriptorType 	= VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	wds[0].pImageInfo 		= NULL;
+	wds[0].pBufferInfo 		= &dbi;
+	wds[0].pTexelBufferView	= 0;
+
+	wds[1].sType 			= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	wds[1].pNext 			= 0;
+	wds[1].dstSet 			= descriptor_set;
+	wds[1].dstBinding 		= 1;
+	wds[1].dstArrayElement	= 0;
+	wds[1].descriptorCount 	= tex_count;
+	wds[1].descriptorType 	= VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	wds[1].pImageInfo 		= dif;
+	wds[1].pBufferInfo 		= NULL;
+	wds[1].pTexelBufferView	= 0;
+
+	vkUpdateDescriptorSets(vk_sc_device, 2, wds, 0, NULL);
 }
-//-----------------------------------------------------------------------------
+
 //-----------------------------------------------------------------------------
 static void	vk_createFramebuffer( 
+//-----------------------------------------------------------------------------
 	  const VkDevice				& 	vk_sc_device
 	, const VkImageView 			&	sc_imgview
 	, const VkRenderPass 			&	vk_render_pass
@@ -1237,43 +1193,39 @@ static void	vk_CmdBeginRenderPass(
 	//---------------------
 	// 描画コマンド・レンダーパスの開始
 	//---------------------
+	VkClearValue cv[2] = 
 	{
-		VkClearValue cv[2] = 
+		[0] = 
 		{
-			[0] = 
+			.color =
 			{
-				.color =
-				{
 //					.float32 = {0.2f, 0.2f, 0.2f, 0.2f}
-					.float32 = {1.0f, 1.0f, 1.0f, 1.0f}
-				},
-			}
-			,
-			[1] = 
-			{
-				.depthStencil = {1.0f, 0}
-			}
-		};
-
-		VkRenderPassBeginInfo rpbi = 
-		{
-			.sType 						= VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-			.pNext 						= NULL,
-			.renderPass 				= vk_render_pass,
-			.framebuffer 				= sc_framebuffer, //sc_framebuffer[i],
-			.renderArea =
-			{
-				.offset 		= {0,0},
-				.extent		 	= {_width,_height},
+				.float32 = {1.0f, 1.0f, 1.0f, 1.0f}
 			},
-			.clearValueCount 			= 2,
-			.pClearValues 				= cv
-		};
-//printf("cmbuf %d before vkCmdBeginRenderPass-st \n",__LINE__);
-		vkCmdBeginRenderPass(sc_cmdbuf, &rpbi, VK_SUBPASS_CONTENTS_INLINE);
-//printf("cmbuf %d before vkCmdBeginRenderPass-en \n",__LINE__);
+		}
+		,
+		[1] = 
+		{
+			.depthStencil = {1.0f, 0}
+		}
+	};
 
-	}
+	VkRenderPassBeginInfo rpbi = 
+	{
+		.sType 						= VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+		.pNext 						= NULL,
+		.renderPass 				= vk_render_pass,
+		.framebuffer 				= sc_framebuffer, //sc_framebuffer[i],
+		.renderArea =
+		{
+			.offset 		= {0,0},
+			.extent		 	= {_width,_height},
+		},
+		.clearValueCount 			= 2,
+		.pClearValues 				= cv
+	};
+	vkCmdBeginRenderPass(sc_cmdbuf, &rpbi, VK_SUBPASS_CONTENTS_INLINE);
+
 }
 
 //-----------------------------------------------------------------------------
@@ -1351,43 +1303,41 @@ static void vk_cmdPipelineBarrier(
 	//---------------------
 	// テクスチャイメージ・コマンド・パイプラインバリアの作成
 	//---------------------
-	{
-		VkImage 				image				= vktex.image;
-		VkImageAspectFlags 		aspectMask			= VK_IMAGE_ASPECT_COLOR_BIT;
-		VkImageLayout 			old_image_layout	= VK_IMAGE_LAYOUT_PREINITIALIZED;
-		VkImageLayout 			new_image_layout	= vktex.imageLayout;
-		VkAccessFlags 			srcAccessMask		= VK_ACCESS_HOST_WRITE_BIT;
-		VkPipelineStageFlags 	src_stages			= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-		VkPipelineStageFlags 	dest_stages			= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+	VkImage 				image				= vktex.image;
+	VkImageAspectFlags 		aspectMask			= VK_IMAGE_ASPECT_COLOR_BIT;
+	VkImageLayout 			old_image_layout	= VK_IMAGE_LAYOUT_PREINITIALIZED;
+	VkImageLayout 			new_image_layout	= vktex.imageLayout;
+	VkAccessFlags 			srcAccessMask		= VK_ACCESS_HOST_WRITE_BIT;
+	VkPipelineStageFlags 	src_stages			= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+	VkPipelineStageFlags 	dest_stages			= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 
 //		ASSERTW(vk_vk_cmdbuf,"中断します");
 
-		VkImageMemoryBarrier imb = 
-		{
-			  .sType 				= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER
-			, .pNext 				= NULL
-			, .srcAccessMask 		= srcAccessMask
-			, .dstAccessMask 		= 0
-			, .oldLayout 			= old_image_layout
-			, .newLayout 			= new_image_layout
-			, .srcQueueFamilyIndex	= 0
-			, .dstQueueFamilyIndex	= 0
-			, .image 				= image
-			, .subresourceRange 	= {aspectMask, 0, 1, 0, 1}
-		};
+	VkImageMemoryBarrier imb = 
+	{
+		  .sType 				= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER
+		, .pNext 				= NULL
+		, .srcAccessMask 		= srcAccessMask
+		, .dstAccessMask 		= 0
+		, .oldLayout 			= old_image_layout
+		, .newLayout 			= new_image_layout
+		, .srcQueueFamilyIndex	= 0
+		, .dstQueueFamilyIndex	= 0
+		, .image 				= image
+		, .subresourceRange 	= {aspectMask, 0, 1, 0, 1}
+	};
 
-		switch (new_image_layout) 
-		{
-		case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:				imb.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;										break;
-		case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:			imb.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;								break;
-		case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:	imb.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT; 						break;
-		case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:			imb.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;	break;
-		case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL: 				imb.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;										break;
-		case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:					imb.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;											break;
-		default:												imb.dstAccessMask = 0;																	break;
-		}
-		vkCmdPipelineBarrier(vk_vk_cmdbuf, src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, &imb);
+	switch (new_image_layout) 
+	{
+	case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:				imb.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;										break;
+	case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:			imb.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;								break;
+	case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:	imb.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT; 						break;
+	case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:			imb.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;	break;
+	case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL: 				imb.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;										break;
+	case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:					imb.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;											break;
+	default:												imb.dstAccessMask = 0;																	break;
 	}
+	vkCmdPipelineBarrier(vk_vk_cmdbuf, src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, &imb);
 }
 
 //-----------------------------------------------------------------------------
@@ -1435,28 +1385,24 @@ void vk_tex_CreateImageView(
 {	//---------------------
 	// テクスチャイメージ・ビューの作成
 	//---------------------
+	VkImageViewCreateInfo ivc = 
 	{
-		VkImageViewCreateInfo ivc = 
-		{
-			  .sType 				= VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO
-			, .pNext 				= NULL
-			, .flags 				= 0
-//			, .image 				= VK_NULL_HANDLE
-			, .image 				= tx_image
-			, .viewType 			= VK_IMAGE_VIEW_TYPE_2D
-			, .format 				= tex_format
-			, .components 			=
-				{
-					VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G,
-					VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A
-				}
-			, .subresourceRange 	= {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}
-		};
-//		ivc.image = tx_image;
-		VkResult  err;
-		err = vkCreateImageView(vk_sc_device, &ivc, NULL, &tx_imgview);
-		ASSERTW(!err,"中断します");
-	}
+		  .sType 				= VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO
+		, .pNext 				= NULL
+		, .flags 				= 0
+		, .image 				= tx_image
+		, .viewType 			= VK_IMAGE_VIEW_TYPE_2D
+		, .format 				= tex_format
+		, .components 			=
+			{
+				VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G,
+				VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A
+			}
+		, .subresourceRange 	= {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}
+	};
+	VkResult  err;
+	err = vkCreateImageView(vk_sc_device, &ivc, NULL, &tx_imgview);
+	ASSERTW(!err,"中断します");
 }
 
 //-----------------------------------------------------------------------------
@@ -1467,302 +1413,187 @@ void vk2_loadTexture( VulkanInf& vk
 )
 {
 	
-	//-----------------------------------------------------
-	// テクスチャ転送
-	//-----------------------------------------------------
+	//---------------------------------------------------------
+	// コマンドバッファの確保
+	//---------------------------------------------------------
 	{
-		//---------------------------------------------------------
-		// コマンドバッファの確保
-		//---------------------------------------------------------
+		const VkCommandBufferAllocateInfo cmai = 
 		{
-			const VkCommandBufferAllocateInfo cmai = 
-			{
-				.sType 				= VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-				.pNext 				= NULL,
-				.commandPool 		= vk.cmd_pool,
-				.level 				= VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-				.commandBufferCount = 1,
-			};
-			VkResult  err;
-			err = vkAllocateCommandBuffers(vk.device, &cmai, &vk.nor_cmdbuf);
-			assert(!err);
-		}
+			.sType 				= VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+			.pNext 				= NULL,
+			.commandPool 		= vk.cmd_pool,
+			.level 				= VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+			.commandBufferCount = 1,
+		};
+		VkResult  err;
+		err = vkAllocateCommandBuffers(vk.device, &cmai, &vk.nor_cmdbuf);
+		assert(!err);
+	}
 
-		//---------------------------------------------------------
-		// コマンドバッファの開始
-		//---------------------------------------------------------
+	//---------------------------------------------------------
+	// コマンドバッファの開始
+	//---------------------------------------------------------
+	{
+		VkCommandBufferBeginInfo cb = 
 		{
-			VkCommandBufferBeginInfo cb = 
-			{
-				.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-				.pNext = NULL,
-				.flags = 0,
-				.pInheritanceInfo = NULL,
-			};
-			VkResult  err;
-			err = vkBeginCommandBuffer(vk.nor_cmdbuf, &cb);
-			assert(!err);
-		}
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+			.pNext = NULL,
+			.flags = 0,
+			.pInheritanceInfo = NULL,
+		};
+		VkResult  err;
+		err = vkBeginCommandBuffer(vk.nor_cmdbuf, &cb);
+		assert(!err);
+	}
 
-		{
-			const VkFormat tex_format = VK_FORMAT_R8G8B8A8_UNORM;
-			VkFormatProperties props;
-			uint32_t i;
+	{
+		const VkFormat tex_format = VK_FORMAT_R8G8B8A8_UNORM;
+		VkFormatProperties props;
+		uint32_t i;
 
-			vkGetPhysicalDeviceFormatProperties(vk.gpu, tex_format, &props);
+		vkGetPhysicalDeviceFormatProperties(vk.gpu, tex_format, &props);
 
 //			for (i = 0; i < tex_cnt; i++) 
-			{
+		{
 
-				if ((props.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) ) 
-				{
-				}
-				else 
-				{
-					// Can't support VK_FORMAT_R8G8B8A8_UNORM !? 
-					assert(!"No support for R8G8B8A8_UNORM as texture image format");
-				}
-
-			for (i = 0; i < tex_cnt; i++) 
+			if ((props.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) ) 
 			{
-	//printf("1 tex %d: %x %x\n", i, (int)props.linearTilingFeatures, (int)VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT);
-					/* Device can texture using linear textures */
-					demo_prepare_texture_image(
-						  vk.device
-						, &vk.memory_properties
-						, tex_files[i]
-						, &vk.textures[i]
-						, VK_IMAGE_TILING_LINEAR
-						, VK_IMAGE_USAGE_SAMPLED_BIT
-						, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-					);
 			}
-			for (i = 0; i < tex_cnt; i++) 
+			else 
 			{
-				vk_cmdPipelineBarrier(
-					  vk.nor_cmdbuf
-					, vk.textures[i]
-				);
-		/*
-					// Nothing in the pipeline needs to be complete to start, and don't allow fragment
-					// shader to run until layout transition completes
-					//-----------------------------------------------------
-					//
-					//-----------------------------------------------------
-					{
-						VkImage 				image				= vk.textures[i].image;
-						VkImageAspectFlags 		aspectMask			= VK_IMAGE_ASPECT_COLOR_BIT;
-						VkImageLayout 			old_image_layout	= VK_IMAGE_LAYOUT_PREINITIALIZED;
-						VkImageLayout 			new_image_layout	= vk.textures[i].imageLayout;
-						VkAccessFlagBits 		srcAccessMask		= VK_ACCESS_HOST_WRITE_BIT;
-						VkPipelineStageFlags 	src_stages			= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-						VkPipelineStageFlags 	dest_stages			= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-
-						assert(vk.nor_cmdbuf);
-
-						VkImageMemoryBarrier imb = 
-						{
-							.sType 				= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-							.pNext 				= NULL,
-							.srcAccessMask 		= srcAccessMask,
-							.dstAccessMask 		= 0,
-							.oldLayout 			= old_image_layout,
-							.newLayout 			= new_image_layout,
-							.image 				= image,
-							.subresourceRange 	= {aspectMask, 0, 1, 0, 1}
-						};
-						switch (new_image_layout) 
-						{
-						case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:				imb.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;										break;
-						case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:			imb.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;								break;
-						case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:	imb.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT; 						break;
-						case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:			imb.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;	break;
-						case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL: 				imb.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;										break;
-						case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:					imb.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;											break;
-						default:												imb.dstAccessMask = 0;																	break;
-						}
-						vkCmdPipelineBarrier(vk.nor_cmdbuf, src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, &imb);
-					}
-
-	//				vk.staging_texture.image = 0;
-*/
-				} 
+				// Can't support VK_FORMAT_R8G8B8A8_UNORM !? 
+				assert(!"No support for R8G8B8A8_UNORM as texture image format");
 			}
-			for (i = 0; i < tex_cnt; i++) 
-			{
 
-				//-----------------------------------------------------
-				// サンプラーの作成
-				//-----------------------------------------------------
-				vk_CreateSampler(
+		for (i = 0; i < tex_cnt; i++) 
+		{
+//printf("1 tex %d: %x %x\n", i, (int)props.linearTilingFeatures, (int)VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT);
+				/* Device can texture using linear textures */
+				demo_prepare_texture_image(
 					  vk.device
-					, vk.textures[i].sampler
+					, &vk.memory_properties
+					, tex_files[i]
+					, &vk.textures[i]
+					, VK_IMAGE_TILING_LINEAR
+					, VK_IMAGE_USAGE_SAMPLED_BIT
+					, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
 				);
-/*
-				{
-					const VkSamplerCreateInfo sci = 
-					{
-						.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-						.pNext = NULL,
-						.magFilter = VK_FILTER_NEAREST,
-						.minFilter = VK_FILTER_NEAREST,
-						.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
-						.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-						.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-						.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-						.mipLodBias = 0.0f,
-						.anisotropyEnable = VK_FALSE,
-						.maxAnisotropy = 1,
-						.compareOp = VK_COMPARE_OP_NEVER,
-						.minLod = 0.0f,
-						.maxLod = 0.0f,
-						.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
-						.unnormalizedCoordinates = VK_FALSE,
-					};
-					VkResult  err;
-					err = vkCreateSampler(vk.device, &sci, NULL, &vk.textures[i].sampler);	//create15s
-					assert(!err);
-				}
-*/
-			}
-			for (i = 0; i < tex_cnt; i++) 
-			{
-/*
-				//-----------------------------------------------------
-				// イメージビューの作成
-				//-----------------------------------------------------
-				{
-					VkImageViewCreateInfo ivc = 
-					{
-						.sType 		= VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-						.pNext 		= NULL,
-						.image 		= VK_NULL_HANDLE,
-						.viewType 	= VK_IMAGE_VIEW_TYPE_2D,
-						.format 	= tex_format,
-						.components =
-							{
-								VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G,
-								VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A,
-							},
-						.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1},
-						.flags = 0,
-					};
-					ivc.image = vk.textures[i].image;
-					VkResult  err;
-					err = vkCreateImageView(vk.device, &ivc, NULL, &vk.textures[i].imgview);	//create12s
-					assert(!err);
-				}
-*/
-				vk_tex_CreateImageView(
-					  vk.device
-					, tex_format
-					, vk.textures[i].image
+		}
+		for (i = 0; i < tex_cnt; i++) 
+		{
+			vk_cmdPipelineBarrier(
+				  vk.nor_cmdbuf
+				, vk.textures[i]
+			);
+			} 
+		}
+		for (i = 0; i < tex_cnt; i++) 
+		{
 
-					, vk.textures[i].imgview
-				);
-				
-			}
+			//-----------------------------------------------------
+			// サンプラーの作成
+			//-----------------------------------------------------
+			vk_CreateSampler(
+				  vk.device
+				, vk.textures[i].sampler
+			);
+		}
+		for (i = 0; i < tex_cnt; i++) 
+		{
+			vk_tex_CreateImageView(
+				  vk.device
+				, tex_format
+				, vk.textures[i].image
+
+				, vk.textures[i].imgview
+			);
+			
+		}
+	}
+
+	//-----------------------------------------------------
+	// 終了待ち
+	//-----------------------------------------------------
+	/*
+	 * Prepare functions above may generate pipeline commands
+	 * that need to be flushed before beginning the render loop.
+	 */
+
+	// This function could get called twice if the texture uses a staging buffer
+	// In that case the second call should be ignored
+	if (vk.nor_cmdbuf == VK_NULL_HANDLE)
+	{
+	//	return;
+	}
+	else
+	{
+		//-----------------------------------------------------
+		// コマンドバッファ終了
+		//-----------------------------------------------------
+		{
+			VkResult  err;
+			err = vkEndCommandBuffer(vk.nor_cmdbuf);
+			assert(!err);
 		}
 
-		//-----------------------------------------------------
-		// 終了待ち
-		//-----------------------------------------------------
-		/*
-		 * Prepare functions above may generate pipeline commands
-		 * that need to be flushed before beginning the render loop.
-		 */
-
-		// This function could get called twice if the texture uses a staging buffer
-		// In that case the second call should be ignored
-		if (vk.nor_cmdbuf == VK_NULL_HANDLE)
-		{
-		//	return;
-		}
-		else
-		{
+		{	
 			//-----------------------------------------------------
-			// コマンドバッファ終了
+			// フェンスの作成
 			//-----------------------------------------------------
+			VkFence fence;
 			{
+				VkFenceCreateInfo fci = 
+				{
+					.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+					.pNext = NULL,
+					.flags = 0
+				};
 				VkResult  err;
-				err = vkEndCommandBuffer(vk.nor_cmdbuf);
+				err = vkCreateFence(vk.device, &fci, NULL, &fence);	//createTmp1
 				assert(!err);
 			}
 
-			{	
-				//-----------------------------------------------------
-				// フェンスの作成
-				//-----------------------------------------------------
-				VkFence fence;
+			//-----------------------------------------------------
+			// フェンス待ち
+			//-----------------------------------------------------
+			{
+				const VkCommandBuffer cmd_bufs[] = {vk.nor_cmdbuf};
 				{
-					VkFenceCreateInfo fci = 
+					VkSubmitInfo si = 
 					{
-						.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+						.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
 						.pNext = NULL,
-						.flags = 0
+						.waitSemaphoreCount = 0,
+						.pWaitSemaphores = NULL,
+						.pWaitDstStageMask = NULL,
+						.commandBufferCount = 1,
+						.pCommandBuffers = cmd_bufs,
+						.signalSemaphoreCount = 0,
+						.pSignalSemaphores = NULL
 					};
 					VkResult  err;
-					err = vkCreateFence(vk.device, &fci, NULL, &fence);	//createTmp1
+					err = vkQueueSubmit(vk.graphics_queue, 1, &si, fence);
 					assert(!err);
 				}
 
-				//-----------------------------------------------------
-				// フェンス待ち
-				//-----------------------------------------------------
 				{
-					const VkCommandBuffer cmd_bufs[] = {vk.nor_cmdbuf};
-					{
-						VkSubmitInfo si = 
-						{
-							.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-							.pNext = NULL,
-							.waitSemaphoreCount = 0,
-							.pWaitSemaphores = NULL,
-							.pWaitDstStageMask = NULL,
-							.commandBufferCount = 1,
-							.pCommandBuffers = cmd_bufs,
-							.signalSemaphoreCount = 0,
-							.pSignalSemaphores = NULL
-						};
-						VkResult  err;
-						err = vkQueueSubmit(vk.graphics_queue, 1, &si, fence);
-						assert(!err);
-					}
-
-					{
-						VkResult  err;
-						err = vkWaitForFences(vk.device, 1, &fence, VK_TRUE, UINT64_MAX);
-						assert(!err);
-					}
-
-					vkFreeCommandBuffers(vk.device, vk.cmd_pool, 1, cmd_bufs);
+					VkResult  err;
+					err = vkWaitForFences(vk.device, 1, &fence, VK_TRUE, UINT64_MAX);
+					assert(!err);
 				}
 
-				//-----------------------------------------------------
-				// フェンスの廃棄
-				//-----------------------------------------------------
-				vkDestroyFence(vk.device, fence, NULL);		//createTmp1
-
+				vkFreeCommandBuffers(vk.device, vk.cmd_pool, 1, cmd_bufs);
 			}
-			vk.nor_cmdbuf = VK_NULL_HANDLE;
-		}
 
-/*
-		//-----------------------------------------------------
-		// 
-		//-----------------------------------------------------
-		if (vk.staging_texture.image) 
-		{
-			//demo_destroy_texture_image(&vk, &vk.staging_texture);
-			{
-				// clean up staging resources 
-				vkFreeMemory(vk.device, vk.staging_texture.devmem, NULL);
-				vkDestroyImage(vk.device, vk.staging_texture.image, NULL);
-			}
-		}
-*/
+			//-----------------------------------------------------
+			// フェンスの廃棄
+			//-----------------------------------------------------
+			vkDestroyFence(vk.device, fence, NULL);		//createTmp1
 
+		}
+		vk.nor_cmdbuf = VK_NULL_HANDLE;
 	}
+
 
 }
 
@@ -1827,12 +1658,28 @@ void vk2_loadModel( VulkanInf& vk
 		//-----------------------------------------------------
 		// モデルデータの作成
 		//-----------------------------------------------------
-		vk_setVert(
+		vk_vert_CreateBuffer(
 			  vk.device
-			, vk.memory_properties
-			, pDataVert
 			, sizeofStructDataVert
 
+			, sir_uniform_buffer[i]
+		);
+		vk_vert_AllocateMemory(
+			  vk.device
+			, vk.memory_properties
+			, sir_uniform_buffer[i]
+
+			, sir_uniform_memory[i]
+		);
+		vk_vert_MapMemory(
+			  vk.device
+			, pDataVert
+			, sizeofStructDataVert
+			, sir_uniform_memory[i]
+		);
+
+		vk_vert_BindBufferMemory(
+			  vk.device
 			, sir_uniform_buffer[i]
 			, sir_uniform_memory[i]
 		);
@@ -1898,35 +1745,33 @@ static void	vk_AcquireNextImage(
 )
 {
 
+	VkResult  err;
+	do 
 	{
-		VkResult  err;
-		do 
+		// Get the index of the next available vk_sc_base image:
+		err = vkAcquireNextImageKHR(
+			  vk_sc_device
+			, vk_sc_base
+			, UINT64_MAX
+			, vk_s_image_acquired_semaphores	//[vk_frame_index]
+			, VK_NULL_HANDLE
+			, &vk_current_buffer
+		);
+		if (err == VK_ERROR_OUT_OF_DATE_KHR) 
 		{
-			// Get the index of the next available vk_sc_base image:
-			err = vkAcquireNextImageKHR(
-				  vk_sc_device
-				, vk_sc_base
-				, UINT64_MAX
-				, vk_s_image_acquired_semaphores	//[vk_frame_index]
-				, VK_NULL_HANDLE
-				, &vk_current_buffer
-			);
-			if (err == VK_ERROR_OUT_OF_DATE_KHR) 
-			{
-				// vk_sc_base is out of date (e.g. the window was resized) and
-				// must be recreated:
-				//demo_resize(&vk);
-			} else if (err == VK_SUBOPTIMAL_KHR) 
-			{
-				// vk_sc_base is not as optimal as it could be, but the platform's
-				// presentation engine will still present the image correctly.
-				break;
-			} else 
-			{
-				ASSERTW(!err,"中断します");
-			}
-		} while (err != VK_SUCCESS);
-	}
+			// vk_sc_base is out of date (e.g. the window was resized) and
+			// must be recreated:
+			//demo_resize(&vk);
+		} else if (err == VK_SUBOPTIMAL_KHR) 
+		{
+			// vk_sc_base is not as optimal as it could be, but the platform's
+			// presentation engine will still present the image correctly.
+			break;
+		} else 
+		{
+			ASSERTW(!err,"中断します");
+		}
+	} while (err != VK_SUCCESS);
 }
 
 //-----------------------------------------------------------------------------
@@ -1954,58 +1799,48 @@ void	vk2_updateBegin( VulkanInf& vk
 	);
 
 	//-----------------------------------------------------
-	// 描画コマンドバッファの作成
+	// コマンドバッファの開始
 	//-----------------------------------------------------
-//	for (uint32_t i = 0; i < vk.swapchainImageCount; i++) 
-	{
-int i = vk.current_buffer;
-//		vk.current_buffer = i;
-		
-		//-----------------------------------------------------
-		// コマンドバッファの開始
-		//-----------------------------------------------------
-		vk_BeginCommandBuffer(
-			  vk.sir_cmdbuf[i]
-		);
+	vk_BeginCommandBuffer(
+		  vk.sir_cmdbuf[vk.current_buffer]
+	);
 
-		//-----------------------------------------------------
-		// コマンド・レンダーパスの開始
-		//-----------------------------------------------------
-		vk_CmdBeginRenderPass(
-			  vk.render_pass
-			, vk.sir_framebuffer[i]
-			, vk.sir_cmdbuf[i]
-			, _width
-			, _height
-		);
-		
-		//-----------------------------------------------------
-		// コマンド・パイプラインのバインド
-		//-----------------------------------------------------
-		vk_CmdBindPipeline(
-			  vk.pipeline
-			, vk.sir_cmdbuf[i]
-		);
+	//-----------------------------------------------------
+	// コマンド・レンダーパスの開始
+	//-----------------------------------------------------
+	vk_CmdBeginRenderPass(
+		  vk.render_pass
+		, vk.sir_framebuffer[vk.current_buffer]
+		, vk.sir_cmdbuf[vk.current_buffer]
+		, _width
+		, _height
+	);
+	
+	//-----------------------------------------------------
+	// コマンド・パイプラインのバインド
+	//-----------------------------------------------------
+	vk_CmdBindPipeline(
+		  vk.pipeline
+		, vk.sir_cmdbuf[vk.current_buffer]
+	);
 
-		
-		//-----------------------------------------------------
-		// ビューポートの設定
-		//-----------------------------------------------------
-		vk_CmdSetViewport(
-			  vk.sir_cmdbuf[i]
-			, _width
-			, _height
-		);
+	//-----------------------------------------------------
+	// ビューポートの設定
+	//-----------------------------------------------------
+	vk_CmdSetViewport(
+		  vk.sir_cmdbuf[vk.current_buffer]
+		, _width
+		, _height
+	);
 
-		//-----------------------------------------------------
-		// シザリングエリアの設定
-		//-----------------------------------------------------
-		vk_CmdSetScissor(
-			  vk.sir_cmdbuf[i]
-			, _width
-			, _height
-		);
-	}
+	//-----------------------------------------------------
+	// シザリングエリアの設定
+	//-----------------------------------------------------
+	vk_CmdSetScissor(
+		  vk.sir_cmdbuf[vk.current_buffer]
+		, _width
+		, _height
+	);
 }
 
 //-----------------------------------------------------------------------------
@@ -2022,81 +1857,61 @@ void	vk2_drawPolygon( VulkanInf& vk
 )
 {
 	//-----------------------------------------------------
-	// 描画コマンドバッファの作成
+	// コマンド・ディスクリプターのバインド
 	//-----------------------------------------------------
-//	for (uint32_t i = 0; i < vk.swapchainImageCount; i++) 
+	vk_CmdBindDescriptorSets(
+		  vk.pipeline_layout
+		, sir_descriptor_set[vk.current_buffer]
+		, vk.sir_cmdbuf[vk.current_buffer]
+	);
+
+	//-----------------------------------------------------
+	// 描画コマンド発行
+	//-----------------------------------------------------
+	vkCmdDraw(vk.sir_cmdbuf[vk.current_buffer], _vertexCount, _instanceCount, _firstVertex, _firstInstance);
+
+	//---------------------------------------------------------
+	// マトリクスのコピー
+	//---------------------------------------------------------
 	{
-int i = vk.current_buffer;
-		//-----------------------------------------------------
-		// コマンド・ディスクリプターのバインド
-		//-----------------------------------------------------
-		vk_CmdBindDescriptorSets(
-			  vk.pipeline_layout
-			, sir_descriptor_set[vk.current_buffer]
-			, vk.sir_cmdbuf[i]
-		);
-
-		//-----------------------------------------------------
-		// 描画コマンド発行
-		//-----------------------------------------------------
-		vkCmdDraw(vk.sir_cmdbuf[i], _vertexCount, _instanceCount, _firstVertex, _firstInstance);
-	}
-
-	{
-
 		uint8_t *pData;
 
-		//---------------------------------------------------------
-		// マップメモリ
-		//---------------------------------------------------------
-		{
-			VkResult  err;
-			err = vkMapMemory( 
-				vk.device
-				, sir_uniform_memory[vk.current_buffer]
-				, 0
-				, VK_WHOLE_SIZE
-				, 0
-				, (void **)&pData
-			);
-			assert(!err);
-		}
+		VkResult  err;
+		err = vkMapMemory( 
+			vk.device
+			, sir_uniform_memory[vk.current_buffer]
+			, 0
+			, VK_WHOLE_SIZE
+			, 0
+			, (void **)&pData
+		);
+		assert(!err);
 
-		//---------------------------------------------------------
-		// マトリクスのコピー
-		//---------------------------------------------------------
 		memcpy(pData, pMVP, matrixSize);
-
-		//---------------------------------------------------------
-		// マップ解除
-		//---------------------------------------------------------
-		vkUnmapMemory(vk.device, sir_uniform_memory[vk.current_buffer]);
 	}
+
+	//---------------------------------------------------------
+	// マップ解除
+	//---------------------------------------------------------
+	vkUnmapMemory(vk.device, sir_uniform_memory[vk.current_buffer]);
 }
 //-----------------------------------------------------------------------------
 void	vk2_updateEnd( VulkanInf& vk)
 //-----------------------------------------------------------------------------
 {
 	//-----------------------------------------------------
-	// 描画コマンドバッファの作成
+	// レンダーパス終了
 	//-----------------------------------------------------
-//	for (uint32_t i = 0; i < vk.swapchainImageCount; i++) 
-	{
-int i = vk.current_buffer;
-		//-----------------------------------------------------
-		// レンダーパス終了
-		//-----------------------------------------------------
-		// Note that ending the renderpass changes the image's layout from
-		// COLOR_ATTACHMENT_OPTIMAL to PRESENT_SRC_KHR
-		vkCmdEndRenderPass(vk.sir_cmdbuf[i]);
+	// Note that ending the renderpass changes the image's layout from
+	// COLOR_ATTACHMENT_OPTIMAL to PRESENT_SRC_KHR
+	vkCmdEndRenderPass(vk.sir_cmdbuf[vk.current_buffer]);
 
-		//-----------------------------------------------------
-		// コマンドバッファ終了
-		//-----------------------------------------------------
-		vk_EndCommandBuffer(
-			vk.sir_cmdbuf[i]
-		);
-	}
+	//-----------------------------------------------------
+	// コマンドバッファ終了
+	//-----------------------------------------------------
+	vk_EndCommandBuffer(
+		vk.sir_cmdbuf[vk.current_buffer]
+	);
 
 
 	// Wait for the image acquired semaphore to be signaled to ensure
@@ -2133,6 +1948,9 @@ int i = vk.current_buffer;
 
 	// If we are using separate queues we have to wait for image ownership,
 	// otherwise wait for draw complete
+	//---------------------------------------------------------
+	// 描画キック
+	//---------------------------------------------------------
 	{
 		VkPresentInfoKHR present = 
 		{
@@ -2146,12 +1964,10 @@ int i = vk.current_buffer;
 		};
 
 
-		//---------------------------------------------------------
-		// 描画キック
-		//---------------------------------------------------------
 		{
 			VkResult  err;
-			err = vkQueuePresentKHR(vk.present_queue, &present);
+//			err = vkQueuePresentKHR(vk.present_queue, &present);
+			err = vkQueuePresentKHR(vk.graphics_queue, &present);
 			vk.frame_index += 1;
 			vk.frame_index %= FRAME_LAG;
 
@@ -2170,35 +1986,6 @@ int i = vk.current_buffer;
 			}
 		}
 	}
-}
-//-----------------------------------------------------------------------------
-void	vk2_release( VulkanInf& vk )
-//-----------------------------------------------------------------------------
-{
-	//---------------------------------------------------------
-	// 終了
-	//---------------------------------------------------------
-	uint32_t i;
-	vkDeviceWaitIdle(vk.device);
-
-	for (i = 0; i < vk.swapchainImageCount; i++) 
-	{
-		vkDestroyFramebuffer(vk.device, vk.sir_framebuffer[i], NULL);	//create5	*	vk2 create
-	}
-
-	vkDestroyPipeline(vk.device, vk.pipeline, NULL);					//create7	*	vk2 create
-	vkDestroyPipelineCache(vk.device, vk.pipelineCache, NULL);			//create8	*	vk2 create
-	vkDestroyRenderPass(vk.device, vk.render_pass, NULL);				//create9	*	vk2 create
-	vkDestroyPipelineLayout(vk.device, vk.pipeline_layout, NULL)	;	//create10	*	vk2 create
-	vkDestroyDescriptorSetLayout(vk.device, vk.desc_layout, NULL);		//create11	*	vk2 create
-
-	for (i = 0; i < vk.swapchainImageCount; i++) 
-	{
-		vkFreeCommandBuffers(vk.device, vk.cmd_pool, 1, &vk.sir_cmdbuf[i]);	//create21	*	vk2 create
-	}
-
-
-	vkDestroyDescriptorPool(vk.device, vk.desc_pool, NULL);				//create6	*	vk2 create
 }
 
 //-----------------------------------------------------------------------------
@@ -2290,56 +2077,51 @@ static void	vk_createInstance( VkInstance& vk_inst)
 			.apiVersion 			= VK_API_VERSION_1_0
 		};
 
+		char **	names = NULL;
+		VkInstanceCreateInfo inst_info = 
 		{
-			char **	names = NULL;
-			VkInstanceCreateInfo inst_info = 
-			{
-				  .sType 					= VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO
-				, .pNext 					= NULL
-				, .flags					= 0
-				, .pApplicationInfo 		= &app
-				, .enabledLayerCount 		= vk_enabled_layer_count
-				, .ppEnabledLayerNames 		= (const char *const *)names
-				, .enabledExtensionCount 	= cntName
-				, .ppEnabledExtensionNames 	= (const char *const *)tblName
-			};
+			  .sType 					= VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO
+			, .pNext 					= NULL
+			, .flags					= 0
+			, .pApplicationInfo 		= &app
+			, .enabledLayerCount 		= vk_enabled_layer_count
+			, .ppEnabledLayerNames 		= (const char *const *)names
+			, .enabledExtensionCount 	= cntName
+			, .ppEnabledExtensionNames 	= (const char *const *)tblName
+		};
 
-			//-------------------------
-			// インスタンスの作成
-			//-------------------------
-			{
-				VkResult err;
-				err = vkCreateInstance(&inst_info, NULL, &vk_inst);
-				if (err == VK_ERROR_INCOMPATIBLE_DRIVER) 
-				{
-					ASSERTW(false,
-						"互換性のあるVulkanインストール可能クライアントドライバ(ICD)が見つかりません。"
-						"詳細については、『スタートアップガイド』を参照してください。"
-					);
-				} 
-				else 
-				if (err == VK_ERROR_EXTENSION_NOT_PRESENT) 
-				{
-					ASSERTW(false,
-						"指定された拡張ライブラリが見つかりません。"
-						"レイヤパスが適切に設定されていることを確認します。"
-					);
-				} 
-				else 
-				if (err) 
-				{
-					ASSERTW(false,
-						"vkCreateInstanceに失敗しました。"
-						"互換性のあるVulkanドライバ(ICD)をインストールしていますか?"
-						"詳細については、『スタートアップガイド』を参照してください。"
-					);
-				}
-			}
+		VkResult err;
+		err = vkCreateInstance(&inst_info, NULL, &vk_inst);
+		if (err == VK_ERROR_INCOMPATIBLE_DRIVER) 
+		{
+			ASSERTW(false,
+				"互換性のあるVulkanインストール可能クライアントドライバ(ICD)が見つかりません。"
+				"詳細については、『スタートアップガイド』を参照してください。"
+			);
+		} 
+		else 
+		if (err == VK_ERROR_EXTENSION_NOT_PRESENT) 
+		{
+			ASSERTW(false,
+				"指定された拡張ライブラリが見つかりません。"
+				"レイヤパスが適切に設定されていることを確認します。"
+			);
+		} 
+		else 
+		if (err) 
+		{
+			ASSERTW(false,
+				"vkCreateInstanceに失敗しました。"
+				"互換性のあるVulkanドライバ(ICD)をインストールしていますか?"
+				"詳細については、『スタートアップガイド』を参照してください。"
+			);
 		}
 	}
 }
+
 //-----------------------------------------------------------------------------
 static void	vk_enumeratePhysicalDevices( 
+//-----------------------------------------------------------------------------
 	  const VkInstance& 	vk_inst
 
 	, VkPhysicalDevice& 	vk_gpuDevice 
@@ -2348,6 +2130,7 @@ static void	vk_enumeratePhysicalDevices(
 
 	int				num = 0;	// 最初のGPU
 	uint32_t 		cntPd = 0;
+
 	//-------------------------
 	// GPU数を取得
 	//-------------------------
@@ -2403,8 +2186,8 @@ void vk_CreateWin32Surface(
 }
 
 //-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
 static void vk_get_graphics_queue_family_index( 
+//-----------------------------------------------------------------------------
 	  const VkPhysicalDevice& 			vk_gpuDevice
 	, const VkSurfaceKHR& 				vk_surface_base 
 
@@ -2413,86 +2196,75 @@ static void vk_get_graphics_queue_family_index(
 {
 	VkQueueFamilyProperties*			tblQf;
 	uint32_t 							cntQf;
+
+
+	//-------------------------
+	// キューファミリー・数取得
+	//-------------------------
 	{
-
-		//-------------------------
-		// キューファミリー・数取得
-		//-------------------------
-		{
-			vkGetPhysicalDeviceQueueFamilyProperties(vk_gpuDevice, &cntQf, NULL);
-			ASSERTW(cntQf >= 1,"中断します");
-		}
-
-		//-------------------------
-		// キューファミリー・確保
-		//-------------------------
-		tblQf = (VkQueueFamilyProperties *)malloc( cntQf * sizeof(VkQueueFamilyProperties));
-
-		//-------------------------
-		// キューファミリー・列挙
-		//-------------------------
-		vkGetPhysicalDeviceQueueFamilyProperties( vk_gpuDevice, &cntQf, tblQf);
-
+		vkGetPhysicalDeviceQueueFamilyProperties(vk_gpuDevice, &cntQf, NULL);
+		ASSERTW(cntQf >= 1,"中断します");
 	}
 
+	//-------------------------
+	// キューファミリー・確保
+	//-------------------------
+	tblQf = (VkQueueFamilyProperties *)malloc( cntQf * sizeof(VkQueueFamilyProperties));
 
-	// キューファミリーからグラフィクス対応キューを選択
+	//-------------------------
+	// キューファミリー・列挙
+	//-------------------------
+	vkGetPhysicalDeviceQueueFamilyProperties( vk_gpuDevice, &cntQf, tblQf);
 
+	//-------------------------
+	// キュー・サポートフラグ列挙
+	//-------------------------
+	VkBool32 *qflg = (VkBool32 *)malloc(cntQf * sizeof(VkBool32));
+	for (uint32_t i = 0; i < cntQf; i++) 
 	{
-		//-------------------------
-		// キュー・サポートフラグ列挙
-		//-------------------------
-		VkBool32 *qflg = (VkBool32 *)malloc(cntQf * sizeof(VkBool32));
-		for (uint32_t i = 0; i < cntQf; i++) 
+		vkGetPhysicalDeviceSurfaceSupportKHR(vk_gpuDevice, i, vk_surface_base, &qflg[i]);
+	}
+	//-------------------------
+	// キュー・検索・選択
+	//-------------------------
+	{
+		uint32_t gq = UINT32_MAX;
 		{
-			vkGetPhysicalDeviceSurfaceSupportKHR(vk_gpuDevice, i, vk_surface_base, &qflg[i]);
-		}
-		//-------------------------
-		// キュー・検索・選択
-		//-------------------------
-		{
-			uint32_t gq = UINT32_MAX;
+			//キューファミリの配列内のグラフィックスと描画のキューを検索し、両方をサポートするものを検索します。
+			bool flgFound = false;
+			for (uint32_t i = 0; i < cntQf; i++) 
 			{
-				//キューファミリの配列内のグラフィックスと描画のキューを検索し、両方をサポートするものを検索します。
-				bool flgFound = false;
-				for (uint32_t i = 0; i < cntQf; i++) 
-				{
 
-					// 1 VK_QUEUE_GRAPHICS_BIT 			キューファミリのキューがグラフィックス操作をサポートすることを示します。
-					// 2 VK_QUEUE_COMPUTE_BIT 			キューファミリのキューが計算操作をサポートすることを示します。
-					// 4 VK_QUEUE_TRANSFER_BIT 			キューファミリのキューが転送操作をサポートすることを示します。
-					// 8 VK_QUEUE_SPARSE_BINDING_BIT 	キューファミリのキューが疎メモリ管理をサポートすることを示します。
-					if ((tblQf[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0) 
+				// 1 VK_QUEUE_GRAPHICS_BIT 			キューファミリのキューがグラフィックス操作をサポートすることを示します。
+				// 2 VK_QUEUE_COMPUTE_BIT 			キューファミリのキューが計算操作をサポートすることを示します。
+				// 4 VK_QUEUE_TRANSFER_BIT 			キューファミリのキューが転送操作をサポートすることを示します。
+				// 8 VK_QUEUE_SPARSE_BINDING_BIT 	キューファミリのキューが疎メモリ管理をサポートすることを示します。
+				if ((tblQf[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0) 
+				{
+					if (qflg[i] == VK_TRUE) 
 					{
-						if (qflg[i] == VK_TRUE) 
-						{
-							flgFound = true;
-							gq = i;
-							break;
-						}
+						flgFound = true;
+						gq = i;
+						break;
 					}
 				}
-				if (flgFound == false) 
-				{
-					ASSERTW(false, "graphicsとpresentの両方をサポートするキューが見つかりませんでした。" );
-				}
 			}
-			vk_q_idxQueue_graphics = gq;
+			if (flgFound == false) 
+			{
+				ASSERTW(false, "graphicsとpresentの両方をサポートするキューが見つかりませんでした。" );
+			}
 		}
+		vk_q_idxQueue_graphics = gq;
+	}
 
-#if 0
-	for (uint32_t i = 0; i < cntQf; i++) 
-	{	
-		printf("%d:bits %x %d \n", i, tblQf[i].queueFlags, qflg[i] );
-	}
-#endif
-		free(qflg);
-	}
+	free(qflg);
+
 	free( tblQf );
 }
+
 //-----------------------------------------------------------------------------
+static void vk_CreateDevice( 
 //-----------------------------------------------------------------------------
-static void vk_createDevice_swapchain( 
 	  const VkPhysicalDevice& 	vk_gpuDevice
 	, const uint32_t& 			vk_q_idxQueue_graphics
 
@@ -2561,6 +2333,7 @@ printf("extDevice %d %s\n", i , tblDevice[i].extensionName );
 printf("cntDevice %d\n", (int)cntDevice );
 printf("cntName %d\n", cntName );
 	}
+
 	//-------------------------
 	// デバイスの作成：スワップチェイン
 	//-------------------------
@@ -2597,10 +2370,10 @@ printf("cntName %d\n", cntName );
 }
 
 //-----------------------------------------------------------------------------
+static void vk_surface_get_format_color_space( 
 //-----------------------------------------------------------------------------
-static void vk_surface_create( 
 	  const VkPhysicalDevice	& 	vk_gpuDevice
-	, const VkSurfaceKHR				& 	vk_surface_base
+	, const VkSurfaceKHR		& 	vk_surface_base
 
 	, VkFormat 					&	vk_surface_format
 	, VkColorSpaceKHR 			&	vk_surface_colorspace
@@ -2658,90 +2431,92 @@ static void vk_surface_create(
 
 	}
 #endif
+	free( tblFormat );
 }
 
 //-----------------------------------------------------------------------------
+static void vk_semaphore_CreateFence( 
 //-----------------------------------------------------------------------------
-static void vk_semaphore_create( 
 	  const VkDevice& 			vk_sc_device 
 
 	, VkFence 					vk_s_fences[FRAME_LAG]
+)
+{
+
+	//-------------------------
+	// Create fences that we can use to throttle if we get too far
+	// ahead of the image presents
+	//-------------------------
+	for (uint32_t i = 0; i < FRAME_LAG; i++) 
+	{
+		VkFenceCreateInfo fci = 
+		{
+			.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+			.pNext = NULL,
+			.flags = VK_FENCE_CREATE_SIGNALED_BIT
+		};
+		VkResult  err;
+		err = vkCreateFence(vk_sc_device, &fci, NULL, &vk_s_fences[i]);
+		ASSERTW(!err,"中断します");
+	}
+}
+//-----------------------------------------------------------------------------
+static void vk_CreateSemaphore_acquired( 
+//-----------------------------------------------------------------------------
+	  const VkDevice& 			vk_sc_device 
+
 	, VkSemaphore 				vk_s_image_acquired_semaphores[FRAME_LAG]
+)
+{
+	// Create semaphores to synchronize acquiring presentable buffers before
+	// rendering and waiting for drawing to be complete before presenting
+	//-------------------------
+	// セマフォの作成：イメージアキュワイド
+	//-------------------------
+	for (uint32_t i = 0; i < FRAME_LAG; i++) 
+	{
+		VkSemaphoreCreateInfo sci = 
+		{
+			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+			.pNext = NULL,
+			.flags = 0,
+		};
+
+		VkResult  err;
+		err = vkCreateSemaphore(vk_sc_device, &sci, NULL, &vk_s_image_acquired_semaphores[i]);
+		ASSERTW(!err,"中断します");
+	}
+}
+//-----------------------------------------------------------------------------
+static void vk_CreateSemaphore_complete( 
+//-----------------------------------------------------------------------------
+	  const VkDevice& 			vk_sc_device 
+
 	, VkSemaphore 				vk_s_draw_complete_semaphores[FRAME_LAG]
 )
 {
 
+	//-------------------------
+	// セマフォの作成：描画完了
+	//-------------------------
 	for (uint32_t i = 0; i < FRAME_LAG; i++) 
 	{
-		//-------------------------
-		// 
-		//-------------------------
+		VkSemaphoreCreateInfo sci = 
 		{
-			// Create fences that we can use to throttle if we get too far
-			// ahead of the image presents
-			VkFenceCreateInfo fci = 
-			{
-				.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-				.pNext = NULL,
-				.flags = VK_FENCE_CREATE_SIGNALED_BIT
-			};
-			VkResult  err;
-			err = vkCreateFence(vk_sc_device, &fci, NULL, &vk_s_fences[i]);
-			ASSERTW(!err,"中断します");
-		}
-	}
+			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+			.pNext = NULL,
+			.flags = 0,
+		};
 
-
-	for (uint32_t i = 0; i < FRAME_LAG; i++) 
-	{
-		{
-			// Create semaphores to synchronize acquiring presentable buffers before
-			// rendering and waiting for drawing to be complete before presenting
-			//-------------------------
-			// セマフォの作成：イメージアキュワイド
-			//-------------------------
-			{
-				VkSemaphoreCreateInfo sci = 
-				{
-					.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-					.pNext = NULL,
-					.flags = 0,
-				};
-
-				VkResult  err;
-				err = vkCreateSemaphore(vk_sc_device, &sci, NULL, &vk_s_image_acquired_semaphores[i]);
-				ASSERTW(!err,"中断します");
-			}
-		}
-	}
-
-	for (uint32_t i = 0; i < FRAME_LAG; i++) 
-	{
-
-		{
-			//-------------------------
-			// セマフォの作成：描画完了
-			//-------------------------
-			{
-				VkSemaphoreCreateInfo sci = 
-				{
-					.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-					.pNext = NULL,
-					.flags = 0,
-				};
-
-				VkResult  err;
-				err = vkCreateSemaphore(vk_sc_device, &sci, NULL, &vk_s_draw_complete_semaphores[i]);
-				ASSERTW(!err,"中断します");
-			}
-
-		}
+		VkResult  err;
+		err = vkCreateSemaphore(vk_sc_device, &sci, NULL, &vk_s_draw_complete_semaphores[i]);
+		ASSERTW(!err,"中断します");
 	}
 
 }
 //-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
 static void vk_createCommandPool( 
+//-----------------------------------------------------------------------------
 	  const VkDevice& 			vk_sc_device 
 	, const uint32_t 			&vk_q_idxQueue_graphics
 
@@ -2752,24 +2527,22 @@ static void vk_createCommandPool(
 	//-------------------------
 	// コマンドプールの作成
 	//-------------------------
+	VkCommandPoolCreateInfo cpci = 
 	{
-		VkCommandPoolCreateInfo cpci = 
-		{
-			.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-			.pNext = NULL,
-			.flags = 0,
-			.queueFamilyIndex = vk_q_idxQueue_graphics,
-		};
+		.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+		.pNext = NULL,
+		.flags = 0,
+		.queueFamilyIndex = vk_q_idxQueue_graphics,
+	};
 
-		VkResult  err;
-		err = vkCreateCommandPool(vk_sc_device, &cpci, NULL, &vk_cmd_pool);
-		ASSERTW(!err,"中断します");
-	}
+	VkResult  err;
+	err = vkCreateCommandPool(vk_sc_device, &cpci, NULL, &vk_cmd_pool);
+	ASSERTW(!err,"中断します");
 
 }
 //-----------------------------------------------------------------------------
+static void vk_CreateSwapchain(
 //-----------------------------------------------------------------------------
-static void vk_createSwapchain(
 	  const VkPhysicalDevice	& 	vk_gpuDevice
 	, const VkSurfaceKHR		& 	vk_surface_base
 	, const VkFormat			&	vk_surface_format
@@ -2785,312 +2558,308 @@ static void vk_createSwapchain(
 	// スワップチェイン・描画モード値
 	//-------------------------
 	VkPresentModeKHR pm = VK_PRESENT_MODE_FIFO_KHR;
+
+	//-------------------------
+	// スワップチェイン・描画モードの数の取得
+	//-------------------------
+	uint32_t pmc;
 	{
-		//-------------------------
-		// スワップチェイン・描画モードの数の取得
-		//-------------------------
-		uint32_t pmc;
+		VkResult  err;
+		err = vkGetPhysicalDeviceSurfacePresentModesKHR( vk_gpuDevice, vk_surface_base, &pmc, NULL);
+		ASSERTW(!err,"中断します");
+	}
+	//-------------------------
+	// スワップチェイン・描画モードバッファの確保
+	//-------------------------
+	VkPresentModeKHR *tblPm;
+	{
+		tblPm = (VkPresentModeKHR *)malloc(pmc * sizeof(VkPresentModeKHR));
+		ASSERTW(tblPm,"中断します");
+
+		VkResult  err;
+		err = vkGetPhysicalDeviceSurfacePresentModesKHR( vk_gpuDevice, vk_surface_base, &pmc, tblPm);
+		ASSERTW(!err,"中断します");
+	}
+
+	//-------------------------
+	// スワップチェイン・描画モードを検索
+	//-------------------------
+	{
+		bool	flgFound = false;
+		for (size_t i = 0; i < pmc; ++i) 
 		{
-			VkResult  err;
-			err = vkGetPhysicalDeviceSurfacePresentModesKHR( vk_gpuDevice, vk_surface_base, &pmc, NULL);
-			ASSERTW(!err,"中断します");
+			if (tblPm[i] == pm) 
+			{
+				flgFound = true;
+				break;
+			}
 		}
+		if (flgFound == false) 
 		{
-			//-------------------------
-			// スワップチェイン・描画モードバッファの確保
-			//-------------------------
-			VkPresentModeKHR *tblPm;
-			{
-				tblPm = (VkPresentModeKHR *)malloc(pmc * sizeof(VkPresentModeKHR));
-				ASSERTW(tblPm,"中断します");
-
-				VkResult  err;
-				err = vkGetPhysicalDeviceSurfacePresentModesKHR( vk_gpuDevice, vk_surface_base, &pmc, tblPm);
-				ASSERTW(!err,"中断します");
-			}
-
-			//-------------------------
-			// スワップチェイン・描画モードを検索
-			//-------------------------
-			{
-				bool	flgFound = false;
-				for (int i = 0; i < pmc; ++i) 
-				{
-printf("VkPresentModeKHR %d %x\n", i, tblPm[i] ); 
-				}
-				for (size_t i = 0; i < pmc; ++i) 
-				{
-					if (tblPm[i] == pm) 
-					{
-						flgFound = true;
-						break;
-					}
-				}
-				if (flgFound == false) 
-				{
-					ASSERTW(false, "VK_PRESENT_MODE_FIFO_KHR:指定した現在のモードはサポートされていません" );
-				}
-			}
-
-			//-------------------------
-			// スワップチェイン・描画モードバッファの解放
-			//-------------------------
-			if (NULL != tblPm) 
-			{
-				free(tblPm);
-			}
+			ASSERTW(false, "VK_PRESENT_MODE_FIFO_KHR:指定した現在のモードはサポートされていません" );
 		}
 	}
 
+	//-------------------------
+	// スワップチェイン・描画モードバッファの解放
+	//-------------------------
+	if (NULL != tblPm) 
 	{
-		//-------------------------
-		// スワップチェイン・サーフェス情報の取得
-		//-------------------------
-		VkSurfaceCapabilitiesKHR pdsc;
+		free(tblPm);
+	}
+
+	//-------------------------
+	// スワップチェイン・サーフェス情報の取得
+	//-------------------------
+	VkSurfaceCapabilitiesKHR pdsc;
+	{
+		VkResult  err;
+		err = vkGetPhysicalDeviceSurfaceCapabilitiesKHR( vk_gpuDevice, vk_surface_base, &pdsc);
+		ASSERTW(!err,"中断します");
+	}
+
+	//-------------------------
+	// スワップチェイン作成
+	//-------------------------
+	{
+		uint32_t mic = 2; //ダブルバッファ
+		if (mic > pdsc.minImageCount ) 
 		{
-			VkResult  err;
-			err = vkGetPhysicalDeviceSurfaceCapabilitiesKHR( vk_gpuDevice, vk_surface_base, &pdsc);
-			ASSERTW(!err,"中断します");
+			ASSERTW(false, "minImageCount:指定した現在のモードはサポートされていません" );
+		}
+		if (mic > pdsc.maxImageCount ) 
+		{
+	//				ASSERTW(false, "maxImageCount:指定した現在のモードはサポートされていません" );
 		}
 
+		VkSurfaceTransformFlagBitsKHR stfb = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+		if ( !(pdsc.supportedTransforms & stfb) ) 
 		{
-printf("pdsc.minImageCount %d\n", pdsc.minImageCount);
-printf("pdsc.maxImageCount %d\n", pdsc.maxImageCount);
-			//-------------------------
-			// スワップチェイン・最小イメージ数値
-			//-------------------------
-			uint32_t mic = 2; //ダブルバッファ
-			if (mic > pdsc.minImageCount ) 
-			{
-				ASSERTW(false, "minImageCount:指定した現在のモードはサポートされていません" );
-			}
-			if (mic > pdsc.maxImageCount ) 
-			{
-//				ASSERTW(false, "maxImageCount:指定した現在のモードはサポートされていません" );
-			}
+			ASSERTW(false, "VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR:指定した現在のモードはサポートされていません" );
+		}
 
-			//-------------------------
-			// スワップチェイン・サーフェストランスフォーム値
-			//-------------------------
-printf("pdsc.supportedTransforms %d\n", pdsc.supportedTransforms);
-			VkSurfaceTransformFlagBitsKHR stfb = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
-			if ( !(pdsc.supportedTransforms & stfb) ) 
+		VkCompositeAlphaFlagBitsKHR caf = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+		if ( !(pdsc.supportedCompositeAlpha & caf) ) 
+		{
+			ASSERTW(false, "VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR:指定した現在のモードはサポートされていません" );
+		}
+
+		VkExtent2D ext;
+		if (pdsc.currentExtent.width == 0xFFFFFFFF) 
+		{
+			ASSERTW(false, "currentExtent:指定した現在のモードはサポートされていません" );
+		}
+
+		VkSwapchainKHR oldSwapchain = vk_sc_base;
+
+		{
+			VkSwapchainCreateInfoKHR sci = 
 			{
-				ASSERTW(false, "VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR:指定した現在のモードはサポートされていません" );
-			}
-
-			//-------------------------
-			// スワップチェイン・コンポジットアルファフラグ値
-			//-------------------------
-printf("pdsc.supportedCompositeAlpha %d\n", pdsc.supportedCompositeAlpha);
-			VkCompositeAlphaFlagBitsKHR caf = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-			if ( !(pdsc.supportedCompositeAlpha & caf) ) 
-			{
-				ASSERTW(false, "VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR:指定した現在のモードはサポートされていません" );
-			}
-
-			//-------------------------
-			// スワップチェイン・スクリーンサイズ値
-			//-------------------------
-			VkExtent2D ext;
-printf("pdsc.currentExtent.width %d\n", pdsc.currentExtent.width);
-printf("pdsc.currentExtent.heigt %d\n", pdsc.currentExtent.height);
-//			ext = pdsc.currentExtent;
-			if (pdsc.currentExtent.width == 0xFFFFFFFF) 
-			{
-				ASSERTW(false, "currentExtent:指定した現在のモードはサポートされていません" );
-			}
-
-			//-------------------------
-			// スワップチェイン作成
-			//-------------------------
-			{
-				VkSwapchainKHR oldSwapchain = vk_sc_base;
-
-				{
-					VkSwapchainCreateInfoKHR sci = 
-					{
-						  .sType 					= VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR
-						, .pNext 					= NULL
-						, .flags 					= 0
-						, .surface 					= vk_surface_base
-						, .minImageCount 			= mic
-						, .imageFormat 				= vk_surface_format
-						, .imageColorSpace 			= vk_surface_colorspace
-						, .imageExtent 				= 
-							{ 
-							  _width
-							, _height
-							}
-						, .imageArrayLayers 		= 1
-						, .imageUsage 				= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
-						, .imageSharingMode 		= VK_SHARING_MODE_EXCLUSIVE
-						, .queueFamilyIndexCount 	= 0
-						, .pQueueFamilyIndices 		= NULL
-						, .preTransform 			= stfb
-						, .compositeAlpha 			= caf
-						, .presentMode 				= pm
-						, .clipped 					= true
-						, .oldSwapchain 			= oldSwapchain
-					};
-
-					VkResult  err;
-printf("line %d\n",__LINE__ );//g++だとここでSegment Fault
-					err = vkCreateSwapchainKHR(vk_sc_device, &sci, NULL, &vk_sc_base);
-printf("line %d\n",__LINE__ );
-					ASSERTW(!err,"中断します");
-				}
-				//-------------------------
-				// 旧スワップチェインの廃棄
-				//-------------------------
-				{
-					// 既存のvk_sc_baseを再作成したばかりの場合は、この時点で古いvk_sc_baseを破棄する必要があります。
-					// 注：vk_sc_baseを破棄すると、プラットフォームが完了したら、それに関連するすべての表示可能なイメージも消去されます。
-					if (oldSwapchain != VK_NULL_HANDLE) 
-					{
-						vkDestroySwapchainKHR(vk_sc_device, oldSwapchain, NULL);
+				  .sType 					= VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR
+				, .pNext 					= NULL
+				, .flags 					= 0
+				, .surface 					= vk_surface_base
+				, .minImageCount 			= mic
+				, .imageFormat 				= vk_surface_format
+				, .imageColorSpace 			= vk_surface_colorspace
+				, .imageExtent 				= 
+					{ 
+					  _width
+					, _height
 					}
-				}
+				, .imageArrayLayers 		= 1
+				, .imageUsage 				= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
+				, .imageSharingMode 		= VK_SHARING_MODE_EXCLUSIVE
+				, .queueFamilyIndexCount 	= 0
+				, .pQueueFamilyIndices 		= NULL
+				, .preTransform 			= stfb
+				, .compositeAlpha 			= caf
+				, .presentMode 				= pm
+				, .clipped 					= true
+				, .oldSwapchain 			= oldSwapchain
+			};
+
+			VkResult  err;
+printf("line %d\n",__LINE__ );//g++だとここでSegment Fault
+			err = vkCreateSwapchainKHR(vk_sc_device, &sci, NULL, &vk_sc_base);
+printf("line %d\n",__LINE__ );
+			ASSERTW(!err,"中断します");
+		}
+		//-------------------------
+		// 旧スワップチェインの廃棄
+		//-------------------------
+		{
+			// 既存のvk_sc_baseを再作成したばかりの場合は、この時点で古いvk_sc_baseを破棄する必要があります。
+			// 注：vk_sc_baseを破棄すると、プラットフォームが完了したら、それに関連するすべての表示可能なイメージも消去されます。
+			if (oldSwapchain != VK_NULL_HANDLE) 
+			{
+				vkDestroySwapchainKHR(vk_sc_device, oldSwapchain, NULL);
 			}
 		}
 	}
 }
+
 //-----------------------------------------------------------------------------
+static void vk_depth_CreateImage(
 //-----------------------------------------------------------------------------
-static void vk_createDepthImage_create_alloc_bind_imageview(
 	  const VkDevice& 								vk_sc_device 
-	, const VkPhysicalDeviceMemoryProperties	&	vk_pdmemory_properties
 	, const int 									_width
 	, const int 									_height
+	, const VkFormat&								vk_depth_format
 
-	, VkFormat&										vk_depth_format
 	, VkImage&										vk_depth_image
-	, VkDeviceMemory&								vk_depth_devmem
-	, VkImageView&									vk_depth_imgview
 )
 {	
-	vk_depth_format = VK_FORMAT_D16_UNORM;
-
 	//---------------------
 	// デプスバッファ・イメージ作成
 	//---------------------
+	VkImageCreateInfo ic = 
 	{
-		VkImageCreateInfo ic = 
-		{
-			.sType 			= VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-			.pNext 			= NULL,
-			.flags 			= 0,
-			.imageType 		= VK_IMAGE_TYPE_2D,
-			.format 		= vk_depth_format,
-			.extent 		= {_width, _height, 1},
-			.mipLevels 		= 1,
-			.arrayLayers 	= 1,
-			.samples 		= VK_SAMPLE_COUNT_1_BIT,
-			.tiling 		= VK_IMAGE_TILING_OPTIMAL,
-			.usage 			= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-		};
+		.sType 			= VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+		.pNext 			= NULL,
+		.flags 			= 0,
+		.imageType 		= VK_IMAGE_TYPE_2D,
+		.format 		= vk_depth_format,
+		.extent 		= {_width, _height, 1},
+		.mipLevels 		= 1,
+		.arrayLayers 	= 1,
+		.samples 		= VK_SAMPLE_COUNT_1_BIT,
+		.tiling 		= VK_IMAGE_TILING_OPTIMAL,
+		.usage 			= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+	};
 
-		VkResult  err;
-		err = vkCreateImage(vk_sc_device, &ic, NULL, &vk_depth_image);
-		ASSERTW(!err,"中断します");
+	VkResult  err;
+	err = vkCreateImage(vk_sc_device, &ic, NULL, &vk_depth_image);
+	ASSERTW(!err,"中断します");
+}
+//-----------------------------------------------------------------------------
+static void vk_depth_AllocateMemory(
+//-----------------------------------------------------------------------------
+	  const VkDevice& 								vk_sc_device 
+	, const VkPhysicalDeviceMemoryProperties	&	vk_pdmemory_properties
+	, const VkImage		&							vk_depth_image
+
+	, VkDeviceMemory		&						vk_depth_devmem
+)
+{	
+
+	VkMemoryRequirements mr;
+	vkGetImageMemoryRequirements(vk_sc_device, vk_depth_image, &mr);
+
+	VkMemoryAllocateInfo mai;
+	mai.sType 				= VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	mai.pNext 				= NULL;
+	mai.allocationSize 		= mr.size;
+	mai.memoryTypeIndex 	= 0;
+
+	//---------------------
+	// デプスバッファ・メモリ列挙判定
+	//---------------------
+	{
+		bool  flgFound = false;
+		{
+			uint32_t 		typeBits			= mr.memoryTypeBits;
+			VkFlags 		requirements_mask	= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+			uint32_t*		typeIndex			= &mai.memoryTypeIndex;
+
+			for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++) 
+			{
+				if ((typeBits & 1) == 1) 
+				{
+					if ((vk_pdmemory_properties.memoryTypes[i].propertyFlags & requirements_mask) == requirements_mask) 
+					{
+						*typeIndex = i;
+						flgFound = true;
+						break;
+					}
+				}
+				typeBits >>= 1;
+			}
+		}
+		ASSERTW(flgFound,"VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT:未対応のフォーマットです");
 	}
 
 	//---------------------
 	// デプスバッファ・メモリ確保
 	//---------------------
-	{
-		VkMemoryRequirements mr;
-		vkGetImageMemoryRequirements(vk_sc_device, vk_depth_image, &mr);
-
-		VkMemoryAllocateInfo mai;
-		mai.sType 				= VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		mai.pNext 				= NULL;
-		mai.allocationSize 		= mr.size;
-		mai.memoryTypeIndex 	= 0;
-
-		//---------------------
-		// デプスバッファ・メモリ列挙判定
-		//---------------------
-		{
-			bool  flgFound = false;
-			{
-				uint32_t 		typeBits			= mr.memoryTypeBits;
-				VkFlags 		requirements_mask	= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-				uint32_t*		typeIndex			= &mai.memoryTypeIndex;
-
-				for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++) 
-				{
-					if ((typeBits & 1) == 1) 
-					{
-						if ((vk_pdmemory_properties.memoryTypes[i].propertyFlags & requirements_mask) == requirements_mask) 
-						{
-							*typeIndex = i;
-							flgFound = true;
-							break;
-						}
-					}
-					typeBits >>= 1;
-				}
-			}
-			ASSERTW(flgFound,"VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT:未対応のフォーマットです");
-		}
-
-		//---------------------
-		// デプスバッファ・メモリ確保
-		//---------------------
-		{ 
-			VkResult  err;
-			err = vkAllocateMemory(vk_sc_device, &mai, NULL, &vk_depth_devmem);
-			ASSERTW(!err,"中断します");
-		}
+	{ 
+		VkResult  err;
+		err = vkAllocateMemory(vk_sc_device, &mai, NULL, &vk_depth_devmem);
+		ASSERTW(!err,"中断します");
 	}
+}
+//-----------------------------------------------------------------------------
+static void vk_depth_BindImageMemory(
+//-----------------------------------------------------------------------------
+	  const VkDevice& 								vk_sc_device 
+	, const VkImage		&							vk_depth_image
+	, const VkDeviceMemory	&							vk_depth_devmem
+)
+{	
 
 	//---------------------
 	// デプスバッファ・イメージメモリのバインド
 	//---------------------
-	{
-		VkResult  err;
-		err = vkBindImageMemory(vk_sc_device, vk_depth_image, vk_depth_devmem, 0);
-		ASSERTW(!err,"中断します");
-	}
+	VkResult  err;
+	err = vkBindImageMemory(
+		 vk_sc_device
+		, vk_depth_image
+		, vk_depth_devmem
+		, 0
+	);
+	ASSERTW(!err,"中断します");
+}
+//-----------------------------------------------------------------------------
+static void vk_depth_CreateImageView(
+//-----------------------------------------------------------------------------
+	  const VkDevice& 								vk_sc_device 
+	, const VkFormat&										vk_depth_format
+	, const VkImage&										vk_depth_image
+
+	, VkImageView&									vk_depth_imgview
+)
+{	
 
 	//---------------------
 	// デプスバッファ・イメージビューの作成
 	//---------------------
+	VkImageViewCreateInfo ivci = 
 	{
-		VkImageViewCreateInfo ivci = 
-		{
-			.sType 						= VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-			.pNext 						= NULL,
-			.flags 						= 0,
-			.image 						= vk_depth_image,
-			.viewType 					= VK_IMAGE_VIEW_TYPE_2D,
-			.format 					= vk_depth_format,
-			.components 				= 
-				{
-					  VK_COMPONENT_SWIZZLE_R
-					, VK_COMPONENT_SWIZZLE_G
-					, VK_COMPONENT_SWIZZLE_B
-					, VK_COMPONENT_SWIZZLE_A
-				},
-			.subresourceRange = 
-				{
-					  .aspectMask 		= VK_IMAGE_ASPECT_DEPTH_BIT
-					, .baseMipLevel 	= 0
-					, .levelCount 		= 1
-					, .baseArrayLayer 	= 0
-					, .layerCount 		= 1
-				},
-		};
-		VkResult  err;
-		err = vkCreateImageView(vk_sc_device, &ivci, NULL, &vk_depth_imgview);
-		ASSERTW(!err,"中断します");
-	}
+		.sType 						= VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+		.pNext 						= NULL,
+		.flags 						= 0,
+		.image 						= vk_depth_image,
+		.viewType 					= VK_IMAGE_VIEW_TYPE_2D,
+		.format 					= vk_depth_format,
+		.components 				= 
+			{
+				  VK_COMPONENT_SWIZZLE_R
+				, VK_COMPONENT_SWIZZLE_G
+				, VK_COMPONENT_SWIZZLE_B
+				, VK_COMPONENT_SWIZZLE_A
+			},
+		.subresourceRange = 
+			{
+				  .aspectMask 		= VK_IMAGE_ASPECT_DEPTH_BIT
+				, .baseMipLevel 	= 0
+				, .levelCount 		= 1
+				, .baseArrayLayer 	= 0
+				, .layerCount 		= 1
+			},
+	};
+	VkResult  err;
+	err = vkCreateImageView(
+		  vk_sc_device
+		, &ivci
+		, NULL
+		, &vk_depth_imgview
+	);
+	ASSERTW(!err,"中断します");
 }
 
 //-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
 static void vk_sir_CreateImageView(
+//-----------------------------------------------------------------------------
 	  const VkDevice			& 	vk_sc_device 
 	, const VkFormat			&	vk_surface_format
 	, const VkImage				&	sci
@@ -3101,37 +2870,40 @@ static void vk_sir_CreateImageView(
 	//-------------------------
 	// スワップチェインイメージ・ビューの作成
 	//-------------------------
+	VkImageViewCreateInfo ivci = 
 	{
-		VkImageViewCreateInfo ivci = 
+		.sType 			= VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+		.pNext 			= NULL,
+		.flags 			= 0,
+		.image 			= sci,
+		.viewType 		= VK_IMAGE_VIEW_TYPE_2D,
+		.format 		= vk_surface_format,
+		.components 	=
 		{
-			.sType 			= VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-			.pNext 			= NULL,
-			.flags 			= 0,
-			.image 			= sci,
-			.viewType 		= VK_IMAGE_VIEW_TYPE_2D,
-			.format 		= vk_surface_format,
-			.components 	=
-			{
-				.r = VK_COMPONENT_SWIZZLE_R,
-				.g = VK_COMPONENT_SWIZZLE_G,
-				.b = VK_COMPONENT_SWIZZLE_B,
-				.a = VK_COMPONENT_SWIZZLE_A,
-			},
-			.subresourceRange = 
-			{
-				.aspectMask 	= VK_IMAGE_ASPECT_COLOR_BIT,
-				.baseMipLevel 	= 0,
-				.levelCount 	= 1,
-				.baseArrayLayer = 0,
-				.layerCount 	= 1
-			},
-		};
+			.r = VK_COMPONENT_SWIZZLE_R,
+			.g = VK_COMPONENT_SWIZZLE_G,
+			.b = VK_COMPONENT_SWIZZLE_B,
+			.a = VK_COMPONENT_SWIZZLE_A,
+		},
+		.subresourceRange = 
+		{
+			.aspectMask 	= VK_IMAGE_ASPECT_COLOR_BIT,
+			.baseMipLevel 	= 0,
+			.levelCount 	= 1,
+			.baseArrayLayer = 0,
+			.layerCount 	= 1
+		},
+	};
 
-		{
-			VkResult  err;
-			err = vkCreateImageView(vk_sc_device, &ivci, NULL, &sc_imgview);
-			ASSERTW(!err,"中断します");
-		}
+	{
+		VkResult  err;
+		err = vkCreateImageView(
+			  vk_sc_device
+			, &ivci
+			, NULL
+			, &sc_imgview
+		);
+		ASSERTW(!err,"中断します");
 	}
 }
 //-----------------------------------------------------------------------------
@@ -3143,138 +2915,10 @@ VkInf::VkInf( HINSTANCE hInstance, HWND hWin, int _width, int _height, int unit_
 	vk.enabled_extension_count = 0;
 	vk.enabled_layer_count = 0;
 
-	//---------------------------------------------------------
+	//---------------------
 	// 拡張インスタンス情報の取得
-	//---------------------------------------------------------
+	//---------------------
 	vk_createInstance( vk.inst );
-/*
-	{
-		VkBool32 surfaceExtFound = 0;
-		VkBool32 platformSurfaceExtFound = 0;
-		
-		memset(vk.extension_names, 0, sizeof(vk.extension_names));
-
-		{
-			uint32_t instance_extension_count = 0;
-			//---------------------------------------------------------
-			// 
-			//---------------------------------------------------------
-			{
-				VkResult err;
-				err = vkEnumerateInstanceExtensionProperties( NULL, &instance_extension_count, NULL);
-				assert(!err);
-			}
-
-			if (instance_extension_count > 0) 
-			{
-				VkExtensionProperties* instance_extensions = (VkExtensionProperties*)malloc(sizeof(VkExtensionProperties) * instance_extension_count);
-
-				//---------------------------------------------------------
-				// 
-				//---------------------------------------------------------
-				{
-					VkResult err;
-					err = vkEnumerateInstanceExtensionProperties( NULL, &instance_extension_count, instance_extensions);
-					assert(!err);
-				}
-				for (uint32_t i = 0; i < instance_extension_count; i++) 
-				{
-					if (!strcmp(VK_KHR_SURFACE_EXTENSION_NAME, instance_extensions[i].extensionName)) 
-					{
-						surfaceExtFound = 1;
-						vk.extension_names[vk.enabled_extension_count++] = VK_KHR_SURFACE_EXTENSION_NAME;
-					}
-					if (!strcmp(VK_KHR_WIN32_SURFACE_EXTENSION_NAME, instance_extensions[i].extensionName)) 
-					{
-						platformSurfaceExtFound = 1;
-						vk.extension_names[vk.enabled_extension_count++] = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
-					}
-
-					assert(vk.enabled_extension_count < 64);
-				}
-
-				free(instance_extensions);
-			}
-		}
-
-		if (!surfaceExtFound) 
-		{
-			ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
-					 "the " VK_KHR_SURFACE_EXTENSION_NAME
-					 " extension.\n\nDo you have a compatible "
-					 "Vulkan installable client driver (ICD) installed?\nPlease "
-					 "look at the Getting Started guide for additional "
-					 "information.\n",
-					 "vkCreateInstance Failure");
-		}
-		if (!platformSurfaceExtFound) 
-		{
-			ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
-					 "the " VK_KHR_WIN32_SURFACE_EXTENSION_NAME
-					 " extension.\n\nDo you have a compatible "
-					 "Vulkan installable client driver (ICD) installed?\nPlease "
-					 "look at the Getting Started guide for additional "
-					 "information.\n",
-					 "vkCreateInstance Failure");
-		}
-	}
-
-	//---------------------------------------------------------
-	// インスタンスの作成
-	//---------------------------------------------------------
-	{
-		const VkApplicationInfo app = 
-		{
-			.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-			.pNext = NULL,
-			.pApplicationName = APP_SHORT_NAME,
-			.applicationVersion = 0,
-			.pEngineName = APP_SHORT_NAME,
-			.engineVersion = 0,
-			.apiVersion = VK_API_VERSION_1_0,
-		};
-		{
-			char **instance_validation_layers = NULL;
-			VkInstanceCreateInfo inst_info = 
-			{
-				.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-				.pNext = NULL,
-				.pApplicationInfo = &app,
-				.enabledLayerCount = vk.enabled_layer_count,
-				.ppEnabledLayerNames = (const char *const *)instance_validation_layers,
-				.enabledExtensionCount = vk.enabled_extension_count,
-				.ppEnabledExtensionNames = (const char *const *)vk.extension_names,
-			};
-
-
-			//---------------------------------------------------------
-			// インスタンスの作成
-			//---------------------------------------------------------
-			{
-				VkResult err;
-				err = vkCreateInstance(&inst_info, NULL, &vk.inst);			//create31
-				if (err == VK_ERROR_INCOMPATIBLE_DRIVER) 
-				{
-					ERR_EXIT("Cannot find a compatible Vulkan installable client driver "
-							 "(ICD).\n\nPlease look at the Getting Started guide for "
-							 "additional information.\n",
-							 "vkCreateInstance Failure");
-				} else if (err == VK_ERROR_EXTENSION_NOT_PRESENT) 
-				{
-					ERR_EXIT("Cannot find a specified extension library"
-							 ".\nMake sure your layers path is set appropriately.\n",
-							 "vkCreateInstance Failure");
-				} else if (err) 
-				{
-					ERR_EXIT("vkCreateInstance failed.\n\nDo you have a compatible Vulkan "
-							 "installable client driver (ICD) installed?\nPlease look at "
-							 "the Getting Started guide for additional information.\n",
-							 "vkCreateInstance Failure");
-				}
-			}
-		}
-	}
-*/
 
 	//---------------------
 	// GPUデバイスの取得
@@ -3284,150 +2928,10 @@ VkInf::VkInf( HINSTANCE hInstance, HWND hWin, int _width, int _height, int unit_
 
 		, vk.gpu
 	 );
-/*
-	//---------------------------------------------------------
-	// GPU数を取得
-	//---------------------------------------------------------
-	uint32_t gpu_count;
-	{
-		VkResult err;
-		err = vkEnumeratePhysicalDevices(vk.inst, &gpu_count, NULL);
-		assert(!err && gpu_count > 0);
-	}
 
-	//---------------------------------------------------------
-	// GPUデバイスを列挙
-	//---------------------------------------------------------
-	if (gpu_count > 0) 
-	{
-		VkPhysicalDevice*	physical_devices = (VkPhysicalDevice*)malloc(sizeof(VkPhysicalDevice) * gpu_count);
-		{
-			VkResult err;
-			err = vkEnumeratePhysicalDevices(vk.inst, &gpu_count, physical_devices);
-			assert(!err);
-		}
-		vk.gpu = physical_devices[0];
-		free(physical_devices);
-	} else 
-	{
-		ERR_EXIT("vkEnumeratePhysicalDevices reported zero accessible devices.\n\n"
-				 "Do you have a compatible Vulkan installable client driver (ICD) "
-				 "installed?\nPlease look at the Getting Started guide for "
-				 "additional information.\n",
-				 "vkEnumeratePhysicalDevices Failure");
-	}
-*/
-
-/*
-	//---------------------------------------------------------
-	// 列挙デバイス情報初期化
-	//---------------------------------------------------------
-	{
-		vk.enabled_extension_count = 0;
-		memset(vk.extension_names, 0, sizeof(vk.extension_names));
-	}
-
-	//---------------------------------------------------------
-	// 列挙デバイス情報取得
-	//---------------------------------------------------------
-	{
-		uint32_t device_extension_count = 0;
-		{
-			VkResult err;
-			err = vkEnumerateDeviceExtensionProperties(vk.gpu, NULL, &device_extension_count, NULL);
-			assert(!err);
-		}
-
-		{
-			VkBool32 swapchainExtFound = 0;
-			if (device_extension_count > 0) 
-			{
-				VkExtensionProperties* device_extensions = (VkExtensionProperties*)malloc(sizeof(VkExtensionProperties) * device_extension_count);
-				//---------------------------------------------------------
-				// 列挙デバイス情報取得
-				//---------------------------------------------------------
-				{
-					VkResult err;
-					err = vkEnumerateDeviceExtensionProperties( vk.gpu, NULL, &device_extension_count, device_extensions);
-					assert(!err);
-				}
-
-				for (uint32_t i = 0; i < device_extension_count; i++) 
-				{
-					if (!strcmp(VK_KHR_SWAPCHAIN_EXTENSION_NAME, device_extensions[i].extensionName)) 
-					{
-						swapchainExtFound = 1;
-						vk.extension_names[vk.enabled_extension_count++] = (char*)VK_KHR_SWAPCHAIN_EXTENSION_NAME;
-					}
-					assert(vk.enabled_extension_count < 64);
-				}
-
-				free(device_extensions);
-			}
-			if (!swapchainExtFound) 
-			{
-				ERR_EXIT("vkEnumerateDeviceExtensionProperties failed to find "
-						 "the " VK_KHR_SWAPCHAIN_EXTENSION_NAME
-						 " extension.\n\nDo you have a compatible "
-						 "Vulkan installable client driver (ICD) installed?\nPlease "
-						 "look at the Getting Started guide for additional "
-						 "information.\n",
-						 "vkCreateInstance Failure");
-			}
-		}
-	}
-
-*/
-
-	//---------------------------------------------------------
-	// GPUデバイス情報取得
-	//---------------------------------------------------------
-//	vkGetPhysicalDeviceProperties(vk.gpu, &vk.gpu_props);
-
-
-/*
-	//---------------------------------------------------------
-	// 拡張関数取得
-	//---------------------------------------------------------
-	{
-		vkGetPhysicalDeviceSurfaceSupportKHR = (PFN_vkGetPhysicalDeviceSurfaceSupportKHR)vkGetInstanceProcAddr(vk.inst, "vk" "GetPhysicalDeviceSurfaceSupportKHR");
-		if (vkGetPhysicalDeviceSurfaceSupportKHR == NULL) 
-		{
-			ERR_EXIT("vkGetInstanceProcAddr failed to find vk" "GetPhysicalDeviceSurfaceSupportKHR", "vkGetInstanceProcAddr Failure");
-		}
-
-		vkGetPhysicalDeviceSurfaceCapabilitiesKHR = (PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR)vkGetInstanceProcAddr(vk.inst, "vk" "GetPhysicalDeviceSurfaceCapabilitiesKHR");
-		if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR == NULL) 
-		{
-			ERR_EXIT("vkGetInstanceProcAddr failed to find vk" "GetPhysicalDeviceSurfaceCapabilitiesKHR", "vkGetInstanceProcAddr Failure");
-		}
-
-		vkGetPhysicalDeviceSurfaceFormatsKHR = (PFN_vkGetPhysicalDeviceSurfaceFormatsKHR)vkGetInstanceProcAddr(vk.inst, "vk" "GetPhysicalDeviceSurfaceFormatsKHR");
-		if (vkGetPhysicalDeviceSurfaceFormatsKHR == NULL) 
-		{
-			ERR_EXIT("vkGetInstanceProcAddr failed to find vk" "GetPhysicalDeviceSurfaceFormatsKHR", "vkGetInstanceProcAddr Failure");
-		}
-
-		vkGetPhysicalDeviceSurfacePresentModesKHR = (PFN_vkGetPhysicalDeviceSurfacePresentModesKHR)vkGetInstanceProcAddr(vk.inst, "vk" "GetPhysicalDeviceSurfacePresentModesKHR");
-		if (vkGetPhysicalDeviceSurfacePresentModesKHR == NULL) 
-		{
-			ERR_EXIT("vkGetInstanceProcAddr failed to find vk" "GetPhysicalDeviceSurfacePresentModesKHR", "vkGetInstanceProcAddr Failure");
-		}
-
-		vkGetSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR)vkGetInstanceProcAddr(vk.inst, "vk" "GetSwapchainImagesKHR");
-		if (vkGetSwapchainImagesKHR == NULL) 
-		{
-			ERR_EXIT("vkGetInstanceProcAddr failed to find vk" "GetSwapchainImagesKHR", "vkGetInstanceProcAddr Failure");
-		}
-	}
-*/
-
-//	vk_create( vk, hInstance, hWin, _width, _height );
-	//vk_init( vk );
-
-//	vk_setup( vk, hInstance, hWin, _width, _height );
-
-	
+	//---------------------
+	// サーフェイスの取得
+	//---------------------
 	vk_CreateWin32Surface(
 		  hInstance
 		, hWin
@@ -3436,100 +2940,6 @@ VkInf::VkInf( HINSTANCE hInstance, HWND hWin, int _width, int _height, int unit_
 	    , vk.surface
 	);
 
-/*
-	//---------------------------------------------------------
-	// デバイスキューファミリー情報取得
-	//---------------------------------------------------------
-	{
-		vkGetPhysicalDeviceQueueFamilyProperties(vk.gpu,&vk.queue_family_count, NULL);
-		assert(vk.queue_family_count >= 1);
-	}
-
-	//---------------------------------------------------------
-	// キューファミリー情報バッファ確保
-	//---------------------------------------------------------
-	vk.queue_props = (VkQueueFamilyProperties *)malloc( vk.queue_family_count * sizeof(VkQueueFamilyProperties));	//create25
-
-	//---------------------------------------------------------
-	// キューファミリー情報取得
-	//---------------------------------------------------------
-	vkGetPhysicalDeviceQueueFamilyProperties( vk.gpu, &vk.queue_family_count, vk.queue_props);
-
-	//---------------------------------------------------------
-	// デバイス機能情報の取得
-	//---------------------------------------------------------
-	{
-		// Query fine-grained feature support for this device.
-		//  If app has specific feature requirements it should check supported
-		//  features based on this query
-		VkPhysicalDeviceFeatures physDevFeatures;
-		vkGetPhysicalDeviceFeatures(vk.gpu, &physDevFeatures);
-	}
-
-
-	//---------------------------------------------------------
-	// キューを作成
-	//---------------------------------------------------------
-	{
-		// Iterate over each queue to learn whether it supports presenting:
-		VkBool32 *supportsPresent = (VkBool32 *)malloc(vk.queue_family_count * sizeof(VkBool32));
-		for (uint32_t i = 0; i < vk.queue_family_count; i++) 
-		{
-			vkGetPhysicalDeviceSurfaceSupportKHR(vk.gpu, i, vk.surface, &supportsPresent[i]);
-		}
-
-		// Search for a graphics and a present queue in the array of queue
-		// families, try to find one that supports both
-		uint32_t graphicsQueueFamilyIndex = UINT32_MAX;
-//		uint32_t presentQueueFamilyIndex = UINT32_MAX;
-		for (uint32_t i = 0; i < vk.queue_family_count; i++) 
-		{
-			if ((vk.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0) 
-			{
-				if (graphicsQueueFamilyIndex == UINT32_MAX) 
-				{
-					graphicsQueueFamilyIndex = i;
-				}
-
-				if (supportsPresent[i] == VK_TRUE) 
-				{
-					graphicsQueueFamilyIndex = i;
-//					presentQueueFamilyIndex = i;
-					break;
-				}
-			}
-		}
-
-		if (presentQueueFamilyIndex == UINT32_MAX) 
-		{
-			// If didn't find a queue that supports both graphics and present, then
-			// find a separate present queue.
-			for (uint32_t i = 0; i < vk.queue_family_count; ++i) 
-			{
-				if (supportsPresent[i] == VK_TRUE) 
-				{
-					presentQueueFamilyIndex = i;
-					break;
-				}
-			}
-		}
-
-
-		// Generate error if could not find both a graphics and a present queue
-//		if (graphicsQueueFamilyIndex == UINT32_MAX || presentQueueFamilyIndex == UINT32_MAX) 
-		if (graphicsQueueFamilyIndex == UINT32_MAX ) 
-		{
-			ERR_EXIT("Could not find both graphics and present queues\n",
-					 "Swapchain Initialization Failure");
-		}
-
-		vk.q_graphics_queue_family_index = graphicsQueueFamilyIndex;
-//		vk.q_present_queue_family_index = presentQueueFamilyIndex;
-//		vk.flg_separate_present_queue = (vk.q_graphics_queue_family_index != vk.q_present_queue_family_index);
-
-		free(supportsPresent);
-	}
-*/
 	//---------------------
 	// グラフィックキューインデックスの取得
 	//---------------------
@@ -3540,189 +2950,64 @@ VkInf::VkInf( HINSTANCE hInstance, HWND hWin, int _width, int _height, int unit_
 		, vk.q_graphics_queue_family_index
 	);
 
-
 	//---------------------
 	// デバイスの生成：スワップチェイン
 	//---------------------
-	vk_createDevice_swapchain( 
+	vk_CreateDevice( 
 		  vk.gpu
 		, vk.q_graphics_queue_family_index
 
 		, vk.device 
 	);
 
-/*
-	//demo_create_device(&vk);
-	//---------------------------------------------------------
-	// 
-	//---------------------------------------------------------
-	{
-		float queue_priorities[1] = {0.0};
-		VkDeviceQueueCreateInfo queues[2];
-		queues[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-		queues[0].pNext = NULL;
-		queues[0].queueFamilyIndex = vk.q_graphics_queue_family_index;
-		queues[0].queueCount = 1;
-		queues[0].pQueuePriorities = queue_priorities;
-		queues[0].flags = 0;
+	//---------------------
+	// デバイスキュー取得
+	//---------------------
+	vkGetDeviceQueue(
+		  vk.device
+		, vk.q_graphics_queue_family_index
+		, 0
 
-		VkDeviceCreateInfo device = 
-		{
-			.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-			.pNext = NULL,
-			.queueCreateInfoCount = 1,
-			.pQueueCreateInfos = queues,
-			.enabledLayerCount = 0,
-			.ppEnabledLayerNames = NULL,
-			.enabledExtensionCount = vk.enabled_extension_count,
-			.ppEnabledExtensionNames = (const char *const *)vk.extension_names,
-			.pEnabledFeatures =
-				NULL, // If specific features are required, pass them in here
-		};
-		VkResult  err;
-		err = vkCreateDevice(vk.gpu, &device, NULL, &vk.device);			//create29s
-		assert(!err);
-	}
-*/
-
-
-	//---------------------------------------------------------
-	// 
-	//---------------------------------------------------------
-	vkGetDeviceQueue(vk.device, vk.q_graphics_queue_family_index, 0, &vk.graphics_queue);
-
-	//---------------------------------------------------------
-	// 
-	//---------------------------------------------------------
-	{
-		vkGetDeviceQueue(vk.device, vk.q_present_queue_family_index, 0, &vk.present_queue);
-	}
+		, &vk.graphics_queue
+	);
 
 	//---------------------
 	// デバイスサーフェースフォーマットの取得
 	//---------------------
-	vk_surface_create( 
+	vk_surface_get_format_color_space( 
 	      vk.gpu
 	    , vk.surface
 	
 		, vk.format
 		, vk.color_space
 	);
-/*
-	//---------------------------------------------------------
-	// フォーマット情報を取得
-	//---------------------------------------------------------
-	{	
-		//---------------------------------------------------------
-		// フォーム数を取得
-		//---------------------------------------------------------
-		uint32_t formatCount;
-		{
-			VkResult  err;
-			err = vkGetPhysicalDeviceSurfaceFormatsKHR(vk.gpu, vk.surface, &formatCount, NULL);
-			assert(!err);
-		}
-
-		//---------------------------------------------------------
-		// フォーム数分バッファを確保
-		//---------------------------------------------------------
-		VkSurfaceFormatKHR *surfFormats = (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
-
-		//---------------------------------------------------------
-		// サーフェースフォーマットを取得
-		//---------------------------------------------------------
-		{
-			VkResult  err;
-			err = vkGetPhysicalDeviceSurfaceFormatsKHR(vk.gpu, vk.surface, &formatCount, surfFormats);
-			assert(!err);
-		}
-
-		//---------------------------------------------------------
-		// 
-		//---------------------------------------------------------
-		{
-			// If the format list includes just one entry of VK_FORMAT_UNDEFINED,
-			// the surface has no preferred format.  Otherwise, at least one
-			// supported format will be returned.
-			if (formatCount == 1 && surfFormats[0].format == VK_FORMAT_UNDEFINED) 
-			{
-				vk.format = VK_FORMAT_B8G8R8A8_UNORM;
-			} else 
-			{
-				assert(formatCount >= 1);
-				vk.format = surfFormats[0].format;
-			}
-		
-			vk.color_space	= surfFormats[0].colorSpace;
-//			vk.flgQuit			= false;
-//			vk.curFrame		= 0;
-		}
-	}
-*/
 
 	//---------------------
-	// セマフォの作成
+	// フェンスの作成
 	//---------------------
-	vk_semaphore_create( 
+	vk_semaphore_CreateFence( 
 	      vk.device 
 
 		, vk.fences
-		, vk.image_acquired_semaphores
-		, vk.draw_complete_semaphores
 	);
 
-/*
-	for (uint32_t i = 0; i < FRAME_LAG; i++) 
-	{
-		//---------------------------------------------------------
-		// 
-		//---------------------------------------------------------
-		{
-			// Create fences that we can use to throttle if we get too far
-			// ahead of the image presents
-			VkFenceCreateInfo fci = 
-			{
-				.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-				.pNext = NULL,
-				.flags = VK_FENCE_CREATE_SIGNALED_BIT
-			};
-			VkResult  err;
-			err = vkCreateFence(vk.device, &fci, NULL, &vk.fences[i]);		//create1s
-			assert(!err);
-		}
+	//---------------------
+	// セマフォの作成 acwuired
+	//---------------------
+	vk_CreateSemaphore_acquired( 
+	      vk.device 
 
-		{
-			// Create semaphores to synchronize acquiring presentable buffers before
-			// rendering and waiting for drawing to be complete before presenting
-			VkSemaphoreCreateInfo sci = 
-			{
-				.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-				.pNext = NULL,
-				.flags = 0,
-			};
-			//---------------------------------------------------------
-			// セマフォの作成：イメージアキュワイド
-			//---------------------------------------------------------
-			{
-				VkResult  err;
-				err = vkCreateSemaphore(vk.device, &sci, NULL, &vk.image_acquired_semaphores[i]);	//create2s
-				assert(!err);
-			}
+		, vk.image_acquired_semaphores
+	);
 
-			//---------------------------------------------------------
-			// セマフォの作成：描画完了
-			//---------------------------------------------------------
-			{
-				VkResult  err;
-				err = vkCreateSemaphore(vk.device, &sci, NULL, &vk.draw_complete_semaphores[i]);	//create3s
-				assert(!err);
-			}
+	//---------------------
+	// セマフォの作成 complete
+	//---------------------
+	vk_CreateSemaphore_complete( 
+	      vk.device 
 
-		}
-	}
-*/
-
-
+		, vk.draw_complete_semaphores
+	);
 
 	//---------------------
 	// コマンドプールの生成
@@ -3733,113 +3018,6 @@ VkInf::VkInf( HINSTANCE hInstance, HWND hWin, int _width, int _height, int unit_
 
 		,vk.cmd_pool
 	);
-/*
-	{
-
-		const VkCommandPoolCreateInfo cmd_pool_info = 
-		{
-			.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-			.pNext = NULL,
-			.queueFamilyIndex = vk.q_graphics_queue_family_index,
-			.flags = 0,
-		};
-
-		VkResult  err;
-		err = vkCreateCommandPool(vk.device, &cmd_pool_info, NULL, &vk.cmd_pool);	//create26s
-		assert(!err);
-	}
-*/
-
-
-
-/*
-	//---------------------------------------------------------
-	// 描画モード値
-	//---------------------------------------------------------
-	VkPresentModeKHR swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR;
-	{
-		// The FIFO present mode is guaranteed by the spec to be supported
-		// and to have no tearing.  It's a great default present mode to use.
-
-		//  There are times when you may wish to use another present mode.  The
-		//  following code shows how to select them, and the comments provide some
-		//  reasons you may wish to use them.
-		//
-		// It should be noted that Vulkan 1.0 doesn't provide a method for
-		// synchronizing rendering with the presentation engine's display.  There
-		// is a method provided for throttling rendering with the display, but
-		// there are some presentation engines for which this method will not work.
-		// If an application doesn't throttle its rendering, and if it renders much
-		// faster than the refresh rate of the display, this can waste power on
-		// mobile devices.  That is because power is being spent rendering images
-		// that may never be seen.
-
-		// VK_PRESENT_MODE_IMMEDIATE_KHR is for applications that don't care about
-		// tearing, or have some way of synchronizing their rendering with the
-		// display.
-		// VK_PRESENT_MODE_MAILBOX_KHR may be useful for applications that
-		// generally render a new presentable image every refresh cycle, but are
-		// occasionally early.  In this case, the application wants the new image
-		// to be displayed instead of the previously-queued-for-presentation image
-		// that has not yet been displayed.
-		// VK_PRESENT_MODE_FIFO_RELAXED_KHR is for applications that generally
-		// render a new presentable image every refresh cycle, but are occasionally
-		// late.  In this case (perhaps because of stuttering/latency concerns),
-		// the application wants the late image to be immediately displayed, even
-		// though that may mean some tearing.
-		//---------------------------------------------------------
-		// 描画モードの数の取得
-		//---------------------------------------------------------
-		uint32_t presentModeCount;
-		{
-			VkResult  err;
-			err = vkGetPhysicalDeviceSurfacePresentModesKHR( vk.gpu, vk.surface, &presentModeCount, NULL);
-			assert(!err);
-		}
-
-		//---------------------------------------------------------
-		// 描画モードバッファの確保
-		//---------------------------------------------------------
-		VkPresentModeKHR *presentModes;
-		{
-			presentModes = (VkPresentModeKHR *)malloc(presentModeCount * sizeof(VkPresentModeKHR));
-			assert(presentModes);
-
-			VkResult  err;
-			err = vkGetPhysicalDeviceSurfacePresentModesKHR( vk.gpu, vk.surface, &presentModeCount, presentModes);
-			assert(!err);
-		}
-
-		//---------------------------------------------------------
-		// 描画モードを検索
-		//---------------------------------------------------------
-		if (vk.presentMode !=  swapchainPresentMode) 
-		{
-
-			for (size_t i = 0; i < presentModeCount; ++i) 
-			{
-				if (presentModes[i] == vk.presentMode) 
-				{
-					swapchainPresentMode = vk.presentMode;
-					break;
-				}
-			}
-		}
-		if (swapchainPresentMode != vk.presentMode) 
-		{
-			ERR_EXIT("Present mode specified is not supported\n", "Present mode unsupported");
-		}
-
-		//---------------------------------------------------------
-		// 描画モードバッファの解放
-		//---------------------------------------------------------
-		if (NULL != presentModes) 
-		{
-			free(presentModes);
-		}
-	}
-*/
-
 
 	//---------------------------------------------------------
 	// サーフェス情報の取得
@@ -3847,436 +3025,155 @@ VkInf::VkInf( HINSTANCE hInstance, HWND hWin, int _width, int _height, int unit_
 	VkSurfaceCapabilitiesKHR surfCapabilities;
 	{
 		VkResult  err;
-		err = vkGetPhysicalDeviceSurfaceCapabilitiesKHR( vk.gpu, vk.surface, &surfCapabilities);
+		err = vkGetPhysicalDeviceSurfaceCapabilitiesKHR( 
+			  vk.gpu
+			, vk.surface
+
+			, &surfCapabilities
+		);
 		assert(!err);
 	}
-/*
-	//---------------------------------------------------------
-	// 最小イメージ数値
-	//---------------------------------------------------------
-	uint32_t mic = 3;
-	{
-		// Determine the number of VkImages to use in the swap chain.
-		// Application desires to acquire 3 images at a time for triple
-		// buffering
-		if (mic < surfCapabilities.minImageCount) 
-		{
-			mic = surfCapabilities.minImageCount;
-		}
-		// If maxImageCount is 0, we can ask for as many images as we want;
-		// otherwise we're limited to maxImageCount
-		if ((surfCapabilities.maxImageCount > 0) && (mic > surfCapabilities.maxImageCount)) 
-		{
-			// Application must settle for fewer images than desired:
-			mic = surfCapabilities.maxImageCount;
-		}
-	}
-
-	//---------------------------------------------------------
-	// サーフェストランスフォーム値
-	//---------------------------------------------------------
-//	VkSurfaceTransformFlagsKHR preTransform;
-	VkSurfaceTransformFlagBitsKHR preTransform;
-	{
-		if ( surfCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR ) 
-		{
-			preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
-		} else 
-		{
-			preTransform = surfCapabilities.currentTransform;
-		}
-	}
-
-	//---------------------------------------------------------
-	// コンポジットアルファフラグ値
-	//---------------------------------------------------------
-	VkCompositeAlphaFlagBitsKHR caf = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-	{
-		// Find a supported composite alpha mode - one of these is guaranteed to be set
-		VkCompositeAlphaFlagBitsKHR compositeAlphaFlags[4] = 
-		{
-			VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-			VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
-			VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
-			VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR,
-		};
-		for (uint32_t i = 0; i < sizeof(compositeAlphaFlags); i++) 
-		{
-			if (surfCapabilities.supportedCompositeAlpha & compositeAlphaFlags[i]) 
-			{
-				caf = compositeAlphaFlags[i];
-				break;
-			}
-		}
-	}
-*/
 
 	//---------------------------------------------------------
 	// スワップチェインの切り替え
 	//---------------------------------------------------------
-	{
-		//---------------------------------------------------------
-		// スクリーンサイズ値
-		//---------------------------------------------------------
-		VkExtent2D ext;
-		{
-			// width and height are either both 0xFFFFFFFF, or both not 0xFFFFFFFF.
-			if (surfCapabilities.currentExtent.width == 0xFFFFFFFF) 
-			{
-				// If the surface size is undefined, the size is set to the size
-				// of the images requested, which must fit within the minimum and
-				// maximum values.
-				ext.width = _width;
-				ext.height =_height;
+	vk_CreateSwapchain(
+		  vk.gpu
+		, vk.surface
+		, vk.format
+		, vk.color_space
+		, vk.device 
+		, _width
+		, _height
 
-				if (ext.width < surfCapabilities.minImageExtent.width) 
-				{
-					ext.width = surfCapabilities.minImageExtent.width;
-				} 
-				else 
-				if (ext.width > surfCapabilities.maxImageExtent.width) 
-				{
-					ext.width = surfCapabilities.maxImageExtent.width;
-				}
-				
-				if (ext.height < surfCapabilities.minImageExtent.height) 
-				{
-					ext.height = surfCapabilities.minImageExtent.height;
-				} 
-				else 
-				if (ext.height > surfCapabilities.maxImageExtent.height) 
-				{
-					ext.height = surfCapabilities.maxImageExtent.height;
-				}
-			} else 
-			{
-				// If the surface size is defined, the swap chain size must match
-				ext = surfCapabilities.currentExtent;
-	//			_width = surfCapabilities.currentExtent.width;
-	//			_height = surfCapabilities.currentExtent.height;
-			}
-		}
-/*
+		, vk.swapchain
+	);
 
-		//---------------------------------------------------------
-		// スワップチェインの保存
-		//---------------------------------------------------------
-		VkSwapchainKHR oldSwapchain = vk.swapchain;
-
-		//---------------------
-		// スワップチェインの生成
-		//---------------------
-
-		//---------------------------------------------------------
-		// スワップチェインの作成
-		//---------------------------------------------------------
-		{
-			VkSwapchainCreateInfoKHR sci = 
-			{
-				.sType 					= VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-				.pNext 					= NULL,
-				.surface 				= vk.surface,
-				.minImageCount 			= mic,
-				.imageFormat 			= vk.format,
-				.imageColorSpace 		= vk.color_space,
-				.imageExtent 			=
-					{
-					   .width = ext.width
-					 , .height = ext.height
-					},
-				.imageUsage 			= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-				.preTransform 			= preTransform,
-				.compositeAlpha 		= caf,
-				.imageArrayLayers 		= 1,
-				.imageSharingMode 		= VK_SHARING_MODE_EXCLUSIVE,
-				.queueFamilyIndexCount 	= 0,
-				.pQueueFamilyIndices 	= NULL,
-				.presentMode 			= swapchainPresentMode,
-				.oldSwapchain 			= oldSwapchain,
-				.clipped 				= true,
-			};
-			VkResult  err;
-			err = vkCreateSwapchainKHR(vk.device, &sci, NULL, &vk.swapchain);	//create16s
-			assert(!err);
-		}
-		//---------------------------------------------------------
-		// 旧スワップチェインの廃棄
-		//---------------------------------------------------------
-		{
-			// If we just re-created an existing swapchain, we should destroy the old
-			// swapchain at this point.
-			// Note: destroying the swapchain also cleans up all its associated
-			// presentable images once the platform is done with them.
-			if (oldSwapchain != VK_NULL_HANDLE) 
-			{
-				vkDestroySwapchainKHR(vk.device, oldSwapchain, NULL);
-			}
-		}
-*/
-	}
-		vk_createSwapchain(
-			  vk.gpu
-			, vk.surface
-			, vk.format
-			, vk.color_space
-			, vk.device 
-			, _width
-			, _height
-
-			, vk.swapchain
-		);
 	//---------------------------------------------------------
 	// スワップチェイン・イメージ数の取得
 	//---------------------------------------------------------
 	{
 		VkResult  err;
-		err = vkGetSwapchainImagesKHR(vk.device, vk.swapchain, &vk.swapchainImageCount, NULL);
+		err = vkGetSwapchainImagesKHR(
+			  vk.device
+			, vk.swapchain
+
+			, &vk.swapchainImageCount
+			, NULL
+		);
 		assert(!err);
 	}
 
+	//---------------------------------------------------------
+	// スワップチェイン・イメージバッファの確保
+	//---------------------------------------------------------
+	VkImage *sci = (VkImage *)malloc(vk.swapchainImageCount * sizeof(VkImage));
+	assert(sci);
 	{
-		//---------------------------------------------------------
-		// スワップチェイン・イメージバッファの確保
-		//---------------------------------------------------------
+		VkResult  err;
+		err = vkGetSwapchainImagesKHR(
+			  vk.device
+			, vk.swapchain
+
+			, &vk.swapchainImageCount
+			, sci
+		);
+		assert(!err);
+	}
+
+	//---------------------------------------------------------
+	// イメージビューの作成
+	//---------------------------------------------------------
+//	vk.swapchain_image_resources = (SwapchainImageResources *)malloc(sizeof(SwapchainImageResources) * vk.swapchainImageCount);	//create24s
+//	assert(vk.swapchain_image_resources);
+	vk.sir_image						=(VkImage* 			)malloc(sizeof(VkImage			) * vk.swapchainImageCount);
+	vk.sir_cmdbuf						=(VkCommandBuffer* 	)malloc(sizeof(VkCommandBuffer	) * vk.swapchainImageCount);
+	vk.sir_graphics_to_present_cmdbuf	=(VkCommandBuffer* 	)malloc(sizeof(VkCommandBuffer	) * vk.swapchainImageCount);
+	vk.sir_imgview						=(VkImageView* 		)malloc(sizeof(VkImageView		) * vk.swapchainImageCount);
+//	vk.sir_uniform_buffer				=(VkBuffer* 		)malloc(sizeof(VkBuffer			) * vk.swapchainImageCount);
+//	vk.sir_uniform_memory				=(VkDeviceMemory* 	)malloc(sizeof(VkDeviceMemory	) * vk.swapchainImageCount);
+	vk.sir_framebuffer					=(VkFramebuffer* 	)malloc(sizeof(VkFramebuffer	) * vk.swapchainImageCount);
+//	vk.sir_descriptor_set				=(VkDescriptorSet* 	)malloc(sizeof(VkDescriptorSet	) * vk.swapchainImageCount);
+
+	{
 		VkImage *sci = (VkImage *)malloc(vk.swapchainImageCount * sizeof(VkImage));
-		assert(sci);
+		ASSERTW(sci,"中断します");
+
+		//-------------------------
+		// スワップチェインイメージ・バッファの確保
+		//-------------------------
 		{
 			VkResult  err;
-			err = vkGetSwapchainImagesKHR(vk.device, vk.swapchain, &vk.swapchainImageCount, sci);
-			assert(!err);
+			uint32_t a = vk.swapchainImageCount;
+			err = vkGetSwapchainImagesKHR(
+				  vk.device
+				, vk.swapchain
+				, &a
+				, sci
+			);
+			ASSERTW(!err,"中断します");
 		}
 
-		//---------------------------------------------------------
-		// イメージビューの作成
-		//---------------------------------------------------------
+		//-------------------------
+		// スワップチェインイメージ・バッファの確保
+		//-------------------------
+		for (uint32_t i = 0; i < vk.swapchainImageCount; i++) 
 		{
-//			vk.swapchain_image_resources = (SwapchainImageResources *)malloc(sizeof(SwapchainImageResources) * vk.swapchainImageCount);	//create24s
-//			assert(vk.swapchain_image_resources);
-			vk.sir_image						=(VkImage* 			)malloc(sizeof(VkImage			) * vk.swapchainImageCount);
-			vk.sir_cmdbuf						=(VkCommandBuffer* 	)malloc(sizeof(VkCommandBuffer	) * vk.swapchainImageCount);
-			vk.sir_graphics_to_present_cmdbuf	=(VkCommandBuffer* 	)malloc(sizeof(VkCommandBuffer	) * vk.swapchainImageCount);
-			vk.sir_imgview						=(VkImageView* 		)malloc(sizeof(VkImageView		) * vk.swapchainImageCount);
-//			vk.sir_uniform_buffer				=(VkBuffer* 		)malloc(sizeof(VkBuffer			) * vk.swapchainImageCount);
-//			vk.sir_uniform_memory				=(VkDeviceMemory* 	)malloc(sizeof(VkDeviceMemory	) * vk.swapchainImageCount);
-			vk.sir_framebuffer					=(VkFramebuffer* 	)malloc(sizeof(VkFramebuffer	) * vk.swapchainImageCount);
-//			vk.sir_descriptor_set				=(VkDescriptorSet* 	)malloc(sizeof(VkDescriptorSet	) * vk.swapchainImageCount);
+			vk_sir_CreateImageView(
+				  vk.device 
+				, vk.format
+				, sci[i]
 
-			//-------------------------
-			// スワップチェインイメージ・バッファの確保
-			//-------------------------
-			VkImage *sci = (VkImage *)malloc(vk.swapchainImageCount * sizeof(VkImage));
-			ASSERTW(sci,"中断します");
-			{
-				VkResult  err;
-				uint32_t a = vk.swapchainImageCount;
-				err = vkGetSwapchainImagesKHR(vk.device, vk.swapchain, &a, sci);
-				ASSERTW(!err,"中断します");
-			}
-
-			for (uint32_t i = 0; i < vk.swapchainImageCount; i++) 
-			{
-				vk_sir_CreateImageView(
-					  vk.device 
-					, vk.format
-					, sci[i]
-
-					, vk.sir_imgview[i]
-				);
-			}
-			free( sci );
-/*
-			for (uint32_t i = 0; i < vk.swapchainImageCount; i++) 
-			{
-				VkImageViewCreateInfo ivci = 
-				{
-					.sType 			= VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-					.pNext 			= NULL,
-					.format 		= vk.format,
-					.components 	=
-					{
-						.r = VK_COMPONENT_SWIZZLE_R,
-						.g = VK_COMPONENT_SWIZZLE_G,
-						.b = VK_COMPONENT_SWIZZLE_B,
-						.a = VK_COMPONENT_SWIZZLE_A,
-					},
-					.subresourceRange = 
-					{
-						.aspectMask 	= VK_IMAGE_ASPECT_COLOR_BIT,
-						.baseMipLevel 	= 0,
-						.levelCount 	= 1,
-						.baseArrayLayer = 0,
-						.layerCount 	= 1
-					},
-					.viewType = VK_IMAGE_VIEW_TYPE_2D,
-					.flags = 0,
-					.image = sci[i],
-				};
-
-				vk.sir_image[i] = sci[i];
-
-				{
-					VkResult  err;
-					err = vkCreateImageView(vk.device, &ivci, NULL, &vk.sir_imgview[i]);	//create20s
-					assert(!err);
-				}
-			}
-*/
+				, vk.sir_imgview[i]
+			);
 		}
-
+		free( sci );
 	}
-	
+
 	//---------------------------------------------------------
 	// 物理デバイスメモリプロパティを取得
 	//---------------------------------------------------------
-	{
-		vk.frame_index = 0;
-		// Get Memory information and properties
-		vkGetPhysicalDeviceMemoryProperties(vk.gpu, &vk.memory_properties);
-	}
+	vkGetPhysicalDeviceMemoryProperties(
+		  vk.gpu
+
+		, &vk.memory_properties
+	);
 
 	//---------------------
 	// デプスイメージの取得
 	//---------------------
-	vk_createDepthImage_create_alloc_bind_imageview(
+	vk.depth_inf.format = VK_FORMAT_D16_UNORM;
+
+	vk_depth_CreateImage(
 		  vk.device 
-		, vk.memory_properties
 		, _width
 		, _height
-
 		, vk.depth_inf.format
+
+		, vk.depth_inf.image
+	);
+
+	vk_depth_AllocateMemory(
+		  vk.device 
+		, vk.memory_properties
+		, vk.depth_inf.image
+
+		, vk.depth_inf.devmem
+	);
+
+	vk_depth_BindImageMemory(
+		  vk.device 
 		, vk.depth_inf.image
 		, vk.depth_inf.devmem
+	);
+
+	vk_depth_CreateImageView(
+		  vk.device 
+		, vk.depth_inf.format
+		, vk.depth_inf.image
+
 		, vk.depth_inf.imgview
 	);
-/*
-	
-	//-----------------------------------------------------
-	// フレームバッファの作成
-	//-----------------------------------------------------
-	{//demo_prepare_depth(&vk);
-		const VkFormat depth_format = VK_FORMAT_D16_UNORM;
-		const VkImageCreateInfo image = 
-		{
-			.sType 			= VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-			.pNext 			= NULL,
-			.imageType 		= VK_IMAGE_TYPE_2D,
-			.format 		= depth_format,
-			.extent 		= {_width, _height, 1},
-			.mipLevels 		= 1,
-			.arrayLayers 	= 1,
-			.samples 		= VK_SAMPLE_COUNT_1_BIT,
-			.tiling 		= VK_IMAGE_TILING_OPTIMAL,
-			.usage 			= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-			.flags 			= 0,
-		};
-
-
-
-		//-----------------------------------------------------
-		// デプス作成
-		//-----------------------------------------------------
-		{
-			VkMemoryRequirements mr;
-			vk.depth_inf.format = depth_format;
-
-			//-----------------------------------------------------
-			// イメージの作成
-			//-----------------------------------------------------
-			{
-				VkResult  err;
-				err = vkCreateImage(vk.device, &image, NULL, &vk.depth_inf.image);	//create18s
-				assert(!err);
-			}
-
-			//-----------------------------------------------------
-			// イメージメモリ情報の取得
-			//-----------------------------------------------------
-			{
-				vkGetImageMemoryRequirements(vk.device, vk.depth_inf.image, &mr);
-			}
-
-			vk.depth_inf.mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-			vk.depth_inf.mem_alloc.pNext = NULL;
-			vk.depth_inf.mem_alloc.allocationSize = mr.size;
-			vk.depth_inf.mem_alloc.memoryTypeIndex = 0;
-
-			//-----------------------------------------------------
-			// 
-			//-----------------------------------------------------
-			{
-				bool  pass = false;
-				{
-					VkPhysicalDeviceMemoryProperties* 	pMemory_properties 	= &vk.memory_properties;
-					uint32_t 							typeBits			= mr.memoryTypeBits;
-					VkFlags 							requirements_mask	= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-					uint32_t*							typeIndex			= &vk.depth_inf.mem_alloc.memoryTypeIndex;
-
-					// Search memtypes to find first index with those properties
-					for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++) 
-					{
-						if ((typeBits & 1) == 1) 
-						{
-							// Type is available, does it match user properties?
-							if ((pMemory_properties->memoryTypes[i].propertyFlags & requirements_mask) == requirements_mask) 
-							{
-								*typeIndex = i;
-								pass = true;
-								break;
-							}
-						}
-						typeBits >>= 1;
-					}
-				}
-				assert(pass);
-			}
-
-			//-----------------------------------------------------
-			// メモリ確保：デプス 
-			//-----------------------------------------------------
-			{ 
-				VkResult  err;
-				err = vkAllocateMemory(vk.device, &vk.depth_inf.mem_alloc, NULL, &vk.depth_inf.devmem);	//create19s
-				assert(!err);
-			}
-
-			//-----------------------------------------------------
-			// イメージメモリのバインド
-			//-----------------------------------------------------
-			{
-				VkResult  err;
-				err = vkBindImageMemory(vk.device, vk.depth_inf.image, vk.depth_inf.devmem, 0);
-				assert(!err);
-			}
-		}
-
-		//-----------------------------------------------------
-		// イメージビューの作成
-		//-----------------------------------------------------
-		{
-			VkImageViewCreateInfo ivci = 
-			{
-				.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-				.pNext = NULL,
-				.image = VK_NULL_HANDLE,
-				.format = depth_format,
-				.subresourceRange = 
-				{.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
-									 .baseMipLevel = 0,
-									 .levelCount = 1,
-									 .baseArrayLayer = 0,
-									 .layerCount = 1},
-				.flags = 0,
-				.viewType = VK_IMAGE_VIEW_TYPE_2D,
-			};
-			ivci.image = vk.depth_inf.image;
-			VkResult  err;
-			err = vkCreateImageView(vk.device, &ivci, NULL, &vk.depth_inf.imgview);	//create17s
-			assert(!err);
-		}
-	}
-*/
-
-
 
 
 	//---------------------
@@ -4349,7 +3246,6 @@ VkInf::VkInf( HINSTANCE hInstance, HWND hWin, int _width, int _height, int unit_
 		);
 	}
 
-
 	//-----------------------------------------------------
 	// フレームバッファの作成
 	//-----------------------------------------------------
@@ -4371,11 +3267,9 @@ VkInf::VkInf( HINSTANCE hInstance, HWND hWin, int _width, int _height, int unit_
 	//-----------------------------------------------------
 	// 
 	//-----------------------------------------------------
-	{
 	vk.current_buffer = 0;
-	}
+	vk.frame_index = 0;
 
-//	this->flgSetModel = false;
 	printf("vk create \n");
 
 }
@@ -4384,8 +3278,81 @@ VkInf::VkInf( HINSTANCE hInstance, HWND hWin, int _width, int _height, int unit_
 VkInf::~VkInf()
 //-----------------------------------------------------------------------------
 {
-	vk2_release( vk );
-	vk_release( vk );
+	//---------------------------------------------------------
+	// 終了
+	//---------------------------------------------------------
+	uint32_t i;
+	vkDeviceWaitIdle(vk.device);
+
+	for (i = 0; i < vk.swapchainImageCount; i++) 
+	{
+		vkDestroyFramebuffer(vk.device, vk.sir_framebuffer[i], NULL);	//create5	*	vk2 create
+	}
+
+	vkDestroyPipeline(vk.device, vk.pipeline, NULL);					//create7	*	vk2 create
+	vkDestroyPipelineCache(vk.device, vk.pipelineCache, NULL);			//create8	*	vk2 create
+	vkDestroyRenderPass(vk.device, vk.render_pass, NULL);				//create9	*	vk2 create
+	vkDestroyPipelineLayout(vk.device, vk.pipeline_layout, NULL)	;	//create10	*	vk2 create
+	vkDestroyDescriptorSetLayout(vk.device, vk.desc_layout, NULL);		//create11	*	vk2 create
+
+	for (i = 0; i < vk.swapchainImageCount; i++) 
+	{
+		vkFreeCommandBuffers(vk.device, vk.cmd_pool, 1, &vk.sir_cmdbuf[i]);	//create21	*	vk2 create
+	}
+
+
+	vkDestroyDescriptorPool(vk.device, vk.desc_pool, NULL);				//create6	*	vk2 create
+
+	// Wait for fences from present operations
+	for (int i = 0; i < FRAME_LAG; i++) 
+	{
+		vkWaitForFences(vk.device, 1, &vk.fences[i], VK_TRUE, UINT64_MAX);
+		vkDestroyFence(vk.device, vk.fences[i], NULL);										//create1	*	setup
+		vkDestroySemaphore(vk.device, vk.image_acquired_semaphores[i], NULL)	;			//create2	*	setup
+		vkDestroySemaphore(vk.device, vk.draw_complete_semaphores[i], NULL);				//create3	*	setup
+	}
+
+	for (int i = 0; i < DEMO_TEXTURE_COUNT; i++) 
+	{
+		vkDestroyImageView(vk.device, vk.textures[i].imgview, NULL);	//create12	*	setup
+		vkDestroyImage(vk.device, vk.textures[i].image, NULL);			//create13	*	setup
+		vkFreeMemory(vk.device, vk.textures[i].devmem, NULL);			//create14	*	setup
+		vkDestroySampler(vk.device, vk.textures[i].sampler, NULL);		//create15	*	setup
+	}
+	vkDestroySwapchainKHR(vk.device, vk.swapchain, NULL);			//create16	*	setup
+
+	vkDestroyImageView(vk.device, vk.depth_inf.imgview, NULL);			//create17	*	setup
+	vkDestroyImage(vk.device, vk.depth_inf.image, NULL);				//create18	*	setup
+	vkFreeMemory(vk.device, vk.depth_inf.devmem, NULL);					//create19	*	setup
+
+	for (int i = 0; i < vk.swapchainImageCount; i++) 
+	{
+		vkDestroyImageView(vk.device, vk.sir_imgview[i], NULL);				//create20	*	setup
+	}
+
+//	free(vk.swapchain_image_resources);									//create24	*	setup
+	free(vk.sir_image);
+	free(vk.sir_cmdbuf);
+	free(vk.sir_graphics_to_present_cmdbuf);
+	free(vk.sir_imgview);
+//	free(vk.sir_uniform_buffer);
+//	free(vk.sir_uniform_memory);
+	free(vk.sir_framebuffer);
+//	free(vk.sir_descriptor_set);
+
+	vkDestroyCommandPool(vk.device, vk.cmd_pool, NULL);					//create26	*	setup
+
+	vkDeviceWaitIdle(vk.device);
+	vkDestroyDevice(vk.device, NULL);									//create29	*	setup
+
+	vkDestroySurfaceKHR(vk.inst, vk.surface, NULL);						//create30	*	setup
+
+// init
+	free(vk.queue_props);												//create25	*	init
+	vkDestroyInstance(vk.inst, NULL);									//create31	*	init
+
+	printf("vk released\n");
+
 }
 
 

@@ -260,8 +260,8 @@ void enemy_create()
 	//---------------------------------------------------------
 	for ( int u = 0; u < unit_MAX; u++ )
 	{
-		memcpy( &dataVert[u], &dataVertConst,  sizeof(vktexcube_vs_uniform) );
-//		memcpy( &dataVert[u], &dataVertDelta,  sizeof(vktexcube_vs_uniform) );
+//		memcpy( &dataVert[u], &dataVertConst,  sizeof(vktexcube_vs_uniform) );
+		memcpy( &dataVert[u], &dataVertDelta,  sizeof(vktexcube_vs_uniform) );
 		unit_cnt++;
 	}
 
@@ -299,8 +299,8 @@ void enemy_create()
 			, sc_uniform_buffer[u]
 			, sc_uniform_memory[u]
 			, sc_descriptor_set[u]
-			, "s-const-tex-vert.spv", "s-const-tex-frag.spv"
-//			, "s-phong-vert.spv", "s-phong-frag.spv"
+//			, "s-const-tex-vert.spv", "s-const-tex-frag.spv"
+			, "s-phong-vert.spv", "s-phong-frag.spv"
 			, tex_files
 			, 1
 		);
