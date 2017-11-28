@@ -1391,6 +1391,75 @@ static void vk_cmdPipelineBarrier(
 }
 
 //-----------------------------------------------------------------------------
+void vk_CreateSampler(
+//-----------------------------------------------------------------------------
+	  const VkDevice				&	vk_sc_device
+	, VkSampler				& 	sampler
+)
+{
+	VkSamplerCreateInfo sci = 
+	{
+		  .sType					= VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO
+		, .pNext 					= NULL
+		, .flags 					= 0
+		, .magFilter 				= VK_FILTER_NEAREST
+		, .minFilter 				= VK_FILTER_NEAREST
+		, .mipmapMode 				= VK_SAMPLER_MIPMAP_MODE_NEAREST
+		, .addressModeU 			= VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE
+		, .addressModeV				= VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE
+		, .addressModeW				= VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE
+		, .mipLodBias 				= 0.0f
+		, .anisotropyEnable 		= VK_FALSE
+		, .maxAnisotropy 			= 1
+		, .compareEnable 			= VK_FALSE
+		, .compareOp 				= VK_COMPARE_OP_NEVER
+		, .minLod 					= 0.0f
+		, .maxLod 					= 0.0f
+		, .borderColor 				= VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE
+		, .unnormalizedCoordinates	= VK_FALSE
+	};
+
+	VkResult  err;
+	err = vkCreateSampler(vk_sc_device, &sci, NULL, &sampler);
+	ASSERTW(!err,"中断します");
+
+}
+//-----------------------------------------------------------------------------
+void vk_tex_CreateImageView(
+//-----------------------------------------------------------------------------
+	  const VkDevice			&	vk_sc_device
+	, const VkFormat			&	tex_format
+	, const VkImage				&	tx_image
+	, VkImageView				& 	tx_imgview
+)
+{	//---------------------
+	// テクスチャイメージ・ビューの作成
+	//---------------------
+	{
+		VkImageViewCreateInfo ivc = 
+		{
+			  .sType 				= VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO
+			, .pNext 				= NULL
+			, .flags 				= 0
+//			, .image 				= VK_NULL_HANDLE
+			, .image 				= tx_image
+			, .viewType 			= VK_IMAGE_VIEW_TYPE_2D
+			, .format 				= tex_format
+			, .components 			=
+				{
+					VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G,
+					VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A
+				}
+			, .subresourceRange 	= {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}
+		};
+//		ivc.image = tx_image;
+		VkResult  err;
+		err = vkCreateImageView(vk_sc_device, &ivc, NULL, &tx_imgview);
+		ASSERTW(!err,"中断します");
+	}
+}
+
+//-----------------------------------------------------------------------------
 void vk2_loadTexture( VulkanInf& vk
 //-----------------------------------------------------------------------------
 	, const char** tex_files
@@ -1525,8 +1594,12 @@ void vk2_loadTexture( VulkanInf& vk
 				//-----------------------------------------------------
 				// サンプラーの作成
 				//-----------------------------------------------------
+				vk_CreateSampler(
+					  vk.device
+					, vk.textures[i].sampler
+				);
+/*
 				{
-					/* create sampler */
 					const VkSamplerCreateInfo sci = 
 					{
 						.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -1550,14 +1623,15 @@ void vk2_loadTexture( VulkanInf& vk
 					err = vkCreateSampler(vk.device, &sci, NULL, &vk.textures[i].sampler);	//create15s
 					assert(!err);
 				}
+*/
 			}
 			for (i = 0; i < tex_cnt; i++) 
 			{
+/*
 				//-----------------------------------------------------
 				// イメージビューの作成
 				//-----------------------------------------------------
 				{
-					/* create image imgview */
 					VkImageViewCreateInfo ivc = 
 					{
 						.sType 		= VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -1578,6 +1652,14 @@ void vk2_loadTexture( VulkanInf& vk
 					err = vkCreateImageView(vk.device, &ivc, NULL, &vk.textures[i].imgview);	//create12s
 					assert(!err);
 				}
+*/
+				vk_tex_CreateImageView(
+					  vk.device
+					, tex_format
+					, vk.textures[i].image
+
+					, vk.textures[i].imgview
+				);
 				
 			}
 		}
@@ -3008,9 +3090,8 @@ static void vk_createDepthImage_create_alloc_bind_imageview(
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-static void vk_CreateImageView(
+static void vk_sir_CreateImageView(
 	  const VkDevice			& 	vk_sc_device 
-	, const VkSwapchainKHR		&	vk_sc_base
 	, const VkFormat			&	vk_surface_format
 	, const VkImage				&	sci
 
@@ -3994,9 +4075,8 @@ VkInf::VkInf( HINSTANCE hInstance, HWND hWin, int _width, int _height, int unit_
 
 			for (uint32_t i = 0; i < vk.swapchainImageCount; i++) 
 			{
-				vk_CreateImageView(
+				vk_sir_CreateImageView(
 					  vk.device 
-					, vk.swapchain
 					, vk.format
 					, sci[i]
 
