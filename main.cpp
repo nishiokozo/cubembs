@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
 		, pWin->win_width
 		, pWin->win_height
 		, 200//unit_MAX
-		, 100//DEMO_TEXTURE_COUNT
+		, 1//DEMO_TEXTURE_COUNT
 	);
 
 	enemy_create();
@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
 		
 		if ( key.hi._6 )
 		{
-			lim2 = 100;
+			lim2 = 30;
 		}
 		if ( lim2 )
 		{
