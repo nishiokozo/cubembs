@@ -11,7 +11,7 @@ void	vect44_rotateZ( float* m, float th );
 #define M_PI	3.14159265358979323846
 #endif
 
-#define	pi	M_PI
+//#define	pi	M_PI
 class	ivect3
 {
 public:
@@ -37,6 +37,7 @@ public:
 };
 
 
+/*
 typedef	struct
 {
 	float	x;	
@@ -44,6 +45,7 @@ typedef	struct
 	float	z;	
 	float	w;	
 } vector;
+*/
 
 class	vect2
 {

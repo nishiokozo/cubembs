@@ -337,14 +337,20 @@ char *demo_read_spv(const char *filename, size_t *psize)
 	void *shader_code;
 
 	FILE *fp = fopen(filename, "rb");
-	if (!fp) return NULL;
+//	if (!fp) return NULL;
+	if (!fp) 
+	{
+		char	chr[256];
+		sprintf( chr, "ファイルがありません [%s]",filename );
+		ASSERTW(false, chr );
+	}
 
 	fseek(fp, 0L, SEEK_END);
 	size = ftell(fp);
 
 	fseek(fp, 0L, SEEK_SET);
 
-	shader_code = malloc(size);
+	shader_code = malloc(size);						//createTmp
 	retval = fread(shader_code, size, 1, fp);
 	assert(retval == 1);
 
@@ -511,7 +517,7 @@ void vk_vert_BindBufferMemory(
 }
 
 //-----------------------------------------------------------------------------
-static void	vk_createDescripterPool( 
+static void	vkCreateDescriptorPool( 
 //-----------------------------------------------------------------------------
 	  const  VkDevice			&	vk_sc_device
 	, const  int 					tex_count
@@ -551,12 +557,12 @@ static void	vk_createDescripterPool(
 }
 
 //-----------------------------------------------------------------------------
-static void	vk_createDescriptionLayout( 
+static void	vk_CreateDescriptorSetLayout( 
 //-----------------------------------------------------------------------------
-	  const VkDevice& vk_sc_device
-	, const int tex_count
+	  const VkDevice				&	vk_sc_device
+	, const int 						tex_count
 
-	, VkDescriptorSetLayout 				&vk_desc_layout
+	, VkDescriptorSetLayout 		&	vk_desc_layout
 )
 {
 	//---------------------
@@ -599,7 +605,7 @@ static void	vk_createDescriptionLayout(
 }
 
 //-----------------------------------------------------------------------------
-static void	vk_createPipelineLayout( 
+static void	vk_CreatePipelineLayout( 
 //-----------------------------------------------------------------------------
 	  const VkDevice				&	vk_sc_device
 	, const VkDescriptorSetLayout 	&	vk_desc_layout
@@ -628,7 +634,7 @@ static void	vk_createPipelineLayout(
 }
 
 //-----------------------------------------------------------------------------
-static void	vk_createRenderPass( 
+static void	vk_CreateRenderPass( 
 //-----------------------------------------------------------------------------
 	  const VkDevice	& 	vk_sc_device
 	, const VkFormat 	&	vk_surface_format
@@ -900,7 +906,7 @@ static void	vk_CreateGraphicsPipelines(
 					{
 						VkResult  err;
 						err = vkCreateShaderModule(vk_sc_device, &smci, NULL, &vert_sm);
-						ASSERTW(!err,"中断します");
+						ASSERTW(!err,"中断します v-shader ");
 					}
 					pssci[0].module = vert_sm;
 				}
@@ -923,7 +929,7 @@ static void	vk_CreateGraphicsPipelines(
 					{
 						VkResult  err;
 						err = vkCreateShaderModule(vk_sc_device, &smci, NULL, &flag_sm);
-						ASSERTW(!err,"中断します");
+						ASSERTW(!err,"中断します f-shader");
 					}
 					pssci[1].module = flag_sm;
 				}
@@ -955,7 +961,7 @@ static void	vk_CreateGraphicsPipelines(
 
 			VkResult  err;
 			err = vkCreateGraphicsPipelines(vk_sc_device, vk_pipelineCache, 1, &gpci, NULL, &vk_pipeline_graphics);
-			ASSERTW(!err,"中断します");
+			ASSERTW(!err,"中断します pipelines");
 		}
 
 		//---------------------
@@ -990,7 +996,7 @@ static void vk_AllocateCommandBuffers(
 			.commandBufferCount = 1,
 		};
 		VkResult  err;
-		err = vkAllocateCommandBuffers(vk_device, &cmai, &sir_cmdbuf);	//create21	setPipeline
+		err = vkAllocateCommandBuffers(vk_device, &cmai, &sir_cmdbuf);	//upper
 		assert(!err);
 	}
 }
@@ -1017,7 +1023,7 @@ static void	vk_AllocateDescriptorSets(
 			.pSetLayouts 		= &vk_desc_layout
 		};
 		VkResult  err;
-		err = vkAllocateDescriptorSets(vk_sc_device, &dsai, &descriptor_set);
+		err = vkAllocateDescriptorSets(vk_sc_device, &dsai, &descriptor_set); 	//create_AllocateDescriptorSet
 		{
 			char	chr[256];
 			sprintf( chr, "中断します。 err=(%x)\n",err);
@@ -1416,19 +1422,12 @@ void vk2_loadTexture( VulkanInf& vk
 	//---------------------------------------------------------
 	// コマンドバッファの確保
 	//---------------------------------------------------------
-	{
-		const VkCommandBufferAllocateInfo cmai = 
-		{
-			.sType 				= VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-			.pNext 				= NULL,
-			.commandPool 		= vk.cmd_pool,
-			.level 				= VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-			.commandBufferCount = 1,
-		};
-		VkResult  err;
-		err = vkAllocateCommandBuffers(vk.device, &cmai, &vk.nor_cmdbuf);
-		assert(!err);
-	}
+	vk_AllocateCommandBuffers(	//createNN_AllocateCommandBuffers
+		  vk.device
+		, vk.cmd_pool
+
+		, vk.nor_cmdbuf
+	);
 
 	//---------------------------------------------------------
 	// コマンドバッファの開始
@@ -1512,87 +1511,66 @@ void vk2_loadTexture( VulkanInf& vk
 	}
 
 	//-----------------------------------------------------
-	// 終了待ち
+	// コマンドバッファ終了
 	//-----------------------------------------------------
-	/*
-	 * Prepare functions above may generate pipeline commands
-	 * that need to be flushed before beginning the render loop.
-	 */
-
-	// This function could get called twice if the texture uses a staging buffer
-	// In that case the second call should be ignored
-	if (vk.nor_cmdbuf == VK_NULL_HANDLE)
 	{
-	//	return;
+		VkResult  err;
+		err = vkEndCommandBuffer(vk.nor_cmdbuf);
+		assert(!err);
 	}
-	else
+
+	//-----------------------------------------------------
+	// フェンスの作成
+	//-----------------------------------------------------
+	VkFence fence;
 	{
-		//-----------------------------------------------------
-		// コマンドバッファ終了
-		//-----------------------------------------------------
+		VkFenceCreateInfo fci = 
 		{
+			.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+			.pNext = NULL,
+			.flags = 0
+		};
+		VkResult  err;
+		err = vkCreateFence(vk.device, &fci, NULL, &fence);	//createTmp1
+		assert(!err);
+	}
+
+	//-----------------------------------------------------
+	// フェンス待ち
+	//-----------------------------------------------------
+	{
+		const VkCommandBuffer cmd_bufs[] = {vk.nor_cmdbuf};
+		{
+			VkSubmitInfo si = 
+			{
+				.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+				.pNext = NULL,
+				.waitSemaphoreCount = 0,
+				.pWaitSemaphores = NULL,
+				.pWaitDstStageMask = NULL,
+				.commandBufferCount = 1,
+				.pCommandBuffers = cmd_bufs,
+				.signalSemaphoreCount = 0,
+				.pSignalSemaphores = NULL
+			};
 			VkResult  err;
-			err = vkEndCommandBuffer(vk.nor_cmdbuf);
+			err = vkQueueSubmit(vk.graphics_queue, 1, &si, fence);
 			assert(!err);
 		}
 
-		{	
-			//-----------------------------------------------------
-			// フェンスの作成
-			//-----------------------------------------------------
-			VkFence fence;
-			{
-				VkFenceCreateInfo fci = 
-				{
-					.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-					.pNext = NULL,
-					.flags = 0
-				};
-				VkResult  err;
-				err = vkCreateFence(vk.device, &fci, NULL, &fence);	//createTmp1
-				assert(!err);
-			}
-
-			//-----------------------------------------------------
-			// フェンス待ち
-			//-----------------------------------------------------
-			{
-				const VkCommandBuffer cmd_bufs[] = {vk.nor_cmdbuf};
-				{
-					VkSubmitInfo si = 
-					{
-						.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-						.pNext = NULL,
-						.waitSemaphoreCount = 0,
-						.pWaitSemaphores = NULL,
-						.pWaitDstStageMask = NULL,
-						.commandBufferCount = 1,
-						.pCommandBuffers = cmd_bufs,
-						.signalSemaphoreCount = 0,
-						.pSignalSemaphores = NULL
-					};
-					VkResult  err;
-					err = vkQueueSubmit(vk.graphics_queue, 1, &si, fence);
-					assert(!err);
-				}
-
-				{
-					VkResult  err;
-					err = vkWaitForFences(vk.device, 1, &fence, VK_TRUE, UINT64_MAX);
-					assert(!err);
-				}
-
-				vkFreeCommandBuffers(vk.device, vk.cmd_pool, 1, cmd_bufs);
-			}
-
-			//-----------------------------------------------------
-			// フェンスの廃棄
-			//-----------------------------------------------------
-			vkDestroyFence(vk.device, fence, NULL);		//createTmp1
-
+		{
+			VkResult  err;
+			err = vkWaitForFences(vk.device, 1, &fence, VK_TRUE, UINT64_MAX);
+			assert(!err);
 		}
-		vk.nor_cmdbuf = VK_NULL_HANDLE;
+
+		vkFreeCommandBuffers(vk.device, vk.cmd_pool, 1, cmd_bufs);	//createNN_AllocateCommandBuffers
 	}
+
+	//-----------------------------------------------------
+	// フェンスの廃棄
+	//-----------------------------------------------------
+	vkDestroyFence(vk.device, fence, NULL);		//createTmp1
 
 
 }
@@ -1649,9 +1627,9 @@ void vk2_loadModel( VulkanInf& vk
 	// 
 	//-----------------------------------------------------
 
-	sir_uniform_buffer 	= (VkBuffer *)			malloc(sizeof(VkBuffer) 		* vk.swapchainImageCount);
-	sir_uniform_memory 	= (VkDeviceMemory *)	malloc(sizeof(VkDeviceMemory) 	* vk.swapchainImageCount);
-	sir_descriptor_set 	= (VkDescriptorSet *)	malloc(sizeof(VkDescriptorSet) 	* vk.swapchainImageCount);
+	sir_uniform_buffer 	= (VkBuffer *)			malloc(sizeof(VkBuffer) 		* vk.swapchainImageCount);	//create37_malloc
+	sir_uniform_memory 	= (VkDeviceMemory *)	malloc(sizeof(VkDeviceMemory) 	* vk.swapchainImageCount);	//create38_malloc
+	sir_descriptor_set 	= (VkDescriptorSet *)	malloc(sizeof(VkDescriptorSet) 	* vk.swapchainImageCount);	//create39_malloc
 
 	for ( int i = 0; i < vk.swapchainImageCount; i++) 
 	{
@@ -1720,7 +1698,7 @@ void	vk2_removeModel( VulkanInf& vk
 		vkDestroyBuffer(vk.device, sir_uniform_buffer[i], NULL);			//create22	*	vk3_create
 		vkFreeMemory(vk.device, sir_uniform_memory[i], NULL);			//create23	*	vk3_create
 
-		vkFreeDescriptorSets(
+		vkFreeDescriptorSets( 	//create_AllocateDescriptorSet
 			  vk.device				//	VkDevice device
 			, vk.desc_pool			//	VkDescriptorPool descriptorPool
 			, 1						//	uint32_t descriptorSetCount
@@ -1729,9 +1707,9 @@ void	vk2_removeModel( VulkanInf& vk
 	}
 
 
-		free(sir_uniform_buffer);
-		free(sir_uniform_memory);
-		free(sir_descriptor_set);
+		free(sir_uniform_buffer); 	//create37_malloc
+		free(sir_uniform_memory); 	//create38_malloc
+		free(sir_descriptor_set); 	//create39_malloc
 }
 
 //-----------------------------------------------------------------------------
@@ -2017,7 +1995,7 @@ static void	vk_createInstance( VkInstance& vk_inst)
 		ASSERTW( (cntEp > 0), "Vulkanインスタンスが取得できませんでしたれました。" );
 
 		{
-			VkExtensionProperties* tblEp = (VkExtensionProperties*)malloc(sizeof(VkExtensionProperties) * cntEp);
+			VkExtensionProperties* tblEp = (VkExtensionProperties*)malloc(sizeof(VkExtensionProperties) * cntEp); 	//createTmp
 
 			//-------------------------
 			// インスタンス・列挙選択
@@ -2043,7 +2021,7 @@ static void	vk_createInstance( VkInstance& vk_inst)
 				ASSERTW(cntName < 64,"中断します");
 			}
 
-			free(tblEp);
+			free(tblEp);	 	//createTmp
 		}
 
 		if (!flgFound_surface) 
@@ -2147,14 +2125,14 @@ static void	vk_enumeratePhysicalDevices(
 	// GPUデバイスを列挙
 	//-------------------------
 	{
-		VkPhysicalDevice* 	pd = (VkPhysicalDevice*)malloc(sizeof(VkPhysicalDevice) * cntPd);
+		VkPhysicalDevice* 	pd = (VkPhysicalDevice*)malloc(sizeof(VkPhysicalDevice) * cntPd); 	//createTmp
 		{
 			VkResult err;
 			err = vkEnumeratePhysicalDevices(vk_inst, &cntPd, pd);
 			ASSERTW(!err,"中断します");
 		}
 		vk_gpuDevice = pd[num];
-		free(pd);
+		free(pd); 	//createTmp
 	}
 
 
@@ -2209,7 +2187,7 @@ static void vk_get_graphics_queue_family_index(
 	//-------------------------
 	// キューファミリー・確保
 	//-------------------------
-	tblQf = (VkQueueFamilyProperties *)malloc( cntQf * sizeof(VkQueueFamilyProperties));
+	tblQf = (VkQueueFamilyProperties *)malloc( cntQf * sizeof(VkQueueFamilyProperties)); 	//createTmp
 
 	//-------------------------
 	// キューファミリー・列挙
@@ -2219,7 +2197,7 @@ static void vk_get_graphics_queue_family_index(
 	//-------------------------
 	// キュー・サポートフラグ列挙
 	//-------------------------
-	VkBool32 *qflg = (VkBool32 *)malloc(cntQf * sizeof(VkBool32));
+	VkBool32 *qflg = (VkBool32 *)malloc(cntQf * sizeof(VkBool32)); 	//createTmp
 	for (uint32_t i = 0; i < cntQf; i++) 
 	{
 		vkGetPhysicalDeviceSurfaceSupportKHR(vk_gpuDevice, i, vk_surface_base, &qflg[i]);
@@ -2257,9 +2235,9 @@ static void vk_get_graphics_queue_family_index(
 		vk_q_idxQueue_graphics = gq;
 	}
 
-	free(qflg);
+	free(qflg); 	//createTmp
 
-	free( tblQf );
+	free( tblQf ); 	//createTmp
 }
 
 //-----------------------------------------------------------------------------
@@ -2298,7 +2276,7 @@ static void vk_CreateDevice(
 				//-------------------------
 				// 列挙デバイス・バッファ確保
 				//-------------------------
-				VkExtensionProperties* tblDevice = (VkExtensionProperties*)malloc(sizeof(VkExtensionProperties) * cntDevice);
+				VkExtensionProperties* tblDevice = (VkExtensionProperties*)malloc(sizeof(VkExtensionProperties) * cntDevice); 	//createTmp
 
 				//-------------------------
 				// 列挙デバイス・名取得
@@ -2323,7 +2301,7 @@ printf("extDevice %d %s\n", i , tblDevice[i].extensionName );
 					ASSERTW(cntName < 64,"中断します");
 				}
 
-				free(tblDevice);
+				free(tblDevice); 	//createTmp
 			}
 			if ( flgFound == false ) 
 			{
@@ -2393,7 +2371,7 @@ static void vk_surface_get_format_color_space(
 	//-------------------------
 	// サーフェースフォーマット・バッファを確保
 	//-------------------------
-	VkSurfaceFormatKHR *tblFormat = (VkSurfaceFormatKHR *)malloc(cntFormat * sizeof(VkSurfaceFormatKHR));
+	VkSurfaceFormatKHR *tblFormat = (VkSurfaceFormatKHR *)malloc(cntFormat * sizeof(VkSurfaceFormatKHR)); 	//createTmp
 
 	//-------------------------
 	// サーフェースフォーマット・列挙
@@ -2431,7 +2409,7 @@ static void vk_surface_get_format_color_space(
 
 	}
 #endif
-	free( tblFormat );
+	free( tblFormat ); 	//createTmp
 }
 
 //-----------------------------------------------------------------------------
@@ -2573,7 +2551,7 @@ static void vk_CreateSwapchain(
 	//-------------------------
 	VkPresentModeKHR *tblPm;
 	{
-		tblPm = (VkPresentModeKHR *)malloc(pmc * sizeof(VkPresentModeKHR));
+		tblPm = (VkPresentModeKHR *)malloc(pmc * sizeof(VkPresentModeKHR)); 	//createTmp
 		ASSERTW(tblPm,"中断します");
 
 		VkResult  err;
@@ -2605,7 +2583,7 @@ static void vk_CreateSwapchain(
 	//-------------------------
 	if (NULL != tblPm) 
 	{
-		free(tblPm);
+		free(tblPm); 	//createTmp
 	}
 
 	//-------------------------
@@ -2700,7 +2678,7 @@ printf("line %d\n",__LINE__ );
 }
 
 //-----------------------------------------------------------------------------
-static void vk_depth_CreateImage(
+static void vk_depth_CreateImage0(
 //-----------------------------------------------------------------------------
 	  const VkDevice& 								vk_sc_device 
 	, const int 									_width
@@ -2784,7 +2762,7 @@ static void vk_depth_AllocateMemory(
 	//---------------------
 	{ 
 		VkResult  err;
-		err = vkAllocateMemory(vk_sc_device, &mai, NULL, &vk_depth_devmem);
+		err = vkAllocateMemory(vk_sc_device, &mai, NULL, &vk_depth_devmem); 	//create19_AllocateMemory
 		ASSERTW(!err,"中断します");
 	}
 }
@@ -2812,11 +2790,11 @@ static void vk_depth_BindImageMemory(
 //-----------------------------------------------------------------------------
 static void vk_depth_CreateImageView(
 //-----------------------------------------------------------------------------
-	  const VkDevice& 								vk_sc_device 
-	, const VkFormat&										vk_depth_format
-	, const VkImage&										vk_depth_image
+	  const VkDevice	& 	vk_sc_device 
+	, const VkFormat	&	vk_depth_format
+	, const VkImage		&	vk_depth_image
 
-	, VkImageView&									vk_depth_imgview
+	, VkImageView		&	vk_depth_imgview
 )
 {	
 
@@ -2906,6 +2884,74 @@ static void vk_sir_CreateImageView(
 		ASSERTW(!err,"中断します");
 	}
 }
+//-----------------------------------------------------------------------------
+void VkInf::loadModel(
+//-----------------------------------------------------------------------------
+	 void* pDataVert
+	,int sizeofStructDataVert
+
+	, VkBuffer* 				&	sc_uniform_buffer
+	, VkDeviceMemory* 			&	sc_uniform_memory
+	, VkDescriptorSet* 			&	sc_descriptor_set
+	, const char* fn_vert
+	, const char* fn_frag
+	, const char** 	tex_files
+	, const int		tex_cnt
+)
+{
+	vk2_loadModel( vk
+		, pDataVert
+		, sizeofStructDataVert
+		, sc_uniform_buffer
+		, sc_uniform_memory
+		, sc_descriptor_set
+		, fn_vert
+		, fn_frag
+		, tex_files
+		, tex_cnt
+	 );
+}
+//-----------------------------------------------------------------------------
+void	VkInf::unloadModel(
+//-----------------------------------------------------------------------------
+	  VkBuffer* 				&	sir_uniform_buffer
+	, VkDeviceMemory* 			&	sir_uniform_memory
+	, VkDescriptorSet* 			&	sir_descriptor_set
+)
+{
+	vk2_removeModel(
+		vk
+		, sir_uniform_buffer
+		, sir_uniform_memory
+		, sir_descriptor_set
+	);
+}
+//-----------------------------------------------------------------------------
+void	VkInf::drawModel(
+//-----------------------------------------------------------------------------
+	 const void* pMVP
+	,int matrixSize
+	, VkDeviceMemory* 			&	sir_uniform_memory
+	,int _vertexCount		//	= 12*3;
+	,int _instanceCount		//	= 1;
+	,int _firstVertex		//	= 0;
+	,int _firstInstance		// = 0;
+	, VkDescriptorSet* 			&	sir_descriptor_set
+)
+{
+	vk2_drawPolygon(
+		vk
+		,pMVP
+		,matrixSize
+		,sir_uniform_memory
+		,_vertexCount
+		,_instanceCount
+		,_firstVertex
+		,_firstInstance
+		,sir_descriptor_set
+	);
+}
+
 //-----------------------------------------------------------------------------
 VkInf::VkInf( HINSTANCE hInstance, HWND hWin, int _width, int _height, int unit_max, int tex_max )
 //-----------------------------------------------------------------------------
@@ -3067,7 +3113,7 @@ VkInf::VkInf( HINSTANCE hInstance, HWND hWin, int _width, int _height, int unit_
 	//---------------------------------------------------------
 	// スワップチェイン・イメージバッファの確保
 	//---------------------------------------------------------
-	VkImage *sci = (VkImage *)malloc(vk.swapchainImageCount * sizeof(VkImage));
+	VkImage *sci = (VkImage *)malloc(vk.swapchainImageCount * sizeof(VkImage)); 	//createTmp
 	assert(sci);
 	{
 		VkResult  err;
@@ -3086,13 +3132,13 @@ VkInf::VkInf( HINSTANCE hInstance, HWND hWin, int _width, int _height, int unit_
 	//---------------------------------------------------------
 //	vk.swapchain_image_resources = (SwapchainImageResources *)malloc(sizeof(SwapchainImageResources) * vk.swapchainImageCount);	//create24s
 //	assert(vk.swapchain_image_resources);
-	vk.sir_image						=(VkImage* 			)malloc(sizeof(VkImage			) * vk.swapchainImageCount);
-	vk.sir_cmdbuf						=(VkCommandBuffer* 	)malloc(sizeof(VkCommandBuffer	) * vk.swapchainImageCount);
-	vk.sir_graphics_to_present_cmdbuf	=(VkCommandBuffer* 	)malloc(sizeof(VkCommandBuffer	) * vk.swapchainImageCount);
-	vk.sir_imgview						=(VkImageView* 		)malloc(sizeof(VkImageView		) * vk.swapchainImageCount);
+	vk.sir_image						=(VkImage* 			)malloc(sizeof(VkImage			) * vk.swapchainImageCount);		//create32
+	vk.sir_cmdbuf						=(VkCommandBuffer* 	)malloc(sizeof(VkCommandBuffer	) * vk.swapchainImageCount);		//create33
+	vk.sir_graphics_to_present_cmdbuf	=(VkCommandBuffer* 	)malloc(sizeof(VkCommandBuffer	) * vk.swapchainImageCount);		//create34
+	vk.sir_imgview						=(VkImageView* 		)malloc(sizeof(VkImageView		) * vk.swapchainImageCount);		//create35
 //	vk.sir_uniform_buffer				=(VkBuffer* 		)malloc(sizeof(VkBuffer			) * vk.swapchainImageCount);
 //	vk.sir_uniform_memory				=(VkDeviceMemory* 	)malloc(sizeof(VkDeviceMemory	) * vk.swapchainImageCount);
-	vk.sir_framebuffer					=(VkFramebuffer* 	)malloc(sizeof(VkFramebuffer	) * vk.swapchainImageCount);
+	vk.sir_framebuffer					=(VkFramebuffer* 	)malloc(sizeof(VkFramebuffer	) * vk.swapchainImageCount);		//create36
 //	vk.sir_descriptor_set				=(VkDescriptorSet* 	)malloc(sizeof(VkDescriptorSet	) * vk.swapchainImageCount);
 
 	{
@@ -3127,7 +3173,7 @@ VkInf::VkInf( HINSTANCE hInstance, HWND hWin, int _width, int _height, int unit_
 				, vk.sir_imgview[i]
 			);
 		}
-		free( sci );
+		free( sci ); 	//createTmp
 	}
 
 	//---------------------------------------------------------
@@ -3144,7 +3190,7 @@ VkInf::VkInf( HINSTANCE hInstance, HWND hWin, int _width, int _height, int unit_
 	//---------------------
 	vk.depth_inf.format = VK_FORMAT_D16_UNORM;
 
-	vk_depth_CreateImage(
+	vk_depth_CreateImage0(
 		  vk.device 
 		, _width
 		, _height
@@ -3177,11 +3223,11 @@ VkInf::VkInf( HINSTANCE hInstance, HWND hWin, int _width, int _height, int unit_
 
 
 	//---------------------
-	// ディスクリプターレイアウト作成
+	// ディスクリプターセットレイアウト作成
 	//---------------------
-	vk_createDescriptionLayout(
+	vk_CreateDescriptorSetLayout(
 		  vk.device
-		, tex_max	//DEMO_TEXTURE_COUNT
+		, tex_max			//DEMO_TEXTURE_COUNT
 
 		, vk.desc_layout	//create11
 	);
@@ -3190,9 +3236,9 @@ VkInf::VkInf( HINSTANCE hInstance, HWND hWin, int _width, int _height, int unit_
 	// デスクリプタプールの作成
 	//-----------------------------------------------------
 	{
-	vk_createDescripterPool(									
+	vkCreateDescriptorPool(									
 		  vk.device
-		, tex_max	//DEMO_TEXTURE_COUNT
+		, tex_max		//DEMO_TEXTURE_COUNT
 		, vk.swapchainImageCount * unit_max
 
 		, vk.desc_pool	//create6
@@ -3202,7 +3248,7 @@ VkInf::VkInf( HINSTANCE hInstance, HWND hWin, int _width, int _height, int unit_
 	//-----------------------------------------------------
 	// パイプラインレイアウトの作成
 	//-----------------------------------------------------
-	vk_createPipelineLayout(
+	vk_CreatePipelineLayout(
 		  vk.device 
 		, vk.desc_layout
 
@@ -3212,7 +3258,7 @@ VkInf::VkInf( HINSTANCE hInstance, HWND hWin, int _width, int _height, int unit_
 	//-----------------------------------------------------
 	// レンダーパスの作成
 	//-----------------------------------------------------
-	vk_createRenderPass(
+	vk_CreateRenderPass(
 		  vk.device 
 		, vk.format
 		, vk.depth_inf.format
@@ -3224,21 +3270,19 @@ VkInf::VkInf( HINSTANCE hInstance, HWND hWin, int _width, int _height, int unit_
 	//-----------------------------------------------------
 	// パイプラインキャッシュの作成
 	//-----------------------------------------------------
-	{
 	vk_CreatePipelineCache(
 		  vk.device 
 		, vk.render_pass
 
 		, vk.pipelineCache	//create8
 	);
-	}
 
 	//-----------------------------------------------------
 	// コマンドバッファの作成
 	//-----------------------------------------------------
 	for (uint32_t i = 0; i < vk.swapchainImageCount; i++) 
 	{
-		vk_AllocateCommandBuffers(
+		vk_AllocateCommandBuffers(	//create21_AllocateCommandBuffers
 			  vk.device
 			, vk.cmd_pool
 
@@ -3297,7 +3341,7 @@ VkInf::~VkInf()
 
 	for (i = 0; i < vk.swapchainImageCount; i++) 
 	{
-		vkFreeCommandBuffers(vk.device, vk.cmd_pool, 1, &vk.sir_cmdbuf[i]);	//create21	*	vk2 create
+		vkFreeCommandBuffers(vk.device, vk.cmd_pool, 1, &vk.sir_cmdbuf[i]);	//create21_AllocateCommandBuffers
 	}
 
 
@@ -3319,11 +3363,11 @@ VkInf::~VkInf()
 		vkFreeMemory(vk.device, vk.textures[i].devmem, NULL);			//create14	*	setup
 		vkDestroySampler(vk.device, vk.textures[i].sampler, NULL);		//create15	*	setup
 	}
-	vkDestroySwapchainKHR(vk.device, vk.swapchain, NULL);			//create16	*	setup
+	vkDestroySwapchainKHR(vk.device, vk.swapchain, NULL);				//create16	*	setup
 
 	vkDestroyImageView(vk.device, vk.depth_inf.imgview, NULL);			//create17	*	setup
 	vkDestroyImage(vk.device, vk.depth_inf.image, NULL);				//create18	*	setup
-	vkFreeMemory(vk.device, vk.depth_inf.devmem, NULL);					//create19	*	setup
+	vkFreeMemory(vk.device, vk.depth_inf.devmem, NULL);					//create19_AllocateMemory
 
 	for (int i = 0; i < vk.swapchainImageCount; i++) 
 	{
@@ -3331,13 +3375,13 @@ VkInf::~VkInf()
 	}
 
 //	free(vk.swapchain_image_resources);									//create24	*	setup
-	free(vk.sir_image);
-	free(vk.sir_cmdbuf);
-	free(vk.sir_graphics_to_present_cmdbuf);
-	free(vk.sir_imgview);
+	free(vk.sir_image);													//create32
+	free(vk.sir_cmdbuf);												//create33
+	free(vk.sir_graphics_to_present_cmdbuf);							//create34
+	free(vk.sir_imgview);												//create35
 //	free(vk.sir_uniform_buffer);
 //	free(vk.sir_uniform_memory);
-	free(vk.sir_framebuffer);
+	free(vk.sir_framebuffer);											//create36	
 //	free(vk.sir_descriptor_set);
 
 	vkDestroyCommandPool(vk.device, vk.cmd_pool, NULL);					//create26	*	setup

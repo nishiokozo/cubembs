@@ -21,11 +21,13 @@
 #include "win.h"
 #include "vect.h"
 #include "enemy.h"
+#include "core.h"
+//#include "fighter.h"
 
 vect44 g_view;
 
 	VkInf* g_pVk;
-const char *tex_files[] = {"lunarg.ppm"};
+//const char *tex_files[] = {"lunarg.ppm"};
 
 //-----------------------------------------------------------------------------
 int main(int argc, char *argv[])
@@ -41,12 +43,14 @@ int main(int argc, char *argv[])
 		, pWin->hWin
 		, pWin->win_width
 		, pWin->win_height
-		, 200//unit_MAX
+		, 20000//unit_MAX
 		, 1//DEMO_TEXTURE_COUNT
 	);
 
 	enemy_create();
-
+	core_create();
+//	fighter_create();
+	
 	//-----------------------------------------------------
 	// ƒƒCƒ“ƒ‹[ƒv
 	//-----------------------------------------------------
@@ -88,6 +92,8 @@ int main(int argc, char *argv[])
 			printf("%d ",lim2 );
 		}
 		
+			core_draw();
+//			fighter_draw();
 		//-----------------------------------------------------
 		// •`‰æ
 		//-----------------------------------------------------
@@ -96,6 +102,11 @@ int main(int argc, char *argv[])
 			vk2_updateBegin( g_pVk->vk, pWin->win_width, pWin->win_height );
 
 			enemy_update();
+			core_update();
+			core_draw();
+
+//			fighter_update();
+//			fighter_draw();
 			
 			vk2_updateEnd( g_pVk->vk );
 

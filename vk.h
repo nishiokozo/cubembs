@@ -113,40 +113,6 @@ struct VulkanInf
 	uint32_t queue_family_count;
 };
 
-class VkInf
-{
-public:
-	VulkanInf vk;
-	bool	flgSetModel;
-
-	bool isNull()
-	{
-		return ((long long)this==0);
-	}
-	
-	void release()
-	{
-	
-	printf("---relese\n");
-		delete this;
-	}
-
-/*
-	void setmodel( int _width, int _height
-		,void* pDataVert
-		,int sizeofStructDataVert
-	);
-	void releaseModel();
-
-	void v_draw(
-		 void*	pMVP
-		,int matrixSize
-	);
-*/
-	VkInf( HINSTANCE hInstance, HWND hWin, int _width, int _height, int unit_max, int tex_max );
-	~VkInf();
-
-};
 
 //void vk2_create( VulkanInf& vk, int _width, int _height
 //	, int unit_cnt
@@ -183,7 +149,9 @@ void vk2_loadTexture( VulkanInf& vk
 	, const char** tex_files
 );
 
+//-----------------------------------------------------------------------------
 void vk2_loadModel( VulkanInf& vk
+//-----------------------------------------------------------------------------
 	,void* pDataVert
 	,int sizeofStructDataVert
 
@@ -194,7 +162,7 @@ void vk2_loadModel( VulkanInf& vk
 	, const char* fn_frag
 	, const char** 	tex_files
 	, const int		tex_cnt
- );
+);
 //-----------------------------------------------------------------------------
 void vk2_cmd2( VulkanInf& vk
 //-----------------------------------------------------------------------------
@@ -204,3 +172,55 @@ void vk2_cmd2( VulkanInf& vk
 		,int _firstInstance		// = 0;
 	, VkDescriptorSet* 			&	sir_descriptor_set
 );
+
+
+class VkInf
+{
+public:
+	VulkanInf vk;
+//	bool	flgSetModel;
+
+	bool isNull()
+	{
+		return ((long long)this==0);
+	}
+	
+	void release()
+	{
+	
+	printf("---relese\n");
+		delete this;
+	}
+	VkInf( HINSTANCE hInstance, HWND hWin, int _width, int _height, int unit_max, int tex_max );
+	~VkInf();
+
+	void loadModel(
+		 void* pDataVert
+		,int sizeofStructDataVert
+
+		, VkBuffer* 				&	sc_uniform_buffer
+		, VkDeviceMemory* 			&	sc_uniform_memory
+		, VkDescriptorSet* 			&	sc_descriptor_set
+		, const char* fn_vert
+		, const char* fn_frag
+		, const char** 	tex_files
+		, const int		tex_cnt
+	);
+	void unloadModel(
+		  VkBuffer* 				&	sir_uniform_buffer
+		, VkDeviceMemory* 			&	sir_uniform_memory
+		, VkDescriptorSet* 			&	sir_descriptor_set
+	);
+	void drawModel(
+		 const void* pMVP
+		,int matrixSize
+		, VkDeviceMemory* 			&	sir_uniform_memory
+		,int _vertexCount
+		,int _instanceCount
+		,int _firstVertex
+		,int _firstInstance
+		, VkDescriptorSet* 			&	sir_descriptor_set
+	);
+
+};
+

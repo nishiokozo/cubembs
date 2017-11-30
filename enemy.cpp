@@ -20,30 +20,20 @@
 #include "vk.h"
 #include "win.h"
 #include "vect.h"
+#include "unit12.h"
 #include "enemy.h"
 
-extern	VkInf* g_pVk;
+
+
+//=============
 extern	vect44 g_view;
 
-struct vktexcube_vs_uniform 
-{
-	// Must start with MVP
-	float mvp[4][4];
-	float position[12 * 3][4];
-	float attr[12 * 3][4];
-};
 
 
-static const	int	unit_MAX = 5;
-static int unit_cnt=0;
-static vktexcube_vs_uniform*	dataVert			;//= new vktexcube_vs_uniform[unit_MAX];
-static VkBuffer** 				sc_uniform_buffer	;//= new VkBuffer*[unit_MAX];
-static VkDeviceMemory** 		sc_uniform_memory	;//= new VkDeviceMemory*[unit_MAX];
-static VkDescriptorSet** 		sc_descriptor_set	;//= new VkDescriptorSet*[unit_MAX];
-static vect44*					mvp					;//= new vect44[unit_MAX];
-static vect44* 					g_model				;//= new vect44[unit_MAX];
 
-static vktexcube_vs_uniform 	dataVertDelta = 
+static const char 		*tex_files[] = {"lunarg.ppm"};
+
+static Unit12::vk_vert12 	dataVertPhong0 = 
 {
 	{//mvp
 		0,0,0,0,
@@ -138,7 +128,8 @@ static vktexcube_vs_uniform 	dataVertDelta =
 		{ 1.0f , 0.0f }, 
 	}
 };
-static vktexcube_vs_uniform 	dataVertConst = 
+
+static Unit12::vk_vert12 	dataVertConst0 = 
 {
 	{//mvp
 		0,0,0,0,
@@ -236,131 +227,98 @@ static vktexcube_vs_uniform 	dataVertConst =
 
 	}
 };
-static const char *tex_files[] = {"lunarg.ppm"};
+
+
+
+
+
+static const int	unit_MAX = 5;
+int					g_umcnt;
+Unit12*				g_unit;
 
 
 //-----------------------------------------------------------------------------
 void enemy_create()
 //-----------------------------------------------------------------------------
 {
-
-	dataVert			= new vktexcube_vs_uniform[unit_MAX];
-	sc_uniform_buffer	= new VkBuffer*[unit_MAX];
-	sc_uniform_memory	= new VkDeviceMemory*[unit_MAX];
-	sc_descriptor_set	= new VkDescriptorSet*[unit_MAX];
-	mvp					= new vect44[unit_MAX];
-	g_model				= new vect44[unit_MAX];
-
-	//---------------------------------------------------------
-	//	
-	//---------------------------------------------------------
-	unit_cnt=0;
-	//---------------------------------------------------------
-	//	モデルコピー 
-	//---------------------------------------------------------
-	for ( int u = 0; u < unit_MAX; u++ )
-	{
-//		memcpy( &dataVert[u], &dataVertConst,  sizeof(vktexcube_vs_uniform) );
-		memcpy( &dataVert[u], &dataVertDelta,  sizeof(vktexcube_vs_uniform) );
-		unit_cnt++;
-	}
+	g_umcnt = unit_MAX;
+	g_unit = new Unit12[unit_MAX];
 
 	//---------------------------------------------------------
 	// 透視変換行列の作成
 	//---------------------------------------------------------
-	for ( int u = 0; u < unit_cnt; u++ )
+	for ( int u = 0; u < g_umcnt; u++ )
 	{
-		g_model[u].identity();
-		g_model[u].translate( (-(unit_cnt-1)/2)+u*1.0,0,0);
+		g_unit[u].mat_model.identity();
+		g_unit[u].mat_model.translate( (-(g_umcnt-1)/2)+u*1.0,-2,0);
 	}
 
-	for ( int u = 0; u < unit_cnt; u++ )
+	for ( int u = 0; u < g_umcnt; u++ )
 	{
-//		 	g_model[u].rotX(RAD(0.1));
-	 	g_model[u].rotY(RAD(80));
-	}
-	for ( int u = 0; u < unit_cnt; u++ )
-	{
-		mvp[u].identity();
-		mvp[u].perspectiveGL( 45, 512.0/512.0,0.1,100		 );
-		mvp[u].m[1][1] *= -1; // GL to Vulkan
-		mvp[u] =  g_model[u] * g_view * mvp[u];
+		g_unit[u].mat_model.rotY(RAD(45.2));
 	}
 
+	for ( int u = 0; u < g_umcnt; u++ )
+	{
+		g_unit[u].mvp.identity();
+		g_unit[u].mvp.perspectiveGL( 45, 512.0/512.0,0.1,100		 );
+		g_unit[u].mvp.m[1][1] *= -1; // GL to Vulkan
+		g_unit[u].mvp =  g_unit[u].mat_model * g_view * g_unit[u].mvp;
+	}
 
 	//---------------------------------------------------------
-	//	モデル登録 
+	// モデル読み込み
 	//---------------------------------------------------------
-	for ( int u = 0 ; u < unit_cnt ; u++ )
+	for ( int u = 0 ; u < g_umcnt ; u++ )
 	{
-		vk2_loadModel( g_pVk->vk
-			, (void*)&dataVert[u]
-			, sizeof(struct vktexcube_vs_uniform)
-			, sc_uniform_buffer[u]
-			, sc_uniform_memory[u]
-			, sc_descriptor_set[u]
-//			, "s-const-tex-vert.spv", "s-const-tex-frag.spv"
-			, "s-phong-vert.spv", "s-phong-frag.spv"
+		g_unit[u].loadModel(
+//			  &dataVertConst0, "s-const-tex-vert.spv", "s-const-tex-frag.spv"
+			  &dataVertPhong0, "s-phong-vert.spv", "s-phong-frag.spv"
 			, tex_files
 			, 1
 		);
 	}
+
 }
+
 //-----------------------------------------------------------------------------
 void enemy_remove()
 //-----------------------------------------------------------------------------
 {
 
-	//---------------------------------------------------------
-	//	モデル 
-	//---------------------------------------------------------
-	for ( int u = 0 ; u < unit_cnt ; u++ )
+	for ( int u = 0 ; u < g_umcnt ; u++ )
 	{
-		vk2_removeModel( g_pVk->vk
-			, sc_uniform_buffer[u]
-			, sc_uniform_memory[u]
-			, sc_descriptor_set[u]
-		);
+		g_unit[u].unloadModel();
 	}
-
-	delete	[] dataVert;
-	delete	[] sc_uniform_buffer;
-	delete 	[] sc_uniform_memory;
-	delete 	[] sc_descriptor_set;
-	delete	[] mvp;
-	delete	[] g_model;
+	delete [] g_unit;
 
 }
 //-----------------------------------------------------------------------------
 void enemy_update()
 //-----------------------------------------------------------------------------
 {
-	for ( int u = 0; u < unit_cnt; u++ )
+	// 計算
+	for ( int u = 0; u < g_umcnt; u++ )
 	{
-	 	g_model[u].rotX(RAD(0.1));
-	 	g_model[u].rotY(RAD(1));
+		if ( u == 0 ) g_unit[u].mat_model.rotY(RAD(3)/(u+3));
+		if ( u == 1 ) g_unit[u].mat_model.rotY(RAD(3)/(u+3));
+		if ( u == 2 ) g_unit[u].mat_model.rotY(RAD(3)/(u+3));
+		if ( u == 3 ) g_unit[u].mat_model.rotY(RAD(3)/(u+3));
+		if ( u == 4 ) g_unit[u].mat_model.rotY(RAD(3)/(u+3));
+		if ( u == 5 ) g_unit[u].mat_model.rotY(RAD(3)/(u+3));
 	}
-	for ( int u = 0; u < unit_cnt; u++ )
+	for ( int u = 0; u < g_umcnt; u++ )
 	{
-		mvp[u].identity();
-		mvp[u].perspectiveGL( 45, 512.0/512.0,0.1,100		 );
-		mvp[u].m[1][1] *= -1; // GL to Vulkan
-		mvp[u] =  g_model[u] * g_view * mvp[u];
-	}
-
-	for ( int u =0 ; u < unit_cnt ; u++ )
-	{
-		vk2_drawPolygon( g_pVk->vk
-			, mvp[u].m
-			, sizeof(vect44)
-			, sc_uniform_memory[u]
-			, 12*3	//_vertexCount
-			, 1		//_instanceCount
-			, 0		//_firstVertex
-			, 0		//_firstInstance
-			, sc_descriptor_set[u]
-		);
+		g_unit[u].mvp.identity();
+		g_unit[u].mvp.perspectiveGL( 45, 512.0/512.0,0.1,100		 );
+		g_unit[u].mvp.m[1][1] *= -1; // GL to Vulkan
+		g_unit[u].mvp =  g_unit[u].mat_model * g_view * g_unit[u].mvp;
 	}
 
+	// 描画
+	for ( int u =0 ; u < g_umcnt ; u++ )
+	{
+		g_unit[u].drawModel();
+	}
 
 }
