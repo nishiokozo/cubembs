@@ -275,19 +275,9 @@ static Unit12::vk_vert12 	dataVertConst0 =
 	}
 };
 
-/*
-static const	int	unit_MAX = 1;
-static int unit_cnt=0;
-static vk_texcube_vs_uniform*	dataVert			;
-static VkBuffer** 				sc_uniform_buffer	;
-static VkDeviceMemory** 		sc_uniform_memory	;
-static VkDescriptorSet** 		sc_descriptor_set	;
-static vect44*					mvp					;
-static vect44* 					g_model				;
-*/
 
 static	Unit12*	g_unit;
-//static int g_cube;
+
 
 static	float g_col[] = { 0.8, 0.0, 0.0, 1.0 };
 //-----------------------------------------------------------------------------
@@ -303,12 +293,6 @@ static	void drawCube( matrix m, float size )
 
 	memcpy( g_unit->mat_model.m, m.m,sizeof(float[16]));
 	g_unit->mat_model.m[3][2] = -g_unit->mat_model.m[3][2];
-//	printf("pos1 %f %f %f\n", g_unit->mat_model.m[3][0], g_unit->mat_model.m[3][1], g_unit->mat_model.m[3][2] );
-
-//		g_unit->mat_model.identity();
-//		g_unit->mat_model.translate( (-(unit_cnt-1)/2)+0*1.0,0,0);
-
-//	printf("pos2 %f %f %f\n", g_unit->mat_model.m[3][0], g_unit->mat_model.m[3][1], g_unit->mat_model.m[3][2] );
 
 	vect44 mvp;
 	{
@@ -320,147 +304,40 @@ static	void drawCube( matrix m, float size )
 
 		g_unit->drawModel();
 
-/*
-//	for ( int u =0 ; u < unit_cnt ; u++ )
-	{
-		vk2_drawPolygon( g_pVk->vk
-			, mvp.m//g_unit->mvp.m
-			, sizeof(vect44)
-			, sc_uniform_memory[u]
-			, 12*3	//_vertexCount
-			, 1		//_instanceCount
-			, 0		//_firstVertex
-			, 0		//_firstInstance
-			, sc_descriptor_set[u]
-		);
-	}
-*/
 
-/*
-	glPushMatrix();
-
-		glMultMatrixf( (float*)m.m );
-
-		glCallList(g_cube);
-
-	glPopMatrix();
-*/
 }
 
 //-----------------------------------------------------------------------------
-void	core_create( )
+void	core_create()
 //-----------------------------------------------------------------------------
 {
-/*
-	dataVert			= new vk_texcube_vs_uniform[unit_MAX];
-	sc_uniform_buffer	= new VkBuffer*[unit_MAX];
-	sc_uniform_memory	= new VkDeviceMemory*[unit_MAX];
-	sc_descriptor_set	= new VkDescriptorSet*[unit_MAX];
-	mvp					= new vect44[unit_MAX];
-	g_model				= new vect44[unit_MAX];
-
-*/
 	g_unit = new Unit12;
 
-	//---------------------------------------------------------
-	//	
-	//---------------------------------------------------------
-//	unit_cnt=0;
-	//---------------------------------------------------------
-	//	モデルコピー 
-	//---------------------------------------------------------
-/*
-	for ( int u = 0; u < unit_MAX; u++ )
-	{
-//		memcpy( &dataVert[u], &dataVertConst,  sizeof(vk_texcube_vs_uniform) );
-		memcpy( &dataVert[u], &dataVertConst,  sizeof(vk_texcube_vs_uniform) );
-		unit_cnt++;
-	}
-*/
+	g_unit->mat_model.identity();
 
-	//---------------------------------------------------------
-	// 透視変換行列の作成
-	//---------------------------------------------------------
-//	for ( int u = 0; u < unit_cnt; u++ )
-//	{
-		g_unit->mat_model.identity();
-//		g_unit->mat_model.translate( (-(unit_cnt-1)/2)+u*1.0,0,0);
-//	}
-
-//	for ( int u = 0; u < unit_cnt; u++ )
-//	{
-//		 	g_unit->mat_model.rotY(RAD(45.2));
-//	}
-//	for ( int u = 0; u < unit_cnt; u++ )
-//	{
-		g_unit->mvp.identity();
-		g_unit->mvp.perspectiveGL( 45, 512.0/512.0,0.1,100		 );
-		g_unit->mvp.m[1][1] *= -1; // GL to Vulkan
-		g_unit->mvp =  g_unit->mat_model * g_view * g_unit->mvp;
-//	}
-
+	g_unit->mvp.identity();
+	g_unit->mvp.perspectiveGL( 45, 512.0/512.0,0.1,100		 );
+	g_unit->mvp.m[1][1] *= -1; // GL to Vulkan
+	g_unit->mvp =  g_unit->mat_model * g_view * g_unit->mvp;
 
 	//---------------------------------------------------------
 	//	モデル登録 
 	//---------------------------------------------------------
-		g_unit->loadModel(
-			  &dataVertConst0, "s-const-tex-vert.spv", "s-const-tex-frag.spv"
-//			  &dataVertPhong0, "s-phong-vert.spv", "s-phong-frag.spv"
-			, tex_files
-			, 1
-		);
+	g_unit->loadModel(
+		  &dataVertConst0, "s-const-tex-vert.spv", "s-const-tex-frag.spv"
+		//&dataVertPhong0, "s-phong-vert.spv", "s-phong-frag.spv"
+		, tex_files
+		, 1
+	);
 
-/*
-	for ( int u = 0 ; u < unit_cnt ; u++ )
-	{
-		vk2_loadModel( g_pVk->vk
-			
-			, (void*)&dataVert[u]
-			, sizeof(struct vk_texcube_vs_uniform)
-			, sc_uniform_buffer[u]
-			, sc_uniform_memory[u]
-			, sc_descriptor_set[u]
-			, "s-const-tex-vert.spv", "s-const-tex-frag.spv"
-//			, "s-phong-vert.spv", "s-phong-frag.spv"
-			, tex_files
-			, 1
-		);
-	}
-*/
-/*
-	//	モデル作成
-	g_cube = glGenLists(1);
-
-	glNewList(g_cube, GL_COMPILE);
-
-		glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, g_col);
-		glBegin(GL_QUADS);
-		{
-			int i;
-			int j;
-			float	size = 1.0f;
-			for (j = 0; j < 6; ++j) 
-			{
-				glNormal3fv(normal[j]);
-				for (i = 0; i < 4; ++i) 
-				{
-					float	v[3];
-					v[0] = vertex[face[j][i]][0] * size;
-					v[1] = vertex[face[j][i]][1] * size;
-					v[2] = vertex[face[j][i]][2] * size;
-					glVertex3fv( v );
-				}
-			}
-		}
-		glEnd();
-
-	glEndList();
-
-	//	初期位置
-*/
 	g_mat = mtrans( 0,10,0 );
 
-//	return	true;
+}
+//-----------------------------------------------------------------------------
+void	core_remove()
+//-----------------------------------------------------------------------------
+{
+	delete g_unit;
 }
 //-----------------------------------------------------------------------------
 static	void updateBody( matrix* pM1, vector v1, vector pt, vector vs )

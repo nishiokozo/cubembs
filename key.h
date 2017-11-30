@@ -239,4 +239,4 @@ enum
 };
 */
 int	key_update();
-int key_init( int argc, char *argv[] );
+int key_init();

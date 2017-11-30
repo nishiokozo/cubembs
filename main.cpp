@@ -22,12 +22,14 @@
 #include "vect.h"
 #include "enemy.h"
 #include "core.h"
-//#include "fighter.h"
+#include "vector.h"
+#include "mouse.h"
 
 vect44 g_view;
 
 	VkInf* g_pVk;
-//const char *tex_files[] = {"lunarg.ppm"};
+
+//Mouse	g_mouse();
 
 //-----------------------------------------------------------------------------
 int main(int argc, char *argv[])
@@ -38,6 +40,7 @@ int main(int argc, char *argv[])
 
 	//---
 	WinInf* pWin = new WinInf( "msb", 128, 128 );
+
 	g_pVk = new VkInf( 
 		  pWin->hInstance
 		, pWin->hWin
@@ -49,7 +52,6 @@ int main(int argc, char *argv[])
 
 	enemy_create();
 	core_create();
-//	fighter_create();
 	
 	//-----------------------------------------------------
 	// ƒƒCƒ“ƒ‹[ƒv
@@ -57,7 +59,8 @@ int main(int argc, char *argv[])
 	MSG msg;   // message
 	msg.wParam = 0;
 
-	key_init(argc,argv);
+	key_init();
+	mouse_init();
 
 	int lim1 = 0;
 	int lim2 = 0;
@@ -85,35 +88,37 @@ int main(int argc, char *argv[])
 		}
 		if ( lim2 )
 		{
+			core_remove();
 			enemy_remove();
 			enemy_create();
+			core_create();
 		
 			lim2--;
 			printf("%d ",lim2 );
 		}
 		
-			core_draw();
-//			fighter_draw();
 		//-----------------------------------------------------
 		// •`‰æ
 		//-----------------------------------------------------
 		if ( g_pVk ) 
 		{
-			vk2_updateBegin( g_pVk->vk, pWin->win_width, pWin->win_height );
+			g_pVk->drawBegin( pWin->win_width, pWin->win_height );
 
 			enemy_update();
 			core_update();
 			core_draw();
 
-//			fighter_update();
-//			fighter_draw();
-			
-			vk2_updateEnd( g_pVk->vk );
+			g_pVk->drawEnd();
 
 		}
 
 		key_update();
+//		g_mouse.update();
+	mouse_update();
 
+
+//		if ( mouse.hi.l )		printf("mouse l %f %f\n", mouse.sx, mouse.sy );
+//		if ( mouse.hi.r )		printf("mouse r %f %f\n", mouse.sx, mouse.sy );
 	}
 
 	//-----------------------------------------------------
@@ -122,6 +127,7 @@ int main(int argc, char *argv[])
 	if ( g_pVk ) 
 	{
 		enemy_remove();
+		core_remove();
 		delete g_pVk;g_pVk=0;
 	}
 

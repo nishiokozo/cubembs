@@ -222,5 +222,8 @@ public:
 		, VkDescriptorSet* 			&	sir_descriptor_set
 	);
 
+	void drawBegin( int _width, int _height );
+	void drawEnd();
+
 };
 
