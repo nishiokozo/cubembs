@@ -2758,7 +2758,10 @@ void VkInf::loadModel(
 	//-----------------------------------------------------
 	// 
 	//-----------------------------------------------------
-	vk2_loadTexture( vk, tex_files, tex_cnt );
+	if ( tex_cnt > 0 )
+	{
+		vk2_loadTexture( vk, tex_files, tex_cnt );
+	}
 
 
 	//-----------------------------------------------------
@@ -2839,7 +2842,7 @@ void VkInf::loadModel(
 
 		vk_UpdateDescriptorSets(
 			  vk.device
-			, DEMO_TEXTURE_COUNT
+			, tex_cnt
 			, vk.textures 
 			, sizeofStructDataVert
 			, vkunit.uniform_buffer[i]
@@ -2874,6 +2877,15 @@ void	VkInf::unloadModel(
 		free(vkunit.uniform_buffer); 	//create37_malloc
 		free(vkunit.uniform_memory); 	//create38_malloc
 		free(vkunit.descriptor_set); 	//create39_malloc
+
+	for (int i = 0; i < vkunit.tex_cnt; i++) 
+	{
+		vkDestroyImageView(vk.device, vk.textures[i].imgview, NULL);	//create12	*	setup
+		vkDestroyImage(vk.device, vk.textures[i].image, NULL);			//create13	*	setup
+		vkFreeMemory(vk.device, vk.textures[i].devmem, NULL);			//create14	*	setup
+		vkDestroySampler(vk.device, vk.textures[i].sampler, NULL);		//create15	*	setup
+	}
+
 }
 //-----------------------------------------------------------------------------
 void	VkInf::drawModel(
@@ -3345,13 +3357,6 @@ VkInf::~VkInf()
 		vkDestroySemaphore(vk.device, vk.draw_complete_semaphores[i], NULL);				//create3	*	setup
 	}
 
-	for (int i = 0; i < DEMO_TEXTURE_COUNT; i++) 
-	{
-		vkDestroyImageView(vk.device, vk.textures[i].imgview, NULL);	//create12	*	setup
-		vkDestroyImage(vk.device, vk.textures[i].image, NULL);			//create13	*	setup
-		vkFreeMemory(vk.device, vk.textures[i].devmem, NULL);			//create14	*	setup
-		vkDestroySampler(vk.device, vk.textures[i].sampler, NULL);		//create15	*	setup
-	}
 	vkDestroySwapchainKHR(vk.device, vk.swapchain, NULL);				//create16	*	setup
 
 	vkDestroyImageView(vk.device, vk.depth_inf.imgview, NULL);			//create17	*	setup
