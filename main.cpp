@@ -28,7 +28,7 @@
 #include "enemy.h"
 #include "camera.h"
 
-vect44 g_view;
+vect44 g_view,g_proj;
 
 	VkInf* g_pVk;
 
@@ -78,6 +78,10 @@ int main(int argc, char *argv[])
 	g_view.identity();
 	g_view.rotY(rad(180));
 	g_view.translate(0,0,-5);
+
+		g_proj.identity();
+		g_proj.perspectiveGL( 45, 512.0/512.0,0.1,100		 );
+		g_proj.m[1][1] *= -1; // GL to Vulkan
 
 	//---
 	WinInf* pWin = new WinInf( "msb", 128, 128 );

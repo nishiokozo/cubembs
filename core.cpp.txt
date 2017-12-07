@@ -1,11 +1,4 @@
-/*
-#define APIENTRY
-#include <stdio.h>
-#include <GL/gl.h>
-#include "l.h"
 //#define _GNU_SOURCE // M_PI Ç™íËã`Ç≥ÇÍÇÈ
-*/
-
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -27,18 +20,33 @@
 #include "vk.h"
 #include "win.h"
 #include "vect.h"
-#include "unit12.h"
-//#include "enemy.h"
+#include "enemy.h"
+//#include <GL/gl.h>
+//#include "l.h"
+
 //#include "camera.h"
 //#include "fighter.h"
+#include <math.h>
 #include "vector.h"
 #include "matrix.h"
-#include "fighter.h"
+#include "unit12.h"
 #include "core.h"
 
-
 static	matrix	g_mat;
+
+extern	VkInf* g_pVk;
+extern	vect44 g_view;
+
 /*
+struct vk_texcube_vs_uniform 
+{
+	// Must start with MVP
+	float mvp[4][4];
+	float position[12 * 3][4];
+	float attr[12 * 3][4];
+};
+*/
+
 static	float vertex[][3] = {
 
 	{ -0.0, -0.4, 1.5 },
@@ -70,11 +78,103 @@ static	float normal[][3] = {
 	{ 0.0, 1.0, 0.0 }
 };
 
-static int g_cube;
+static const char 		*tex_files[] = {"lunarg.ppm"};
 
+static Unit12::vk_vert12 	dataVertPhong0 = 
+{
+	{//mvp
+		0,0,0,0,
+		0,0,0,0,
+		0,0,0,0,
+		0,0,0,0,
+	},
+	{//xyzw
+		{ 0.00f ,  0.60f , -0.50f, 0.0f},  // -X side
+		{ 0.00f ,  0.00f ,  1.50f, 0.0f},
+		{ 0.00f ,  0.00f ,  1.50f, 0.0f},
+		{ 0.00f ,  0.00f ,  1.50f, 1.0f},
+		{ 0.50f ,  0.00f , -0.50f, 1.0f},
+		{ 0.00f ,  0.60f , -0.50f, 1.0f},
 
-static	float g_col[] = { 0.8, 0.0, 0.0, 1.0 };
-*/
+		{ 0.00f ,  0.60f , -0.50f, 0.0f},  // -Z side
+		{-0.50f ,  0.00f , -0.50f, 0.0f},
+		{-0.00f ,  0.60f , -0.50f, 0.0f},
+		{ 0.00f ,  0.60f , -0.50f, 1.0f},
+		{ 0.50f ,  0.00f , -0.50f, 1.0f},
+		{-0.50f ,  0.00f , -0.50f, 1.0f},
+
+		{-0.00f , -0.10f , -0.00f, 0.0f},  // -Y side
+		{ 0.00f , -0.10f , -0.00f, 0.0f},
+		{ 0.00f , -0.10f ,  0.00f, 0.0f},
+		{-0.00f , -0.10f , -0.00f, 0.0f},
+		{ 0.00f , -0.10f ,  0.00f, 0.0f},
+		{-0.00f , -0.10f ,  0.00f, 0.0f},
+
+		{ 0.50f ,  0.00f , -0.50f, 0.0f},  // +Y side
+		{ 0.00f ,  0.00f ,  1.50f, 0.0f},
+		{-0.00f ,  0.00f ,  1.50f, 0.0f},
+		{ 0.50f ,  0.00f , -0.50f, 1.0f},
+		{-0.00f ,  0.00f ,  1.50f, 1.0f},
+		{-0.50f ,  0.00f , -0.50f, 1.0f},
+
+		{ 0.00f ,  0.00f ,  0.00f, 0.0f},  // +X side
+		{ 0.00f ,  0.00f ,  0.00f, 0.0f},
+		{ 0.00f , -0.00f ,  0.00f, 0.0f},
+		{-0.00f , -0.00f ,  1.50f, 1.0f},
+		{-0.00f ,  0.60f , -0.50f, 1.0f},
+		{-0.50f , -0.00f , -0.50f, 1.0f},
+
+		{-0.00f ,  0.00f ,  1.50f, 0.0f},  // +Z side
+		{-0.00f , -0.00f ,  1.50f, 0.0f},
+		{ 0.00f ,  0.00f ,  1.50f, 0.0f},
+		{-0.00f , -0.00f ,  1.50f, 0.0f},
+		{ 0.00f , -0.00f ,  1.50f, 0.0f},
+		{ 0.00f ,  0.00f ,  1.50f, 0.0f},
+	},
+	{//normal
+		{ 0.0f , 1.0f },   // -X side
+		{ 1.0f , 1.0f }, 
+		{ 1.0f , 0.0f }, 
+		{ 0.75f, 0.63f, 0.19f }, 
+		{ 0.75f, 0.63f, 0.19f }, 
+		{ 0.75f, 0.63f, 0.19f }, 
+		     
+		{ 1.0f , 1.0f },   // -Z side
+		{ 0.0f , 0.0f }, 
+		{ 0.0f , 1.0f }, 
+		{ 0.0f , 0.0f,-1.0f }, 
+		{ 0.0f , 0.0f,-1.0f }, 
+		{ 0.0f , 0.0f,-1.0f }, 
+		     
+		{ 1.0f , 0.0f },   // -Y side
+		{ 1.0f , 1.0f }, 
+		{ 0.0f , 1.0f }, 
+		{ 1.0f , 0.0f }, 
+		{ 0.0f , 1.0f }, 
+		{ 0.0f , 0.0f }, 
+		     
+		{ 1.0f , 0.0f },   // +Y side
+		{ 0.0f , 0.0f }, 
+		{ 0.0f , 1.0f }, 
+		{ 0.0f ,-1.0f, 0.0f }, 
+		{ 0.0f ,-1.0f, 0.0f }, 
+		{ 0.0f ,-1.0f, 0.0f }, 
+		     
+		{ 1.0f , 0.0f },   // +X side
+		{ 0.0f , 0.0f }, 
+		{ 0.0f , 1.0f }, 
+		{-0.75f, 0.63f, 0.19f }, 
+		{-0.75f, 0.63f, 0.19f }, 
+		{-0.75f, 0.63f, 0.19f }, 
+		     
+		{ 0.0f , 0.0f },   // +Z side
+		{ 0.0f , 1.0f }, 
+		{ 1.0f , 0.0f }, 
+		{ 0.0f , 1.0f }, 
+		{ 1.0f , 1.0f }, 
+		{ 1.0f , 0.0f }, 
+	}
+};
 
 static Unit12::vk_vert12 	dataVertConst0 = 
 {
@@ -174,10 +274,12 @@ static Unit12::vk_vert12 	dataVertConst0 =
 
 	}
 };
-static Unit12*				g_unit;
-extern	vect44 g_view,g_proj;
-static const char 		*tex_files[] = {"lunarg.ppm"};
 
+
+static	Unit12*	g_unit;
+
+
+static	float g_col[] = { 0.8, 0.0, 0.0, 1.0 };
 //-----------------------------------------------------------------------------
 matrix	core_getMatrix()
 //-----------------------------------------------------------------------------
@@ -188,111 +290,54 @@ matrix	core_getMatrix()
 static	void drawCube( matrix m, float size )
 //-----------------------------------------------------------------------------
 {
-	memcpy( g_unit->mat_model.m, m.m, sizeof(matrix));
-/*
-	{
-		g_unit->mvp.identity();
-		g_unit->mvp.perspectiveGL( 45, 512.0/512.0,0.1,100		 );
-		g_unit->mvp.m[1][1] *= -1; // GL to Vulkan
-		g_unit->mvp =  g_unit->mat_model * g_view * g_unit->mvp;
-	}
-*/
-		g_unit->mvp =  g_unit->mat_model * g_view * g_proj;
 
-	// ï`âÊ
+	memcpy( g_unit->mat_model.m, m.m,sizeof(float[16]));
+	g_unit->mat_model.m[3][2] = -g_unit->mat_model.m[3][2];
+
+	vect44 mvp;
 	{
+		mvp.identity();
+		mvp.perspectiveGL( 45, 512.0/512.0,0.1,100		 );
+		mvp.m[1][1] *= -1; // GL to Vulkan
+		mvp =  g_unit->mat_model * g_view * mvp;
+	}
+
 		g_unit->drawModel();
-	}
-/*
 
-	glPushMatrix();
 
-		glMultMatrixf( (float*)m.m );
-
-		glCallList(g_cube);
-
-	glPopMatrix();
-*/
 }
 
+//-----------------------------------------------------------------------------
+void	core_create()
+//-----------------------------------------------------------------------------
+{
+	g_unit = new Unit12;
+
+	g_unit->mat_model.identity();
+
+	g_unit->mvp.identity();
+	g_unit->mvp.perspectiveGL( 45, 512.0/512.0,0.1,100		 );
+	g_unit->mvp.m[1][1] *= -1; // GL to Vulkan
+	g_unit->mvp =  g_unit->mat_model * g_view * g_unit->mvp;
+
+	//---------------------------------------------------------
+	//	ÉÇÉfÉãìoò^ 
+	//---------------------------------------------------------
+	g_unit->loadModel(
+		  &dataVertConst0, "s-const-tex-vert.spv", "s-const-tex-frag.spv"
+		//&dataVertPhong0, "s-phong-vert.spv", "s-phong-frag.spv"
+		, tex_files
+		, 1
+	);
+
+	g_mat = mtrans( 0,10,0 );
+
+}
 //-----------------------------------------------------------------------------
 void	core_remove()
 //-----------------------------------------------------------------------------
 {
-	delete	g_unit;
-}
-//-----------------------------------------------------------------------------
-int	core_create()
-//-----------------------------------------------------------------------------
-{
-	//	ÉÇÉfÉãçÏê¨
-/*
-	g_cube = glGenLists(1);
-
-	glNewList(g_cube, GL_COMPILE);
-
-		glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, g_col);
-		glBegin(GL_QUADS);
-		{
-			int i;
-			int j;
-			float	size = 1.0f;
-			for (j = 0; j < 6; ++j) 
-			{
-				glNormal3fv(normal[j]);
-				for (i = 0; i < 4; ++i) 
-				{
-					float	v[3];
-					v[0] = vertex[face[j][i]][0] * size;
-					v[1] = vertex[face[j][i]][1] * size;
-					v[2] = vertex[face[j][i]][2] * size;
-					glVertex3fv( v );
-				}
-			}
-		}
-		glEnd();
-
-	glEndList();
-*/
-	g_unit = new Unit12;
-
-	//---------------------------------------------------------
-	// ìßéãïœä∑çsóÒÇÃçÏê¨
-	//---------------------------------------------------------
-	{
-		g_unit->mat_model.identity();
-		g_unit->mat_model.translate( 0,-2,0);
-	}
-
-	{
-		g_unit->mat_model.rotY(RAD(45.2));
-	}
-
-/*
-	{
-		g_unit->mvp.identity();
-		g_unit->mvp.perspectiveGL( 45, 512.0/512.0,0.1,100		 );
-		g_unit->mvp.m[1][1] *= -1; // GL to Vulkan
-		g_unit->mvp =  g_unit->mat_model * g_view * g_unit->mvp;
-	}
-*/
-		g_unit->mvp =  g_unit->mat_model * g_view * g_proj;
-
-	//---------------------------------------------------------
-	// ÉÇÉfÉãì«Ç›çûÇ›
-	//---------------------------------------------------------
-	{
-		g_unit->loadModel(
-			  &dataVertConst0, "s-const-tex-vert.spv", "s-const-tex-frag.spv"
-//			  &dataVertPhong0, "s-phong-vert.spv", "s-phong-frag.spv"
-			, tex_files
-			, 1
-		);
-	}
-	//	èâä˙à íu
-	g_mat = mtrans( 0,10,0 );
-
-	return	true;
+	delete g_unit;
 }
 //-----------------------------------------------------------------------------
 static	void updateBody( matrix* pM1, vector v1, vector pt, vector vs )
@@ -312,7 +357,7 @@ static	void updateBody( matrix* pM1, vector v1, vector pt, vector vs )
 
 	vector p = pM1->vpos() +  pM1->mrot() * vs ;
 
-#if 1
+#if 0
 //	épê®êßå‰
 
 	vector	p0 = pM1->vpos();
@@ -372,8 +417,8 @@ int	core_update()
 	}
 	else
 	{
-		pt = fighter_getMatrix().vpos();
-//		pt = vector(0,0,0);
+//		pt = fighter_getMatrix().vpos();
+		pt = vector( 0, 0, 0 );
 		vs = vector( 0, 0, 1.3f );
 	}
 	
@@ -383,6 +428,8 @@ int	core_update()
 
 
 	vector vm = vnormal( pt - p0 );
+
+//	printf("vm %f %f %f\n", vm.x, vm.y, vm.z );
 
 	updateBody( &g_mat, vm, pt, vs );
 

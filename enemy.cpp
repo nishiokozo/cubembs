@@ -309,7 +309,7 @@ static Unit12::vk_vert12 	dataVertConst0 =
 static	const int unit_MAX = 50;
 //static	int g_umcnt;
 static Unit12*				g_unit;
-extern	vect44 g_view;
+extern	vect44 g_view,g_proj;
 static const char 		*tex_files[] = {"lunarg.ppm"};
 
 static	ENEMY_INF	enemy_inf[unit_MAX];

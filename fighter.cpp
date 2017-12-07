@@ -2,10 +2,13 @@
 #define APIENTRY
 #include <stdio.h>
 #include <GL/gl.h>
-#include "l.h"
-//#define _GNU_SOURCE // M_PI ‚ª’è‹`‚³‚ê‚é
-*/
 
+#include "l.h"
+#include "camera.h"
+#include "fighter.h"
+#include "core.h"
+#include "missile.h"
+*/
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -30,26 +33,44 @@
 #include "unit12.h"
 //#include "enemy.h"
 //#include "camera.h"
-//#include "fighter.h"
 #include "vector.h"
 #include "matrix.h"
+#include "mouse.h"
+
 #include "fighter.h"
-#include "core.h"
 
+typedef struct
+{
+	matrix	mat;
+	int		attack_lim;
 
-static	matrix	g_mat;
+	int		t_flg;
+	int		t_lim;
+	matrix	t_mf;
+} FIGHTER_INF;
+
+static	FIGHTER_INF	fighter_inf;
 /*
 static	float vertex[][3] = {
-
-	{ -0.0, -0.4, 1.5 },
-	{  0.0, -0.4, 1.5 },
-	{  0.0, -0.4, 1.5 },
-	{ -0.0, -0.4, 1.5 },
-
-	{ -0.05,  0.4, -0.5 },
-	{  0.05,  0.4, -0.5 },
-	{  0.7, -0.4, -0.5 },
-	{ -0.7, -0.4, -0.5 }
+#if 0
+	{ -0.0, -0.5, -0.1 },
+	{  0.0, -0.5, -0.1 },
+	{  0.1,  0.5, -0.5 },
+	{ -0.1,  0.5, -0.5 },
+	{ -0.1, -0.5,  0.1 },
+	{  0.1, -0.5,  0.1 },
+	{  0.6,  0.5,  0.5 },
+	{ -0.6,  0.5,  0.5 }
+#else
+	{ -0.5, -0.5, -0.5 },
+	{  0.5, -0.5, -0.5 },
+	{  0.5,  0.5, -0.5 },
+	{ -0.5,  0.5, -0.5 },
+	{ -0.5, -0.5,  0.5 },
+	{  0.5, -0.5,  0.5 },
+	{  0.5,  0.5,  0.5 },
+	{ -0.5,  0.5,  0.5 }
+#endif
 };
 
 static	int face[][4] = {
@@ -70,10 +91,8 @@ static	float normal[][3] = {
 	{ 0.0, 1.0, 0.0 }
 };
 
-static int g_cube;
-
-
-static	float g_col[] = { 0.8, 0.0, 0.0, 1.0 };
+static	float g_def[] = { 1.0, 1.0, 1.0, 1.0 };
+static	float g_amb[] = { 0.4, 0.4, 0.4, 1.0 };
 */
 
 static Unit12::vk_vert12 	dataVertConst0 = 
@@ -178,14 +197,15 @@ static Unit12*				g_unit;
 extern	vect44 g_view,g_proj;
 static const char 		*tex_files[] = {"lunarg.ppm"};
 
+
 //-----------------------------------------------------------------------------
-matrix	core_getMatrix()
+matrix	fighter_getMatrix()
 //-----------------------------------------------------------------------------
 {
-	return	g_mat;
+	return	fighter_inf.mat;
 }
 //-----------------------------------------------------------------------------
-static	void drawCube( matrix m, float size )
+static	void drawBody( matrix m, float size )
 //-----------------------------------------------------------------------------
 {
 	memcpy( g_unit->mat_model.m, m.m, sizeof(matrix));
@@ -198,66 +218,62 @@ static	void drawCube( matrix m, float size )
 	}
 */
 		g_unit->mvp =  g_unit->mat_model * g_view * g_proj;
-
-	// •`‰æ
+//printf("fi %f %f %f\n", g_unit->mat_model.m[3][0], g_unit->mat_model.m[3][1], g_unit->mat_model.m[3][2] );
+	// æç”»
 	{
 		g_unit->drawModel();
 	}
+
 /*
+	int i;
+	int j;
 
 	glPushMatrix();
 
 		glMultMatrixf( (float*)m.m );
 
-		glCallList(g_cube);
+		glEnable(GL_LIGHTING);
+		glEnable(GL_DEPTH_TEST);
+		glBegin(GL_QUADS);
+		{
+			glMaterialfv(GL_FRONT, GL_DIFFUSE, g_def);
+			glMaterialfv(GL_FRONT, GL_AMBIENT, g_amb);
+		}
+
+		for (j = 0; j < 6; ++j) {
+			glNormal3fv(normal[j]);
+			for (i = 0; i < 4; ++i) {
+				float	v[3];
+				v[0] = vertex[face[j][i]][0] * size;
+				v[1] = vertex[face[j][i]][1] * size;
+				v[2] = vertex[face[j][i]][2] * size;
+				glVertex3fv( v );
+			}
+		}
+		glEnd();
 
 	glPopMatrix();
 */
 }
 
 //-----------------------------------------------------------------------------
-void	core_remove()
+void	fighter_remove()
 //-----------------------------------------------------------------------------
 {
 	delete	g_unit;
 }
 //-----------------------------------------------------------------------------
-int	core_create()
+int	fighter_create()
 //-----------------------------------------------------------------------------
 {
-	//	ƒ‚ƒfƒ‹ì¬
-/*
-	g_cube = glGenLists(1);
+//	fighter_inf.mat = mrotx(-0.0001f)* mroty(-0.0001f)*mrotz(0.00f)*mtrans( 0,	5.0f,	15 );
+//	fighter_inf.mat = mrotx(rad(-25.0001f))* mroty(rad(45))*mrotz(0.00f)*mtrans(45,	45.0f,	45 );
+	fighter_inf.mat = mtrans(0,10,35 ) * mrotx(rad(-25.0001f))* mroty(rad(45))*mrotz(0.00f);
 
-	glNewList(g_cube, GL_COMPILE);
-
-		glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, g_col);
-		glBegin(GL_QUADS);
-		{
-			int i;
-			int j;
-			float	size = 1.0f;
-			for (j = 0; j < 6; ++j) 
-			{
-				glNormal3fv(normal[j]);
-				for (i = 0; i < 4; ++i) 
-				{
-					float	v[3];
-					v[0] = vertex[face[j][i]][0] * size;
-					v[1] = vertex[face[j][i]][1] * size;
-					v[2] = vertex[face[j][i]][2] * size;
-					glVertex3fv( v );
-				}
-			}
-		}
-		glEnd();
-
-	glEndList();
-*/
 	g_unit = new Unit12;
 
 	//---------------------------------------------------------
-	// “§Ž‹•ÏŠ·s—ñ‚Ìì¬
+	// é€è¦–å¤‰æ›è¡Œåˆ—ã®ä½œæˆ
 	//---------------------------------------------------------
 	{
 		g_unit->mat_model.identity();
@@ -279,7 +295,7 @@ int	core_create()
 		g_unit->mvp =  g_unit->mat_model * g_view * g_proj;
 
 	//---------------------------------------------------------
-	// ƒ‚ƒfƒ‹“Ç‚Ýž‚Ý
+	// ãƒ¢ãƒ‡ãƒ«èª­ã¿è¾¼ã¿
 	//---------------------------------------------------------
 	{
 		g_unit->loadModel(
@@ -289,114 +305,118 @@ int	core_create()
 			, 1
 		);
 	}
-	//	‰ŠúˆÊ’u
-	g_mat = mtrans( 0,10,0 );
-
-	return	true;
-}
-//-----------------------------------------------------------------------------
-static	void updateBody( matrix* pM1, vector v1, vector pt, vector vs )
-//-----------------------------------------------------------------------------
-{
-	vector vx = pM1->vx();
-	vector vy = pM1->vy();
-	vector vz = pM1->vz();
-	vector vc = vnormal(vcross(  vz, v1 ));
-
-	float	f = fdot( vz, v1 );
-	float	rc = acos(f) / 30.0f;
-
-
-
-	matrix	mr = mrotv( vc, rc );
-
-	vector p = pM1->vpos() +  pM1->mrot() * vs ;
-
-#if 1
-//	Žp¨§Œä
-
-	vector	p0 = pM1->vpos();
-
-	vector	vt = vnormal(pt-p0);
-
-	float	rz = acos(fdot( vy, vt ));
-	
-	if ( rz > rad(10) )
-	{
-
-	  #if 0
-		line_request( p0, pt, vector(1,1,0));
-		line_request( p0, p0+vy, vector(1,0,0));
-	  #endif
-
-		if ( fdot( vx, vt ) > 0.0f ) rz = -rz;
-
-		(*pM1) = mrotz(rz/20) * (*pM1) * mr ;
-	}
-	else
-	{
-		(*pM1) = (*pM1) * mr ;
-	}
-#else
-	(*pM1) = (*pM1) * mr ;
-#endif
-
-	pM1->m[3][0] = p.x;
-	pM1->m[3][1] = p.y;
-	pM1->m[3][2] = p.z;
-
-
-}
-//-----------------------------------------------------------------------------
-int	core_update()
-//-----------------------------------------------------------------------------
-{
-	vector pt;
-	vector vs;
-
-	static	int flgKakusan = false;
-	static	int limKakusan = 600;
-
-//	if ( key.hi.k ) flgKakusan = !flgKakusan;
-
-	if ( limKakusan-- <= 0 )
-	{
-		limKakusan = 1000;
-		flgKakusan = ! flgKakusan;
-	}
-	
-
-	if ( flgKakusan )
-	{
-		vs = vector( 0, 0, 5.2f );
-	}
-	else
-	{
-		pt = fighter_getMatrix().vpos();
-//		pt = vector(0,0,0);
-		vs = vector( 0, 0, 1.3f );
-	}
-	
-	
-
-	vector p0 = g_mat.vpos();
-
-
-	vector vm = vnormal( pt - p0 );
-
-	updateBody( &g_mat, vm, pt, vs );
 
 	return	true;
 }
 
+
+
 //-----------------------------------------------------------------------------
-int	core_draw()
+int	fighter_update()
 //-----------------------------------------------------------------------------
 {
+	matrix	matMove = mident();
+	matrix	matRot = mident();
 
-	g_mat	= mnormal( g_mat );
+#define	SPD	0.4f
 
-	drawCube( g_mat, 1.0f );
+	if ( key.on.a )		matMove *= mtrans( SPD,0,0);
+	if ( key.on.d )		matMove *= mtrans(-SPD,0,0);
+	if ( key.on.w )		matMove *= mtrans( 0.0, SPD,0);
+	if ( key.on.s )		matMove *= mtrans( 0.0,-SPD,0);
+	if ( key.on.shift )	matMove *= mtrans( 0.0,0.0,  SPD);
+	if ( key.on.ctrl )	matMove *= mtrans( 0.0,0.0, -SPD);
+
+	if ( key.on.left )	matRot *= mroty(rad( 1));
+	if ( key.on.right )	matRot *= mroty(rad(-1));
+	if ( key.on.up )	matRot *= mrotx(rad(-1));
+	if ( key.on.down )	matRot *= mrotx(rad( 1));
+
+	if ( key.hi.r )
+	{
+		matMove = mident();
+		fighter_inf.mat = mident();
+	}
+
+	if ( fighter_inf.attack_lim == 0 )
+	{
+//		if ( key.on.z )		
+		if ( mouse.on.l ||  mouse.on.r )		
+		{
+//			missile_request( fighter_inf.mat, MISSLE_TYPE_FIGHTER,2.0f );
+			fighter_inf.attack_lim = 1;
+		}
+	}
+	if ( fighter_inf.attack_lim > 0 ) 		fighter_inf.attack_lim--;
+
+
+
+//	fighter_inf.mat = mroty(rad(-mouse.vf.x*2)) * mrotx(rad(mouse.vf.y*2)) * fighter_inf.mat;	
+
+
+
+
+	if ( key.hi.t )
+	{
+		{
+			fighter_inf.t_flg  = true;
+			vector va = fighter_inf.mat.vy();
+			vector vb = vector(0,1,0);
+			float	r = acos(fdot(va,vb));
+
+			float	n = r *10;
+
+			fighter_inf.t_lim = 50;
+
+			fighter_inf.t_mf = mrotv( vnormal(vcross(  va, vb )), r/50 );
+
+			printf("r=%f\n", n );
+
+		}
+	}
+//			font_printf("fflg=%d %d\n", fighter_inf.t_flg, fighter_inf.t_lim );
+
+	if ( fighter_inf.t_flg )
+	{
+		if ( fighter_inf.t_lim > 0 ) 
+		{
+			fighter_inf.t_lim--;
+			if ( fighter_inf.t_lim == 0 )
+			{
+				fighter_inf.t_flg = false ;
+			}
+		}
+	}
+
+	if ( fighter_inf.t_flg )
+	{
+//			font_printf("a\n" );
+
+			vector vpos = fighter_inf.mat.vpos();
+			fighter_inf.mat = fighter_inf.mat * fighter_inf.t_mf;
+			fighter_inf.mat.m[3][0] = vpos.x;
+			fighter_inf.mat.m[3][1] = vpos.y;
+			fighter_inf.mat.m[3][2] = vpos.z;
+				
+	}
+
+		fighter_inf.mat = matMove * matRot * fighter_inf.mat;
+		fighter_inf.mat = mnormal( fighter_inf.mat );
+
+
+
+
+
+
+	
+	return	true;
+}
+
+//-----------------------------------------------------------------------------
+int	fighter_draw()
+//-----------------------------------------------------------------------------
+{
+	drawBody( fighter_inf.mat, 1.0f );
 
 	return	true;
 }
