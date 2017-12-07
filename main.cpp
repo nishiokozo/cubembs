@@ -20,10 +20,13 @@
 #include "vk.h"
 #include "win.h"
 #include "vect.h"
-#include "enemy.h"
-#include "core.h"
 #include "vector.h"
+#include "matrix.h"
 #include "mouse.h"
+#include "core.h"
+#include "fighter.h"
+#include "enemy.h"
+#include "camera.h"
 
 vect44 g_view;
 
@@ -32,10 +35,47 @@ vect44 g_view;
 //Mouse	g_mouse();
 
 //-----------------------------------------------------------------------------
+void	func_create()
+//-----------------------------------------------------------------------------
+{
+	enemy_create();
+	core_create();
+	fighter_create();
+	camera_create();
+
+}
+//-----------------------------------------------------------------------------
+void	func_update()
+//-----------------------------------------------------------------------------
+{
+			core_update();
+			fighter_update();
+			camera_update();
+}
+//-----------------------------------------------------------------------------
+void	func_draw()
+//-----------------------------------------------------------------------------
+{
+			enemy_update();
+			core_draw();
+			fighter_draw();
+}
+//-----------------------------------------------------------------------------
+void	func_remove()
+//-----------------------------------------------------------------------------
+{
+		enemy_remove();
+		core_remove();
+		fighter_remove();
+		camera_remove();
+
+}
+//-----------------------------------------------------------------------------
 int main(int argc, char *argv[])
 //-----------------------------------------------------------------------------
 {
 	g_view.identity();
+	g_view.rotY(rad(180));
 	g_view.translate(0,0,-5);
 
 	//---
@@ -50,8 +90,7 @@ int main(int argc, char *argv[])
 		, 1//DEMO_TEXTURE_COUNT
 	);
 
-	enemy_create();
-	core_create();
+	func_create();
 	
 	//-----------------------------------------------------
 	// ƒƒCƒ“ƒ‹[ƒv
@@ -88,10 +127,8 @@ int main(int argc, char *argv[])
 		}
 		if ( lim2 )
 		{
-			core_remove();
-			enemy_remove();
-			enemy_create();
-			core_create();
+			func_remove();
+			func_create();
 		
 			lim2--;
 			printf("%d ",lim2 );
@@ -104,9 +141,18 @@ int main(int argc, char *argv[])
 		{
 			g_pVk->drawBegin( pWin->win_width, pWin->win_height );
 
-			enemy_update();
-			core_update();
-			core_draw();
+			func_update();
+			matrix mv = minv( camera_getCamera() );
+			memcpy( g_view.m, mv.m, sizeof(matrix)); 
+
+//			matrix	mTar = 	fighter_getMatrix();
+//			memcpy( g_view.m, cm.m, sizeof(matrix)); 
+
+
+
+
+			func_draw();
+
 
 			g_pVk->drawEnd();
 
@@ -114,7 +160,7 @@ int main(int argc, char *argv[])
 
 		key_update();
 //		g_mouse.update();
-	mouse_update();
+		mouse_update( pWin->win_x, pWin->win_y	 , pWin->win_width, pWin->win_height );
 
 
 //		if ( mouse.hi.l )		printf("mouse l %f %f\n", mouse.sx, mouse.sy );
@@ -126,8 +172,7 @@ int main(int argc, char *argv[])
 	//-----------------------------------------------------
 	if ( g_pVk ) 
 	{
-		enemy_remove();
-		core_remove();
+		func_remove();
 		delete g_pVk;g_pVk=0;
 	}
 

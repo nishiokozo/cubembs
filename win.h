@@ -7,6 +7,8 @@ public:
 	HWND hWin;				  // hWnd - window handle
 	char win_name[WIN_NAME_LEN];  // Name to put on the window/icon
 
+	int	win_x;
+	int	win_y;
 	int	win_width;
 	int	win_height;
 

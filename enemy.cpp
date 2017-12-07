@@ -233,8 +233,8 @@ static Unit12::vk_vert12 	dataVertConst0 =
 
 
 static const int	unit_MAX = 5;
-int					g_umcnt;
-Unit12*				g_unit;
+static 	int					g_umcnt;
+static 	Unit12*				g_unit;
 
 
 //-----------------------------------------------------------------------------

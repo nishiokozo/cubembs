@@ -1,5 +1,6 @@
 int	core_draw();
 int	core_update();
-void	core_create();
 void	core_remove();
-//matrix	core_getMatrix();
+int	core_create();
+//int	core_init( int argc, char *argv[] );
+matrix	core_getMatrix();

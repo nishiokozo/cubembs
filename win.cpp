@@ -82,6 +82,25 @@ void	win_init( WinInf& win, const char* name, int width, int height  )
 			NULL					  	// no extra parameters
 		);
 	
+{
+//    HWND hDesktop = GetDesktopWindow();
+        
+    WINDOWINFO windowInfo;
+    windowInfo.cbSize = sizeof(WINDOWINFO);
+    
+    GetWindowInfo(win.hWin, &windowInfo);
+
+    printf("bottom=%d, left=%d, right=%d, top=%d\n", 
+        windowInfo.rcWindow.bottom, 
+        windowInfo.rcWindow.left,
+        windowInfo.rcWindow.right,
+        windowInfo.rcWindow.top);
+
+	win.win_x = windowInfo.rcWindow.left - wr.left;
+	win.win_y = windowInfo.rcWindow.top - wr.top;
+}
+
+
 		if (!win.hWin) 
 		{
 			// It didn't work, so try to give a useful error:

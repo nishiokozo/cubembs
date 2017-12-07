@@ -31,7 +31,7 @@ int mouse_init()
 	return true;
 }
 //-----------------------------------------------------------------------------
-int mouse_update()
+int mouse_update( float win_x, float win_y, float win_w, float win_h )
 //-----------------------------------------------------------------------------
 {
 	POINT pos;
@@ -65,23 +65,23 @@ int mouse_update()
 	mouse.dx = (mouse.sx - mouse.cx) * mouse.screen_w;
 	mouse.dy = (mouse.sy - mouse.cy) * mouse.screen_h;
 
-//	mouse.vw.x =  (((float)pos.x - framework_getX())/ framework_getW())*2.0f-1.0f;
-//	mouse.vw.y =  (((float)pos.y - framework_getY())/ framework_getH())*2.0f-1.0f;
-//	mouse.vw.x =  (((float)pos.x - framework_getX())/ framework_getW())*2.0f-1.0f;
-//	mouse.vw.y =  (((float)pos.y - framework_getY())/ framework_getH())*2.0f-1.0f;
+	mouse.vw.x =  (((float)pos.x - win_x)/ win_w)*2.0f-1.0f;
+	mouse.vw.y =  (((float)pos.y - win_y)/ win_h)*2.0f-1.0f;
+	mouse.vw.x =  (((float)pos.x - win_x)/ win_w)*2.0f-1.0f;
+	mouse.vw.y =  (((float)pos.y - win_y)/ win_h)*2.0f-1.0f;
 
 
-//	mouse.vf.x = 0; 
-//	mouse.vf.y = 0; 
-//	if ( mouse.vw.x >  0.1f ) mouse.vf.x = (mouse.vw.x-0.1f)/0.9f;
-//	if ( mouse.vw.x < -0.1f ) mouse.vf.x = (mouse.vw.x+0.1f)/0.9f;
-//	if ( mouse.vw.y >  0.1f ) mouse.vf.y = (mouse.vw.y-0.1f)/0.9f;
-//	if ( mouse.vw.y < -0.1f ) mouse.vf.y = (mouse.vw.y+0.1f)/0.9f;
+	mouse.vf.x = 0; 
+	mouse.vf.y = 0; 
+	if ( mouse.vw.x >  0.1f ) mouse.vf.x = (mouse.vw.x-0.1f)/0.9f;
+	if ( mouse.vw.x < -0.1f ) mouse.vf.x = (mouse.vw.x+0.1f)/0.9f;
+	if ( mouse.vw.y >  0.1f ) mouse.vf.y = (mouse.vw.y-0.1f)/0.9f;
+	if ( mouse.vw.y < -0.1f ) mouse.vf.y = (mouse.vw.y+0.1f)/0.9f;
 
-//	if ( mouse.vf.x >  1.0f ) mouse.vf.x =  1.0f;
-//	if ( mouse.vf.x < -1.0f ) mouse.vf.x = -1.0f;
-//	if ( mouse.vf.y >  1.0f ) mouse.vf.y =  1.0f;
-//	if ( mouse.vf.y < -1.0f ) mouse.vf.y = -1.0f;
+	if ( mouse.vf.x >  1.0f ) mouse.vf.x =  1.0f;
+	if ( mouse.vf.x < -1.0f ) mouse.vf.x = -1.0f;
+	if ( mouse.vf.y >  1.0f ) mouse.vf.y =  1.0f;
+	if ( mouse.vf.y < -1.0f ) mouse.vf.y = -1.0f;
 //	
 
 //	if ( mouse.vw.x < -1 ) mouse.vw.x = -1;
@@ -158,7 +158,7 @@ return true;
 	return	true;
 }
 
-void	Mouse::update()
+/*void	Mouse::update()
 {
 	mouse_update();
 }
@@ -170,3 +170,4 @@ Mouse::Mouse()
 Mouse::~Mouse()
 {
 }
+*/
