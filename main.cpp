@@ -48,6 +48,7 @@ void	func_create()
 void	func_update()
 //-----------------------------------------------------------------------------
 {
+			enemy_update();
 			core_update();
 			fighter_update();
 			camera_update();
@@ -56,7 +57,7 @@ void	func_update()
 void	func_draw()
 //-----------------------------------------------------------------------------
 {
-			enemy_update();
+			enemy_draw();
 			core_draw();
 			fighter_draw();
 }
