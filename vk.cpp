@@ -1579,33 +1579,6 @@ void vk2_loadTexture( VulkanInf& vk
 
 }
 
-//-----------------------------------------------------------------------------
-void vk2_loadModel( VulkanInf& vk
-//-----------------------------------------------------------------------------
-	,void* pDataVert
-	,int sizeofStructDataVert
-
-	, VkBuffer* 				&	sir_uniform_buffer
-	, VkDeviceMemory* 			&	sir_uniform_memory
-	, VkDescriptorSet* 			&	sir_descriptor_set
-
-	, const char* fn_vert
-	, const char* fn_frag
-	, const char** tex_files
-	, const int		tex_cnt
-)
-{
-}
-
-//-----------------------------------------------------------------------------
-void	vk2_removeModel( VulkanInf& vk
-//-----------------------------------------------------------------------------
-	, VkBuffer* 				&	sir_uniform_buffer
-	, VkDeviceMemory* 			&	sir_uniform_memory
-	, VkDescriptorSet* 			&	sir_descriptor_set
-)
-{
-}
 
 //-----------------------------------------------------------------------------
 static void	vk_AcquireNextImage(
@@ -2759,6 +2732,27 @@ void VkInf::loadModel(
 
 )
 {
+	vkunit.tex_cnt = tex_cnt;
+
+	//---------------------
+	// ディスクリプターセットレイアウト作成
+	//---------------------
+	vk_CreateDescriptorSetLayout(
+		  vk.device
+		, tex_cnt			//DEMO_TEXTURE_COUNT
+
+		, vkunit.desc_layout	//create11
+	);
+	//-----------------------------------------------------
+	// パイプラインレイアウトの作成
+	//-----------------------------------------------------
+	vk_CreatePipelineLayout(
+		  vk.device 
+		, vkunit.desc_layout
+
+		, vkunit.pipeline_layout	//create10
+	);
+
 
 
 	//-----------------------------------------------------
@@ -2782,7 +2776,7 @@ void VkInf::loadModel(
 		fcode = demo_read_spv( fn_frag, &fsize);
 		vk_CreateGraphicsPipelines(
 			  vk.device 
-			, vk.pipeline_layout
+			, vkunit.pipeline_layout
 			, vk.render_pass
 			, vcode
 			, vsize 
@@ -2840,7 +2834,7 @@ void VkInf::loadModel(
 		//-----------------------------------------------------
 		vk_AllocateDescriptorSets(
 			  vk.device
-  			, vk.desc_layout
+  			, vkunit.desc_layout
 			, vk.desc_pool
 
 			, vkunit.descriptor_set[i]
@@ -2866,6 +2860,9 @@ void	VkInf::unloadModel(
 //	, VkDescriptorSet* 			&	sir_descriptor_set
 )
 {
+
+	vkDestroyPipelineLayout(vk.device, vkunit.pipeline_layout, NULL)	;	//create10	*	vk2 create
+	vkDestroyDescriptorSetLayout(vk.device, vkunit.desc_layout, NULL);		//create11	*	vk2 create
 
 	for (int i = 0; i < vk.swapchainImageCount; i++) 
 	{
@@ -2922,7 +2919,7 @@ void	VkInf::drawModel(
 	// コマンド・ディスクリプターのバインド
 	//-----------------------------------------------------
 	vk_CmdBindDescriptorSets(
-		  vk.pipeline_layout
+		  vkunit.pipeline_layout
 		, vkunit.descriptor_set[vk.current_buffer]
 		, vk.sir_cmdbuf[vk.current_buffer]
 	);
@@ -3239,37 +3236,16 @@ VkInf::VkInf( HINSTANCE hInstance, HWND hWin, int _width, int _height, int unit_
 	);
 
 
-	//---------------------
-	// ディスクリプターセットレイアウト作成
-	//---------------------
-	vk_CreateDescriptorSetLayout(
-		  vk.device
-		, tex_max			//DEMO_TEXTURE_COUNT
-
-		, vk.desc_layout	//create11
-	);
 
 	//-----------------------------------------------------
 	// デスクリプタプールの作成
 	//-----------------------------------------------------
-	{
 	vkCreateDescriptorPool(									
 		  vk.device
 		, tex_max		//DEMO_TEXTURE_COUNT
 		, vk.swapchainImageCount * unit_max
 
 		, vk.desc_pool	//create6
-	);
-	}
-
-	//-----------------------------------------------------
-	// パイプラインレイアウトの作成
-	//-----------------------------------------------------
-	vk_CreatePipelineLayout(
-		  vk.device 
-		, vk.desc_layout
-
-		, vk.pipeline_layout	//create10
 	);
 
 	//-----------------------------------------------------
@@ -3353,8 +3329,6 @@ VkInf::~VkInf()
 	vkDestroyPipeline(vk.device, vk.pipeline, NULL);					//create7	*	vk2 create
 	vkDestroyPipelineCache(vk.device, vk.pipelineCache, NULL);			//create8	*	vk2 create
 	vkDestroyRenderPass(vk.device, vk.render_pass, NULL);				//create9	*	vk2 create
-	vkDestroyPipelineLayout(vk.device, vk.pipeline_layout, NULL)	;	//create10	*	vk2 create
-	vkDestroyDescriptorSetLayout(vk.device, vk.desc_layout, NULL);		//create11	*	vk2 create
 
 	for (i = 0; i < vk.swapchainImageCount; i++) 
 	{

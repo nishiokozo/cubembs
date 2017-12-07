@@ -100,8 +100,8 @@ struct VulkanInf
 //	struct texture_object staging_texture;
 
 	VkCommandBuffer 		nor_cmdbuf;  // Buffer for initialization commands
-	VkPipelineLayout		pipeline_layout;
-	VkDescriptorSetLayout 	desc_layout;
+//	VkPipelineLayout		pipeline_layout;
+//	VkDescriptorSetLayout 	desc_layout;
 	VkPipelineCache 		pipelineCache;
 	VkRenderPass 			render_pass;
 	VkPipeline 				pipeline;
@@ -155,6 +155,10 @@ public:
 		VkDescriptorSet* 	descriptor_set;
 		int					tex_cnt;
 		texture_object*	textures;
+
+		VkDescriptorSetLayout desc_layout;
+		VkPipelineLayout		pipeline_layout;
+
 	};
 
 

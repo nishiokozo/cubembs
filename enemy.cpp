@@ -310,7 +310,6 @@ static	const int unit_MAX = 50;
 //static	int g_umcnt;
 static Unit12*				g_unit;
 extern	vect44 g_view,g_proj;
-static const char 		*tex_files[] = {"lunarg.ppm"};
 
 static	ENEMY_INF	enemy_inf[unit_MAX];
 //-----------------------------------------------------------------------------
@@ -479,11 +478,10 @@ int	enemy_create()
 	//---------------------------------------------------------
 	for ( int u = 0 ; u < unit_MAX ; u++ )
 	{
+		static const char 		*tex_files[] = {"lunarg.ppm"};
 		g_unit[u].loadModel(
-//			  &dataVertConst0, "s-const-tex-vert.spv", "s-const-tex-frag.spv"
-			  &dataVertPhong0, "s-phong-vert.spv", "s-phong-frag.spv"
-			, tex_files
-			, 1
+//			  &dataVertConst0, "s-const-tex-vert.spv", "s-const-tex-frag.spv", tex_files, 1
+			  &dataVertPhong0, "s-phong-vert.spv", "s-phong-frag.spv", tex_files, 0
 		);
 	}
 
@@ -627,6 +625,7 @@ int	enemy_update()
 	if ( key.hi._9 ) g_lvl = 8;
 	if ( key.hi._0 ) g_lvl = 9;
 
+g_lvl = 9;
 	if ( g_lvl != g_prev_lvl )
 	{
 		int	cnt = g_x[g_lvl]*g_y[g_lvl]*g_z[g_lvl];
