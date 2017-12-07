@@ -1416,8 +1416,12 @@ void vk2_loadTexture( VulkanInf& vk
 //-----------------------------------------------------------------------------
 	, const char** tex_files
 	, const int tex_cnt 
+	
+	, texture_object*	&	textures
 )
 {
+	textures = new texture_object[tex_cnt];
+
 	
 	//---------------------------------------------------------
 	// コマンドバッファの確保
@@ -1472,7 +1476,7 @@ void vk2_loadTexture( VulkanInf& vk
 					  vk.device
 					, &vk.memory_properties
 					, tex_files[i]
-					, &vk.textures[i]
+					, &textures[i]
 					, VK_IMAGE_TILING_LINEAR
 					, VK_IMAGE_USAGE_SAMPLED_BIT
 					, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
@@ -1482,7 +1486,7 @@ void vk2_loadTexture( VulkanInf& vk
 		{
 			vk_cmdPipelineBarrier(
 				  vk.nor_cmdbuf
-				, vk.textures[i]
+				, textures[i]
 			);
 			} 
 		}
@@ -1494,7 +1498,7 @@ void vk2_loadTexture( VulkanInf& vk
 			//-----------------------------------------------------
 			vk_CreateSampler(
 				  vk.device
-				, vk.textures[i].sampler
+				, textures[i].sampler
 			);
 		}
 		for (i = 0; i < tex_cnt; i++) 
@@ -1502,9 +1506,9 @@ void vk2_loadTexture( VulkanInf& vk
 			vk_tex_CreateImageView(
 				  vk.device
 				, tex_format
-				, vk.textures[i].image
+				, textures[i].image
 
-				, vk.textures[i].imgview
+				, textures[i].imgview
 			);
 			
 		}
@@ -2755,12 +2759,14 @@ void VkInf::loadModel(
 
 )
 {
+
+
 	//-----------------------------------------------------
 	// 
 	//-----------------------------------------------------
 	if ( tex_cnt > 0 )
 	{
-		vk2_loadTexture( vk, tex_files, tex_cnt );
+		vk2_loadTexture( vk, tex_files, tex_cnt, vkunit.textures );
 	}
 
 
@@ -2843,13 +2849,14 @@ void VkInf::loadModel(
 		vk_UpdateDescriptorSets(
 			  vk.device
 			, tex_cnt
-			, vk.textures 
+			, vkunit.textures 
 			, sizeofStructDataVert
 			, vkunit.uniform_buffer[i]
 			, vkunit.descriptor_set[i]
 		);
 	}
 }
+
 //-----------------------------------------------------------------------------
 void	VkInf::unloadModel(
 //-----------------------------------------------------------------------------
@@ -2878,12 +2885,21 @@ void	VkInf::unloadModel(
 		free(vkunit.uniform_memory); 	//create38_malloc
 		free(vkunit.descriptor_set); 	//create39_malloc
 
-	for (int i = 0; i < vkunit.tex_cnt; i++) 
+
+	// unloadTexture
+	if ( vkunit.tex_cnt > 0 )
 	{
-		vkDestroyImageView(vk.device, vk.textures[i].imgview, NULL);	//create12	*	setup
-		vkDestroyImage(vk.device, vk.textures[i].image, NULL);			//create13	*	setup
-		vkFreeMemory(vk.device, vk.textures[i].devmem, NULL);			//create14	*	setup
-		vkDestroySampler(vk.device, vk.textures[i].sampler, NULL);		//create15	*	setup
+
+		for (int i = 0; i < vkunit.tex_cnt; i++) 
+		{
+			vkDestroyImageView(vk.device	, vkunit.textures[i].imgview	, NULL);	//create12	*	setup
+			vkDestroyImage(vk.device		, vkunit.textures[i].image		, NULL);			//create13	*	setup
+			vkFreeMemory(vk.device			, vkunit.textures[i].devmem		, NULL);			//create14	*	setup
+			vkDestroySampler(vk.device		, vkunit.textures[i].sampler	, NULL);		//create15	*	setup
+		}
+
+		delete [] vkunit.textures;
+		vkunit.textures = 0;
 	}
 
 }

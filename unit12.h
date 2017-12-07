@@ -14,6 +14,7 @@ class	Unit12
 //	VkDeviceMemory* 	sc_uniform_memory	;
 //	VkDescriptorSet* 	sc_descriptor_set	;
 
+
 	vect44				mvp					;
 	vect44 				mat_model			;
 

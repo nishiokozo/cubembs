@@ -2,6 +2,17 @@
 #define APP_SHORT_NAME "cube"
 #define FRAME_LAG 2// Allow a maximum of two outstanding presentation operations.
 
+	struct texture_object 
+	{
+		VkSampler sampler;
+		VkImage image;
+		VkImageLayout imageLayout;
+		VkMemoryAllocateInfo	mem_alloc;
+		VkDeviceMemory 			devmem;
+		VkImageView				imgview;
+		int32_t 				tex_width;
+		int32_t 				tex_height;
+	};
 /*
 typedef struct 
 {
@@ -15,18 +26,6 @@ typedef struct
 	VkDescriptorSet 	sir_descriptor_set;
 } SwapchainImageResources;
 */
-
-struct texture_object 
-{
-	VkSampler sampler;
-	VkImage image;
-	VkImageLayout imageLayout;
-	VkMemoryAllocateInfo	mem_alloc;
-	VkDeviceMemory 			devmem;
-	VkImageView				imgview;
-	int32_t 				tex_width;
-	int32_t 				tex_height;
-};
 
 struct VulkanInf 
 {
@@ -97,7 +96,7 @@ struct VulkanInf
 		VkImageView 			imgview;
 	} depth_inf;
 
-	struct texture_object textures[DEMO_TEXTURE_COUNT];
+//	struct texture_object textures[DEMO_TEXTURE_COUNT];
 //	struct texture_object staging_texture;
 
 	VkCommandBuffer 		nor_cmdbuf;  // Buffer for initialization commands
@@ -143,35 +142,7 @@ void	vk2_removeModel( VulkanInf& vk
 
  );
  
-//-----------------------------------------------------------------------------
-void vk2_loadTexture( VulkanInf& vk
-//-----------------------------------------------------------------------------
-	, const char** tex_files
-);
 
-//-----------------------------------------------------------------------------
-void vk2_loadModel( VulkanInf& vk
-//-----------------------------------------------------------------------------
-	,void* pDataVert
-	,int sizeofStructDataVert
-
-	, VkBuffer* 				&	sc_uniform_buffer
-	, VkDeviceMemory* 			&	sc_uniform_memory
-	, VkDescriptorSet* 			&	sc_descriptor_set
-	, const char* fn_vert
-	, const char* fn_frag
-	, const char** 	tex_files
-	, const int		tex_cnt
-);
-//-----------------------------------------------------------------------------
-void vk2_cmd2( VulkanInf& vk
-//-----------------------------------------------------------------------------
-		,int _vertexCount		//	= 12*3;
-		,int _instanceCount		//	= 1;
-		,int _firstVertex		//	= 0;
-		,int _firstInstance		// = 0;
-	, VkDescriptorSet* 			&	sir_descriptor_set
-);
 
 
 class VkInf
@@ -183,7 +154,9 @@ public:
 		VkDeviceMemory* 	uniform_memory;
 		VkDescriptorSet* 	descriptor_set;
 		int					tex_cnt;
+		texture_object*	textures;
 	};
+
 
 	VulkanInf vk;
 //	bool	flgSetModel;
