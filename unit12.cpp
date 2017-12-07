@@ -41,13 +41,15 @@ void Unit12::loadModel(
 	g_pVk->loadModel(
 		  (void*)pDataVert12
 		, sizeof(struct vk_vert12)
-		, sc_uniform_buffer
-		, sc_uniform_memory
-		, sc_descriptor_set
+//		, vkunit.uniform_buffer
+//		, vkunit.uniform_memory
+//		, vkunit.descriptor_set
 		, fn_vert
 		, fn_frag
 		, tex_files
 		, 1
+
+		, vkunit
 	);
 
 }
@@ -57,9 +59,10 @@ void Unit12::unloadModel()
 //-----------------------------------------------------------------------------
 {
 	g_pVk->unloadModel(
-		  sc_uniform_buffer
-		, sc_uniform_memory
-		, sc_descriptor_set
+//		  vkunit.uniform_buffer
+//		, vkunit.uniform_memory
+//		, vkunit.descriptor_set
+		 vkunit
 	);
 }
 
@@ -70,12 +73,12 @@ void Unit12::drawModel()
 	g_pVk->drawModel(
 		  mvp.m
 		, sizeof(vect44)
-		, sc_uniform_memory
 		, 12*3	//_vertexCount
 		, 1		//_instanceCount
 		, 0		//_firstVertex
 		, 0		//_firstInstance
-		, sc_descriptor_set
+
+		, vkunit
 	);
 }
 

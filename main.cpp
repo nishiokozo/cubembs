@@ -125,6 +125,7 @@ int main(int argc, char *argv[])
 		}
 		if (msg.message != WM_PAINT) continue;
 
+		if ( key.hi.esc ) PostQuitMessage(0);
 		
 		if ( key.hi._6 )
 		{

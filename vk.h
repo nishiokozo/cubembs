@@ -177,6 +177,14 @@ void vk2_cmd2( VulkanInf& vk
 class VkInf
 {
 public:
+	struct Vkunit
+	{
+		VkBuffer* 			uniform_buffer;
+		VkDeviceMemory* 	uniform_memory;
+		VkDescriptorSet* 	descriptor_set;
+		int					tex_cnt;
+	};
+
 	VulkanInf vk;
 //	bool	flgSetModel;
 
@@ -198,28 +206,32 @@ public:
 		 void* pDataVert
 		,int sizeofStructDataVert
 
-		, VkBuffer* 				&	sc_uniform_buffer
-		, VkDeviceMemory* 			&	sc_uniform_memory
-		, VkDescriptorSet* 			&	sc_descriptor_set
+//		, VkBuffer* 				&	sc_uniform_buffer
+//		, VkDeviceMemory* 			&	sc_uniform_memory
+//		, VkDescriptorSet* 			&	sc_descriptor_set
 		, const char* fn_vert
 		, const char* fn_frag
 		, const char** 	tex_files
 		, const int		tex_cnt
+		
+		, Vkunit	&vkunit
 	);
 	void unloadModel(
-		  VkBuffer* 				&	sir_uniform_buffer
-		, VkDeviceMemory* 			&	sir_uniform_memory
-		, VkDescriptorSet* 			&	sir_descriptor_set
+		 Vkunit	&vkunit
+//		  VkBuffer* 				&	sir_uniform_buffer
+//		, VkDeviceMemory* 			&	sir_uniform_memory
+//		, VkDescriptorSet* 			&	sir_descriptor_set
 	);
 	void drawModel(
 		 const void* pMVP
 		,int matrixSize
-		, VkDeviceMemory* 			&	sir_uniform_memory
+//		, VkDeviceMemory* 			&	sir_uniform_memory
 		,int _vertexCount
 		,int _instanceCount
 		,int _firstVertex
 		,int _firstInstance
-		, VkDescriptorSet* 			&	sir_descriptor_set
+//		, VkDescriptorSet* 			&	sir_descriptor_set
+		, Vkunit	&vkunit
 	);
 
 	void drawBegin( int _width, int _height );

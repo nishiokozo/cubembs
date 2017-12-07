@@ -1591,97 +1591,6 @@ void vk2_loadModel( VulkanInf& vk
 	, const int		tex_cnt
 )
 {
-	//-----------------------------------------------------
-	// 
-	//-----------------------------------------------------
-	vk2_loadTexture( vk, tex_files, tex_cnt );
-
-
-	//-----------------------------------------------------
-	// 
-	//-----------------------------------------------------
-	{
-		void *vcode;
-		size_t vsize;
-		void *fcode;
-		size_t fsize;
-		vcode = demo_read_spv( fn_vert, &vsize);
-		fcode = demo_read_spv( fn_frag, &fsize);
-		vk_CreateGraphicsPipelines(
-			  vk.device 
-			, vk.pipeline_layout
-			, vk.render_pass
-			, vcode
-			, vsize 
-			, fcode
-			, fsize 
-			, vk.pipelineCache
-
-			, vk.pipeline		//create7
-		);
-		free(vcode);
-		free(fcode);
-	}
-
-	//-----------------------------------------------------
-	// 
-	//-----------------------------------------------------
-
-	sir_uniform_buffer 	= (VkBuffer *)			malloc(sizeof(VkBuffer) 		* vk.swapchainImageCount);	//create37_malloc
-	sir_uniform_memory 	= (VkDeviceMemory *)	malloc(sizeof(VkDeviceMemory) 	* vk.swapchainImageCount);	//create38_malloc
-	sir_descriptor_set 	= (VkDescriptorSet *)	malloc(sizeof(VkDescriptorSet) 	* vk.swapchainImageCount);	//create39_malloc
-
-	for ( int i = 0; i < vk.swapchainImageCount; i++) 
-	{
-		//-----------------------------------------------------
-		// モデルデータの作成
-		//-----------------------------------------------------
-		vk_vert_CreateBuffer(
-			  vk.device
-			, sizeofStructDataVert
-
-			, sir_uniform_buffer[i]
-		);
-		vk_vert_AllocateMemory(
-			  vk.device
-			, vk.memory_properties
-			, sir_uniform_buffer[i]
-
-			, sir_uniform_memory[i]
-		);
-		vk_vert_MapMemory(
-			  vk.device
-			, pDataVert
-			, sizeofStructDataVert
-			, sir_uniform_memory[i]
-		);
-
-		vk_vert_BindBufferMemory(
-			  vk.device
-			, sir_uniform_buffer[i]
-			, sir_uniform_memory[i]
-		);
-
-		//-----------------------------------------------------
-		// ディスクリプターの作成
-		//-----------------------------------------------------
-		vk_AllocateDescriptorSets(
-			  vk.device
-  			, vk.desc_layout
-			, vk.desc_pool
-
-			, sir_descriptor_set[i]
-		);
-
-		vk_UpdateDescriptorSets(
-			  vk.device
-			, DEMO_TEXTURE_COUNT
-			, vk.textures 
-			, sizeofStructDataVert
-			, sir_uniform_buffer[i]
-			, sir_descriptor_set[i]
-		);
-	}
 }
 
 //-----------------------------------------------------------------------------
@@ -1692,24 +1601,6 @@ void	vk2_removeModel( VulkanInf& vk
 	, VkDescriptorSet* 			&	sir_descriptor_set
 )
 {
-
-	for (int i = 0; i < vk.swapchainImageCount; i++) 
-	{
-		vkDestroyBuffer(vk.device, sir_uniform_buffer[i], NULL);			//create22	*	vk3_create
-		vkFreeMemory(vk.device, sir_uniform_memory[i], NULL);			//create23	*	vk3_create
-
-		vkFreeDescriptorSets( 	//create_AllocateDescriptorSet
-			  vk.device				//	VkDevice device
-			, vk.desc_pool			//	VkDescriptorPool descriptorPool
-			, 1						//	uint32_t descriptorSetCount
-			, &sir_descriptor_set[i]	//	const VkDescriptorSet* pDescriptorSets
-		);
-	}
-
-
-		free(sir_uniform_buffer); 	//create37_malloc
-		free(sir_uniform_memory); 	//create38_malloc
-		free(sir_descriptor_set); 	//create39_malloc
 }
 
 //-----------------------------------------------------------------------------
@@ -1834,44 +1725,6 @@ void	vk2_drawPolygon( VulkanInf& vk
 	, VkDescriptorSet* 			&	sir_descriptor_set
 )
 {
-	//-----------------------------------------------------
-	// コマンド・ディスクリプターのバインド
-	//-----------------------------------------------------
-	vk_CmdBindDescriptorSets(
-		  vk.pipeline_layout
-		, sir_descriptor_set[vk.current_buffer]
-		, vk.sir_cmdbuf[vk.current_buffer]
-	);
-
-	//-----------------------------------------------------
-	// 描画コマンド発行
-	//-----------------------------------------------------
-	vkCmdDraw(vk.sir_cmdbuf[vk.current_buffer], _vertexCount, _instanceCount, _firstVertex, _firstInstance);
-
-	//---------------------------------------------------------
-	// マトリクスのコピー
-	//---------------------------------------------------------
-	{
-		uint8_t *pData;
-
-		VkResult  err;
-		err = vkMapMemory( 
-			vk.device
-			, sir_uniform_memory[vk.current_buffer]
-			, 0
-			, VK_WHOLE_SIZE
-			, 0
-			, (void **)&pData
-		);
-		assert(!err);
-
-		memcpy(pData, pMVP, matrixSize);
-	}
-
-	//---------------------------------------------------------
-	// マップ解除
-	//---------------------------------------------------------
-	vkUnmapMemory(vk.device, sir_uniform_memory[vk.current_buffer]);
 }
 //-----------------------------------------------------------------------------
 void	vk2_updateEnd( VulkanInf& vk)
@@ -2890,66 +2743,191 @@ void VkInf::loadModel(
 	 void* pDataVert
 	,int sizeofStructDataVert
 
-	, VkBuffer* 				&	sc_uniform_buffer
-	, VkDeviceMemory* 			&	sc_uniform_memory
-	, VkDescriptorSet* 			&	sc_descriptor_set
+//	, VkBuffer* 				&	sc_uniform_buffer
+//	, VkDeviceMemory* 			&	sc_uniform_memory
+//	, VkDescriptorSet* 			&	sc_descriptor_set
 	, const char* fn_vert
 	, const char* fn_frag
 	, const char** 	tex_files
 	, const int		tex_cnt
+
+		, Vkunit	&	vkunit
+
 )
 {
-	vk2_loadModel( vk
-		, pDataVert
-		, sizeofStructDataVert
-		, sc_uniform_buffer
-		, sc_uniform_memory
-		, sc_descriptor_set
-		, fn_vert
-		, fn_frag
-		, tex_files
-		, tex_cnt
-	 );
+	//-----------------------------------------------------
+	// 
+	//-----------------------------------------------------
+	vk2_loadTexture( vk, tex_files, tex_cnt );
+
+
+	//-----------------------------------------------------
+	// 
+	//-----------------------------------------------------
+	{
+		void *vcode;
+		size_t vsize;
+		void *fcode;
+		size_t fsize;
+		vcode = demo_read_spv( fn_vert, &vsize);
+		fcode = demo_read_spv( fn_frag, &fsize);
+		vk_CreateGraphicsPipelines(
+			  vk.device 
+			, vk.pipeline_layout
+			, vk.render_pass
+			, vcode
+			, vsize 
+			, fcode
+			, fsize 
+			, vk.pipelineCache
+
+			, vk.pipeline		//create7
+		);
+		free(vcode);
+		free(fcode);
+	}
+
+	//-----------------------------------------------------
+	// 
+	//-----------------------------------------------------
+
+	vkunit.uniform_buffer 	= (VkBuffer *)			malloc(sizeof(VkBuffer) 		* vk.swapchainImageCount);	//create37_malloc
+	vkunit.uniform_memory 	= (VkDeviceMemory *)	malloc(sizeof(VkDeviceMemory) 	* vk.swapchainImageCount);	//create38_malloc
+	vkunit.descriptor_set 	= (VkDescriptorSet *)	malloc(sizeof(VkDescriptorSet) 	* vk.swapchainImageCount);	//create39_malloc
+
+	for ( int i = 0; i < vk.swapchainImageCount; i++) 
+	{
+		//-----------------------------------------------------
+		// モデルデータの作成
+		//-----------------------------------------------------
+		vk_vert_CreateBuffer(
+			  vk.device
+			, sizeofStructDataVert
+
+			, vkunit.uniform_buffer[i]
+		);
+		vk_vert_AllocateMemory(
+			  vk.device
+			, vk.memory_properties
+			, vkunit.uniform_buffer[i]
+
+			, vkunit.uniform_memory[i]
+		);
+		vk_vert_MapMemory(
+			  vk.device
+			, pDataVert
+			, sizeofStructDataVert
+			, vkunit.uniform_memory[i]
+		);
+
+		vk_vert_BindBufferMemory(
+			  vk.device
+			, vkunit.uniform_buffer[i]
+			, vkunit.uniform_memory[i]
+		);
+
+		//-----------------------------------------------------
+		// ディスクリプターの作成
+		//-----------------------------------------------------
+		vk_AllocateDescriptorSets(
+			  vk.device
+  			, vk.desc_layout
+			, vk.desc_pool
+
+			, vkunit.descriptor_set[i]
+		);
+
+		vk_UpdateDescriptorSets(
+			  vk.device
+			, DEMO_TEXTURE_COUNT
+			, vk.textures 
+			, sizeofStructDataVert
+			, vkunit.uniform_buffer[i]
+			, vkunit.descriptor_set[i]
+		);
+	}
 }
 //-----------------------------------------------------------------------------
 void	VkInf::unloadModel(
 //-----------------------------------------------------------------------------
-	  VkBuffer* 				&	sir_uniform_buffer
-	, VkDeviceMemory* 			&	sir_uniform_memory
-	, VkDescriptorSet* 			&	sir_descriptor_set
+		 Vkunit	&	vkunit
+//	  VkBuffer* 				&	sir_uniform_buffer
+//	, VkDeviceMemory* 			&	sir_uniform_memory
+//	, VkDescriptorSet* 			&	sir_descriptor_set
 )
 {
-	vk2_removeModel(
-		vk
-		, sir_uniform_buffer
-		, sir_uniform_memory
-		, sir_descriptor_set
-	);
+
+	for (int i = 0; i < vk.swapchainImageCount; i++) 
+	{
+		vkDestroyBuffer(vk.device, vkunit.uniform_buffer[i], NULL);			//create22	*	vk3_create
+		vkFreeMemory(vk.device, vkunit.uniform_memory[i], NULL);			//create23	*	vk3_create
+
+		vkFreeDescriptorSets( 	//create_AllocateDescriptorSet
+			  vk.device				//	VkDevice device
+			, vk.desc_pool			//	VkDescriptorPool descriptorPool
+			, 1						//	uint32_t descriptorSetCount
+			, &vkunit.descriptor_set[i]	//	const VkDescriptorSet* pDescriptorSets
+		);
+	}
+
+
+		free(vkunit.uniform_buffer); 	//create37_malloc
+		free(vkunit.uniform_memory); 	//create38_malloc
+		free(vkunit.descriptor_set); 	//create39_malloc
 }
 //-----------------------------------------------------------------------------
 void	VkInf::drawModel(
 //-----------------------------------------------------------------------------
 	 const void* pMVP
 	,int matrixSize
-	, VkDeviceMemory* 			&	sir_uniform_memory
+//	, VkDeviceMemory* 			&	sir_uniform_memory
 	,int _vertexCount		//	= 12*3;
 	,int _instanceCount		//	= 1;
 	,int _firstVertex		//	= 0;
 	,int _firstInstance		// = 0;
-	, VkDescriptorSet* 			&	sir_descriptor_set
+//	, VkDescriptorSet* 			&	sir_descriptor_set
+	, Vkunit	&	vkunit
+
 )
 {
-	vk2_drawPolygon(
-		vk
-		,pMVP
-		,matrixSize
-		,sir_uniform_memory
-		,_vertexCount
-		,_instanceCount
-		,_firstVertex
-		,_firstInstance
-		,sir_descriptor_set
+	//-----------------------------------------------------
+	// コマンド・ディスクリプターのバインド
+	//-----------------------------------------------------
+	vk_CmdBindDescriptorSets(
+		  vk.pipeline_layout
+		, vkunit.descriptor_set[vk.current_buffer]
+		, vk.sir_cmdbuf[vk.current_buffer]
 	);
+
+	//-----------------------------------------------------
+	// 描画コマンド発行
+	//-----------------------------------------------------
+	vkCmdDraw(vk.sir_cmdbuf[vk.current_buffer], _vertexCount, _instanceCount, _firstVertex, _firstInstance);
+
+	//---------------------------------------------------------
+	// マトリクスのコピー
+	//---------------------------------------------------------
+	{
+		uint8_t *pData;
+
+		VkResult  err;
+		err = vkMapMemory( 
+			vk.device
+			, vkunit.uniform_memory[vk.current_buffer]
+			, 0
+			, VK_WHOLE_SIZE
+			, 0
+			, (void **)&pData
+		);
+		assert(!err);
+
+		memcpy(pData, pMVP, matrixSize);
+	}
+
+	//---------------------------------------------------------
+	// マップ解除
+	//---------------------------------------------------------
+	vkUnmapMemory(vk.device, vkunit.uniform_memory[vk.current_buffer]);
 }
 //-----------------------------------------------------------------------------
 void	VkInf::drawBegin( int _width, int _height )

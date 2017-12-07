@@ -9,9 +9,10 @@ class	Unit12
 		float attr[12 * 3][4];
 	};
 
-	VkBuffer* 			sc_uniform_buffer	;
-	VkDeviceMemory* 	sc_uniform_memory	;
-	VkDescriptorSet* 	sc_descriptor_set	;
+	VkInf::Vkunit	vkunit;
+//	VkBuffer* 			sc_uniform_buffer	;
+//	VkDeviceMemory* 	sc_uniform_memory	;
+//	VkDescriptorSet* 	sc_descriptor_set	;
 
 	vect44				mvp					;
 	vect44 				mat_model			;
