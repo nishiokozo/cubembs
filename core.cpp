@@ -380,7 +380,7 @@ int	core_create()
 	{
 		g_unit->loadModel(
 //			  &dataVertConst0, "s-const-tex-vert.spv", "s-const-tex-frag.spv", tex_files, 1
-			  &dataVertPhong0, "s-phong-vert.spv", "s-phong-frag.spv", tex_files, 0
+			  &dataVertPhong0, "s-phong-vert.spv", "s-phong-frag.spv", tex_files, 1
 		);
 	}
 	//	‰ŠúˆÊ’u

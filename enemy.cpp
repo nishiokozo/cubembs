@@ -306,7 +306,7 @@ static Unit12::vk_vert12 	dataVertConst0 =
 
 	}
 };
-static	const int unit_MAX = 50;
+static	const int unit_MAX = 8000;
 //static	int g_umcnt;
 static Unit12*				g_unit;
 extern	vect44 g_view,g_proj;
@@ -467,15 +467,13 @@ int	enemy_create()
 
 	for ( int u = 0; u < unit_MAX; u++ )
 	{
-		g_unit[u].mvp.identity();
-		g_unit[u].mvp.perspectiveGL( 45, 512.0/512.0,0.1,100		 );
-		g_unit[u].mvp.m[1][1] *= -1; // GL to Vulkan
-		g_unit[u].mvp =  g_unit[u].mat_model * g_view * g_unit[u].mvp;
+		g_unit[u].mvp =  g_unit[u].mat_model * g_view * g_proj;
 	}
 
 	//---------------------------------------------------------
 	// ƒ‚ƒfƒ‹“Ç‚Ýž‚Ý
 	//---------------------------------------------------------
+printf("1 %d\n",unit_MAX );
 	for ( int u = 0 ; u < unit_MAX ; u++ )
 	{
 		static const char 		*tex_files[] = {"lunarg.ppm"};
@@ -484,6 +482,7 @@ int	enemy_create()
 			  &dataVertPhong0, "s-phong-vert.spv", "s-phong-frag.spv", tex_files, 0
 		);
 	}
+printf("1 %d\n",unit_MAX );
 
 	//	‰ŠúˆÊ’u
 	{

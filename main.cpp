@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
 		, pWin->win_width
 		, pWin->win_height
 		, 20000//unit_MAX
-		, 1//DEMO_TEXTURE_COUNT
+		, 0//DEMO_TEXTURE_COUNT
 	);
 
 	func_create();

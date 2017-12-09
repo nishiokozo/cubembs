@@ -47,7 +47,7 @@ void Unit12::loadModel(
 		, fn_vert
 		, fn_frag
 		, tex_files
-		, 1
+		, tex_cnt
 
 		, vkunit
 	);

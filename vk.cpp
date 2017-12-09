@@ -1055,17 +1055,27 @@ static void	vk_UpdateDescriptorSets(
 	//---------------------
 	// ディスクリプターセット・イメージ設定
 	//---------------------
-	VkDescriptorImageInfo dif[tex_count];
-	memset(&dif, 0, sizeof(dif));
-	for (unsigned int i = 0; i < tex_count; i++) 
+	VkDescriptorImageInfo* dif = 0;
+
+	int wds_cnt = 1;
+	
+	if ( tex_count > 0 ) 
 	{
-		dif[i].sampler		= pTex[i].sampler;
-		dif[i].imageView 	= pTex[i].imgview;
-		dif[i].imageLayout 	= VK_IMAGE_LAYOUT_GENERAL;
+		dif = new VkDescriptorImageInfo[tex_count];
+		memset(dif, 0, sizeof(VkDescriptorImageInfo));
+		for (unsigned int i = 0; i < tex_count; i++) 
+		{
+			dif[i].sampler		= pTex[i].sampler;
+			dif[i].imageView 	= pTex[i].imgview;
+			dif[i].imageLayout 	= VK_IMAGE_LAYOUT_GENERAL;
+		}
+
+		wds_cnt = 2;
 	}
 
-	VkWriteDescriptorSet wds[2];
+	VkWriteDescriptorSet wds[wds_cnt];
 	memset(&wds, 0, sizeof(wds));
+
 
 	wds[0].sType 			= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	wds[0].pNext 			= 0;
@@ -1078,18 +1088,23 @@ static void	vk_UpdateDescriptorSets(
 	wds[0].pBufferInfo 		= &dbi;
 	wds[0].pTexelBufferView	= 0;
 
-	wds[1].sType 			= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	wds[1].pNext 			= 0;
-	wds[1].dstSet 			= descriptor_set;
-	wds[1].dstBinding 		= 1;
-	wds[1].dstArrayElement	= 0;
-	wds[1].descriptorCount 	= tex_count;
-	wds[1].descriptorType 	= VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	wds[1].pImageInfo 		= dif;
-	wds[1].pBufferInfo 		= NULL;
-	wds[1].pTexelBufferView	= 0;
+	if ( wds_cnt == 2 ) 
+	{
+		wds[1].sType 			= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		wds[1].pNext 			= 0;
+		wds[1].dstSet 			= descriptor_set;
+		wds[1].dstBinding 		= tex_count;
+		wds[1].dstArrayElement	= 0;
+		wds[1].descriptorCount 	= tex_count;
+		wds[1].descriptorType 	= VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		wds[1].pImageInfo 		= dif;
+		wds[1].pBufferInfo 		= NULL;
+		wds[1].pTexelBufferView	= 0;
 
-	vkUpdateDescriptorSets(vk_sc_device, 2, wds, 0, NULL);
+	}
+	if ( dif ) delete [] dif;
+
+	vkUpdateDescriptorSets(vk_sc_device, wds_cnt, wds, 0, NULL);
 }
 
 //-----------------------------------------------------------------------------
@@ -2719,10 +2734,6 @@ void VkInf::loadModel(
 //-----------------------------------------------------------------------------
 	 void* pDataVert
 	,int sizeofStructDataVert
-
-//	, VkBuffer* 				&	sc_uniform_buffer
-//	, VkDeviceMemory* 			&	sc_uniform_memory
-//	, VkDescriptorSet* 			&	sc_descriptor_set
 	, const char* fn_vert
 	, const char* fn_frag
 	, const char** 	tex_files
@@ -2846,6 +2857,7 @@ void VkInf::loadModel(
 			, vkunit.textures 
 			, sizeofStructDataVert
 			, vkunit.uniform_buffer[i]
+
 			, vkunit.descriptor_set[i]
 		);
 	}
@@ -2855,9 +2867,6 @@ void VkInf::loadModel(
 void	VkInf::unloadModel(
 //-----------------------------------------------------------------------------
 		 Vkunit	&	vkunit
-//	  VkBuffer* 				&	sir_uniform_buffer
-//	, VkDeviceMemory* 			&	sir_uniform_memory
-//	, VkDescriptorSet* 			&	sir_descriptor_set
 )
 {
 
