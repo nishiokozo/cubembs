@@ -306,7 +306,7 @@ static Unit12::vk_vert12 	dataVertConst0 =
 
 	}
 };
-static	const int unit_MAX = 8000;
+static	const int unit_MAX = 800;
 //static	int g_umcnt;
 static Unit12*				g_unit;
 extern	vect44 g_view,g_proj;

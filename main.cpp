@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
 		g_proj.m[1][1] *= -1; // GL to Vulkan
 
 	//---
-	WinInf* pWin = new WinInf( "msb", 128, 128 );
+	WinInf* pWin = new WinInf( "msb", 128*4, 128*4 );
 
 	g_pVk = new VkInf( 
 		  pWin->hInstance
