@@ -1,0 +1,11 @@
+*.exe.stackdump
+*.exe
+*.txt
+*.o
+*.s
+*.bak
+*.1
+*.2
+*.3
+*.spv
+a
